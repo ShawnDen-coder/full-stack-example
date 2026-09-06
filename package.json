@@ -1,0 +1,16 @@
+{
+  "name": "full-stack-example-workspace",
+  "private": true,
+  "description": "test",
+  "scripts": {
+    "format": "prettier . --write",
+    "format:check": "prettier . --check"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ShawnDen-coder/full-stack-example.git"
+  }
+}
