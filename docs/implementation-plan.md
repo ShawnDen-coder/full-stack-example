@@ -10,9 +10,9 @@
 服务端状态    TanStack Query
 样式          Tailwind CSS v4 + daisyUI
 主题          固定 forest 暗色主题
-HTTP API      Hono
-校验/OpenAPI  Zod + @hono/zod-openapi
-客户端生成    Orval
+HTTP/RPC       Hono + Hono Client (`hc`)
+校验          Zod + @hono/zod-validator
+客户端状态    TanStack Query（封装 Hono RPC 调用）
 数据访问      Drizzle ORM + postgres.js
 数据库        PostgreSQL
 日志          Pino（生产 JSON、开发 pretty）
@@ -26,7 +26,8 @@ HTTP API      Hono
 
 ```text
 React
-→ Orval TanStack Query Hook
+→ TanStack Query Hook
+→ Hono RPC Client (`hc`)
 → GET /health
 → Hono System Module
 → Drizzle SELECT 1
@@ -52,8 +53,6 @@ React
 full-stack-example/
 ├─ apps/
 │  ├─ api/
-│  │  ├─ openapi/
-│  │  │  └─ openapi.json
 │  │  ├─ src/
 │  │  │  ├─ config.ts
 │  │  │  ├─ middleware.ts
@@ -82,10 +81,9 @@ full-stack-example/
 ├─ packages/
 │  ├─ api-client/
 │  │  ├─ src/
-│  │  │  ├─ generated/
-│  │  │  ├─ mutator.ts
+│  │  │  ├─ client.ts
+│  │  │  ├─ errors.ts
 │  │  │  └─ index.ts
-│  │  ├─ orval.config.ts
 │  │  ├─ package.json
 │  │  └─ tsconfig.json
 │  │
@@ -192,11 +190,7 @@ packages/core
     "lint:fix": "biome lint --write .",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build",
-    "openapi": "pnpm --filter @full-stack-example/api openapi",
-    "client": "pnpm --filter @full-stack-example/api-client generate",
-    "generate": "pnpm openapi && pnpm client",
-    "generate:check": "pnpm generate && git diff --exit-code"
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build"
   }
 }
 ```
@@ -219,12 +213,10 @@ packages/core
 **/dist/**
 **/coverage/**
 **/node_modules/**
-**/src/generated/**
-apps/api/openapi/openapi.json
 packages/database/migrations/**
 ```
 
-生成物不参与格式化，避免 Biome 与 Orval、Drizzle Kit 相互改写。
+Migration 由 Drizzle Kit 管理，不参与格式化。
 
 ### 3.3 TypeScript
 
@@ -267,11 +259,6 @@ lint-fix             pnpm lint:fix
 format               pnpm format
 format-check         pnpm format:check
 check                pnpm check
-
-openapi              pnpm openapi
-client               pnpm client
-generate             pnpm generate
-generate-check       pnpm generate:check
 
 db-generate          pnpm --filter @full-stack-example/database db:generate
 db-migrate           pnpm --filter @full-stack-example/database db:migrate
@@ -646,7 +633,7 @@ req.headers.cookie
 res.headers.set-cookie
 ```
 
-匹配项使用 `[Redacted]` 替换，不使用 `remove`，便于确认字段存在但内容已隐藏。任何包含 URL 的诊断信息在记录前先移除用户名和密码。禁止记录 `.env`、完整进程环境、SQL 参数、Health 异常详情和 Orval 请求载荷。
+匹配项使用 `[Redacted]` 替换，不使用 `remove`，便于确认字段存在但内容已隐藏。任何包含 URL 的诊断信息在记录前先移除用户名和密码。禁止记录 `.env`、完整进程环境、SQL 参数、Health 异常详情和 RPC 请求载荷。
 
 ### 6.5 Launch 与关闭日志
 
@@ -676,8 +663,12 @@ const systemModule = createSystemModule({
   logger: rootLogger.child({ component: "system" }),
 });
 
-app.route("/", systemModule);
+const routes = app.route("/", systemModule);
+
+export type AppType = typeof routes;
 ```
+
+`systemModule` 自身注册 `GET /health`。所有模块通过链式 `route()` 组合到 `routes`，确保顶层 `AppType` 保留完整路由类型；`app.ts` 只负责创建应用，不监听端口或执行 Migration。
 
 模块默认采用：
 
@@ -725,12 +716,12 @@ GET /health
 
 约束：
 
+- 请求的 `json`、`query`、`param`、`header` 或 `form` 输入统一使用 `@hono/zod-validator` 的 `zValidator` 校验，并通过 `c.req.valid()` 读取；
 - `status` 使用字面量联合类型；
 - 时间使用 UTC ISO 8601；
 - 不向客户端返回数据库异常文本；
 - 数据库检查设置短超时；
-- `operationId` 固定为 `getHealth`；
-- OpenAPI tag 固定为 `System`。
+- 显式使用 `c.json(body, 200)` 与 `c.json(body, 503)`，让 RPC 客户端推导成功与降级响应类型。
 
 ### 7.3 API 宿主
 
@@ -744,42 +735,33 @@ WEB_ORIGIN=http://localhost:5173
 
 提供：
 
-- Request ID；
+- 基于 Hono 中间件的 Request ID，并保留现有 UUID 校验与生成规则；
 - 结构化请求日志；
-- 仅允许配置来源的 CORS；
+- Hono `cors`，仅允许配置来源；
+- Hono `secureHeaders`、`bodyLimit` 和请求 `timeout`；
 - 统一 404 和错误响应；
 - SIGINT/SIGTERM 优雅关闭；
-- 启动前数据库 Migration；
-- 无需启动服务器即可生成 OpenAPI。
+- 启动前数据库 Migration。
 
 `bootstrap.ts` 负责严格的启动顺序：解析环境变量、执行 Migration、创建数据库连接、注册模块，最后才调用 HTTP listen。任何一步失败都关闭已创建的资源并以非零状态退出。
 
-OpenAPI 固定输出到 `apps/api/openapi/openapi.json`，重复生成必须得到相同内容。
+## 8. Hono RPC 客户端
 
-## 8. Orval 客户端
+API 仍通过 HTTP 提供 `GET /health` 等端点，但客户端契约由 TypeScript 路由类型推导，不生成 OpenAPI 或 Orval 代码。
 
-Orval 输入：
+API 顶层路由链式组合后导出 `AppType`：
 
-```text
-apps/api/openapi/openapi.json
+```ts
+const routes = app.route("/", systemModule)
+
+export type AppType = typeof routes
 ```
 
-输出：
+`@full-stack-example/api` 通过仅含类型的子路径（例如 `@full-stack-example/api/contract`）暴露 `AppType`。该入口不得导入 `bootstrap.ts`、数据库客户端或 Node.js 专用模块。
 
-```text
-packages/api-client/src/generated/
-```
+`@full-stack-example/api-client` 仅包含手写的 RPC 基础设施：用 `hc<AppType>(baseUrl)` 创建客户端、配置 `credentials`/公共 headers，以及将非预期响应转换为统一错误。它只能以 `import type` 引用 API 的 contract 子路径，不得在浏览器中引入 API 的运行时代码。`parseResponse()` 仅用于所有非 2xx 都视为异常的调用；Health 的 `503` 是可展示的降级状态，必须按 `res.status` 分支解析。
 
-配置要求：
-
-- 使用 `react-query` client；
-- 使用 Fetch HTTP client；
-- 首版使用单一输出，不按 tag 拆分；
-- 开启 `clean`；
-- 不生成 MSW mocks；
-- 自定义 Fetch mutator 位于 `src/mutator.ts`；
-- mutator 负责 Base URL、JSON headers 和统一错误转换；
-- `generated/` 内禁止手工文件。
+Web 层以小型 Query 函数或 Hooks 封装 RPC 方法；例如 `api.health.$get()` 作为 `useQuery` 的 `queryFn`。不得重复手写路由路径、请求体或成功响应类型。
 
 浏览器环境变量：
 
@@ -800,17 +782,17 @@ interface ApiErrorShape {
 }
 ```
 
-生成链路：
+调用链路：
 
 ```text
 Hono/Zod Route
-→ openapi.json
-→ Orval
-→ Fetch 函数与 TanStack Query hook
+→ export type AppType
+→ hc<AppType>
+→ 手写的 TanStack Query hook
 → React
 ```
 
-OpenAPI 和 Orval 生成物提交 Git。`generate-check` 检查生成物是否最新，首版不加入 oasdiff。
+前后端所在 monorepo 的 `tsconfig.json` 均必须启用 `strict: true`。未来需要对外、多语言或独立版本化 API 时，再在边界上增加 OpenAPI；它不是首版交付物。
 
 ## 9. Web 与样式系统
 
@@ -819,7 +801,7 @@ OpenAPI 和 Orval 生成物提交 Git。`generate-check` 检查生成物是否�
 首版首页负责：
 
 - 显示应用名称；
-- 使用 Orval 生成的 Health hook；
+- 使用基于 Hono RPC 的 Health Query hook；
 - 显示 API 和数据库状态；
 - Loading 使用 daisyUI loading；
 - 成功使用 `alert-success`；
@@ -934,15 +916,17 @@ VITE_API_BASE_URL=http://localhost:3000
 - 数据库异常时生成 `degraded/down`；
 - 时间戳符合 ISO 8601；
 - 响应不包含内部异常信息；
-- API mutator 将非 2xx 响应转换为统一错误。
+- RPC 客户端将非预期的非 2xx 响应转换为统一错误。
 
 ### API 集成测试
 
+- 使用 Vitest 直接调用 `app.request()`，默认不监听真实端口；数据库检查通过依赖注入替换为可控实现；
 - `GET /health` 正常时返回 `200` 和约定 Schema；
 - 数据库不可用时返回 `503`；
 - 未知路径返回统一 `404`；
 - CORS 仅允许配置的 Web Origin；
-- OpenAPI 包含 `getHealth` 和 `System` tag。
+- JSON 路由测试必须设置正确的 `Content-Type`，并覆盖 Zod 校验失败的 `400` 响应；
+- `AppType` 可被 Web 的 RPC 客户端在严格模式下引用。
 
 ### 数据库集成测试
 
@@ -975,7 +959,7 @@ VITE_API_BASE_URL=http://localhost:3000
 - Health 成功状态正确渲染；
 - Database down 状态正确渲染；
 - 网络错误可重试；
-- 页面只通过生成的 API Client 获取 Health 数据。
+- 页面只通过 Hono RPC Client 获取 Health 数据。
 
 ### 日志测试
 
@@ -989,12 +973,12 @@ VITE_API_BASE_URL=http://localhost:3000
 - 正常关闭会 flush 日志，关闭超时产生 fatal 事件；
 - 日志测试写入内存 stream，不依赖控制台文本快照。
 
-### 生成与工程检查
+### RPC 契约与工程检查
 
-- OpenAPI 连续生成无差异；
-- Orval 连续生成无差异；
-- 生成客户端通过 TypeScript；
-- API 契约变化但客户端未更新时，`generate-check` 失败；
+- API 与 Web 在 `strict` 模式下通过 TypeScript；
+- API contract 入口不导入 bootstrap、数据库或 Node.js 运行时代码；
+- RPC 客户端能推导 Health 的 `200` 和 `503` 响应类型；
+- 路由、请求参数或响应结构变更后，受影响的 RPC 调用在类型检查阶段失败；
 - 根级 Biome 覆盖全部手写源码；
 - `just check` 完成 lint、格式检查、类型检查、测试和构建。
 
@@ -1007,12 +991,12 @@ VITE_API_BASE_URL=http://localhost:3000
 5. 实现数据库迁移锁、首次初始化和幂等启动链路。
 6. 创建 `packages/logging`、Pino 配置、脱敏规则和 child logger 约定。
 7. 创建 `packages/system` 和 Health Schema。
-8. 创建 Hono API、Request ID 日志中间件、OpenAPI 生成和优雅关闭。
-9. 创建 Orval 配置、mutator 和生成客户端。
+8. 创建 Hono API、Request ID 日志中间件、RPC `AppType` 导出和优雅关闭。
+9. 创建 Hono RPC Client、统一错误转换和 Health Query hook。
 10. 创建 React/Vite Web 和 Query/Router Provider。
 11. 接入 Tailwind v4、daisyUI 和固定 forest 主题。
-12. 用生成的 Health hook 完成首页。
-13. 增加测试、生成一致性检查和 README 使用说明。
+12. 用 RPC Health Query hook 完成首页。
+13. 增加测试、RPC 契约检查和 README 使用说明。
 14. 执行完整验收。
 
 ## 13. 完成标准
@@ -1022,7 +1006,6 @@ VITE_API_BASE_URL=http://localhost:3000
 ```bash
 just init
 just launch-doctor
-just generate
 just check
 just launch
 ```
@@ -1043,5 +1026,6 @@ just launch
 - `packages/core`；
 - `packages/modules` 中间目录；
 - 不可运行的 repo-scaffold 命令；
-- 手写的 Health API 客户端类型；
+- OpenAPI、Orval 或生成的 API Client；
+- 手写的 Health API 请求或响应类型；
 - Redis、BullMQ、Worker 或 oasdiff 依赖。

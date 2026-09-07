@@ -1,8 +1,0 @@
-schema_version = 1
-repo_scaffold_version = "1.0.0"
-ecosystem = "pnpm"
-
-[workspace]
-apps_dir = "apps"
-packages_dir = "packages"
-default_member_type = "ts-lib"

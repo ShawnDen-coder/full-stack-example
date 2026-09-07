@@ -2,49 +2,68 @@ set dotenv-load := true
 set shell := ["bash", "-euc"]
 set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
 
-# Show available recipes
 default:
     @just --list
 
-# Install workspace dependencies
 init:
     pnpm install
 
-# Run Prettier format check
-lint:
-    pnpm format:check
+launch:
+    pnpm launch
 
-# Run Prettier with auto-fix
+launch-clean:
+    pnpm launch:clean
+
+launch-doctor:
+    pnpm launch:doctor
+
+dev:
+    pnpm dev
+
+dev-web:
+    pnpm dev:web
+
+dev-api:
+    pnpm dev:api
+
+build:
+    pnpm build
+
+typecheck:
+    pnpm typecheck
+
+test:
+    pnpm test
+
+lint:
+    pnpm lint
+
+lint-fix:
+    pnpm lint:fix
+
 format:
     pnpm format
 
-# Build all workspace packages
-build:
-    pnpm -r run build
+format-check:
+    pnpm format:check
 
-# Type check all workspace packages
-typecheck:
-    pnpm -r run typecheck
+check:
+    pnpm check
 
-# Pinned version used by all member-generation recipes.
-repo_scaffold_version := "1.0.0"
+db-generate:
+    pnpm --filter @full-stack-example/database db:generate
 
-# Add a typed workspace member through the pinned repo-scaffold release.
-add-member name member_type="ts-lib":
-    uvx --from "repo-scaffold==1.0.0" repo-scaffold add-member {{name}} --type {{member_type}} --project-path .
+db-migrate:
+    pnpm --filter @full-stack-example/database db:migrate
 
-# Add a TypeScript library under packages/.
-add-lib name:
-    just add-member {{name}} ts-lib
+db-studio:
+    pnpm --filter @full-stack-example/database db:studio
 
+infra-up:
+    podman compose -f container/compose.yaml up -d
 
-# Add a Vite-built TypeScript CLI under packages/.
-add-cli name:
-    just add-member {{name}} ts-cli
-# Deprecated package terminology retained for team muscle memory.
-add-package name:
-    just add-member {{name}} ts-lib
+infra-down:
+    podman compose -f container/compose.yaml down
 
-# Preview a member generation without changing the workspace.
-plan-member name member_type="ts-lib":
-    uvx --from "repo-scaffold==1.0.0" repo-scaffold add-member {{name}} --type {{member_type}} --project-path . --dry-run
+infra-logs:
+    podman compose -f container/compose.yaml logs -f postgres
