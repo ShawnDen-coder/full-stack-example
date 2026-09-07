@@ -1,19 +1,12 @@
-import { randomUUID } from "node:crypto";
 import type { Logger } from "pino";
-import type { MiddlewareHandler } from "hono";
+import { appFactory } from "./factory.js";
 
-const requestIdPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-export function requestLogging(logger: Logger): MiddlewareHandler {
-  return async (context, next) => {
-    const requestIdHeader = context.req.header("X-Request-ID");
-    const requestId =
-      requestIdHeader && requestIdPattern.test(requestIdHeader) ? requestIdHeader : randomUUID();
+export function requestLogging(logger: Logger) {
+  return appFactory.createMiddleware(async (context, next) => {
+    const requestId = context.get("requestId");
     const requestLogger = logger.child({ requestId });
     const startedAt = performance.now();
     context.set("logger", requestLogger);
-    context.header("X-Request-ID", requestId);
     try {
       await next();
       const statusCode = context.res.status;
@@ -37,5 +30,5 @@ export function requestLogging(logger: Logger): MiddlewareHandler {
       );
       throw error;
     }
-  };
+  });
 }

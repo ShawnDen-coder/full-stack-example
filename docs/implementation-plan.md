@@ -166,7 +166,7 @@ packages/core
 
 ### 3.1 根 package.json
 
-根包负责统一工程工具和 workspace 编排：
+根包只负责声明 workspace 元数据和共享工程依赖；仓库级命令统一由 `justfile` 编排，避免在根 `package.json` 中维护一层同名转发脚本：
 
 ```json
 {
@@ -175,27 +175,11 @@ packages/core
   "packageManager": "pnpm@<locked-version>",
   "engines": {
     "node": ">=22"
-  },
-  "scripts": {
-    "launch": "tsx scripts/launch.ts",
-    "launch:clean": "tsx scripts/launch.ts --stop-infra-on-exit",
-    "launch:doctor": "tsx scripts/launch.ts --doctor",
-    "dev": "concurrently --kill-others-on-fail --names api,web \"pnpm dev:api\" \"pnpm dev:web\"",
-    "dev:web": "pnpm --filter @full-stack-example/web dev",
-    "dev:api": "pnpm --filter @full-stack-example/api dev",
-    "build": "pnpm -r run build",
-    "typecheck": "pnpm -r run typecheck",
-    "test": "pnpm -r --if-present run test",
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --write .",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build"
   }
 }
 ```
 
-安装时使用相互兼容的稳定版本，并将最终解析版本写入 `pnpm-lock.yaml`。Biome、TypeScript、Vitest、`tsx` 和 `concurrently` 等通用工程工具放在根 `devDependencies`，各包不重复安装 Biome。
+安装时使用相互兼容的稳定版本，并将最终解析版本写入 `pnpm-lock.yaml`。Biome、TypeScript、Vitest、`tsx` 和 `concurrently` 等通用工程工具放在根 `devDependencies`，各包不重复安装 Biome。各包只保留 `build`、`dev`、`start`、`typecheck`、`test` 和数据库工具等包自身生命周期命令。
 
 ### 3.2 根级 Biome
 
@@ -247,18 +231,18 @@ init                 pnpm install
 
 launch               启动 PostgreSQL、等待就绪、迁移数据库，再启动 Web 和 API
 launch-clean         与 launch 相同，但退出时停止 Compose 服务
-dev                  pnpm dev
-dev-web              pnpm dev:web
-dev-api              pnpm dev:api
+dev                  concurrently 启动 API 与 Web 的包级 dev 命令
+dev-web              pnpm --filter @full-stack-example/web dev
+dev-api              pnpm --filter @full-stack-example/api dev
 
-build                pnpm build
-typecheck            pnpm typecheck
-test                 pnpm test
-lint                 pnpm lint
-lint-fix             pnpm lint:fix
-format               pnpm format
-format-check         pnpm format:check
-check                pnpm check
+build                pnpm -r run build
+typecheck            pnpm -r run typecheck
+test                 pnpm -r --if-present run test
+lint                 pnpm exec biome lint .
+lint-fix             pnpm exec biome lint --write .
+format               pnpm exec biome format --write .
+format-check         pnpm exec biome format .
+check                顺序调用 lint、format-check、typecheck、test、build
 
 db-generate          pnpm --filter @full-stack-example/database db:generate
 db-migrate           pnpm --filter @full-stack-example/database db:migrate
@@ -443,11 +427,11 @@ Migration 目录由 Database 包内部基于 `import.meta.url` 解析，不依�
 
 #### APPLICATION_STARTING 与 RUNNING
 
-Migration 成功后 Launcher 启动根 `pnpm dev`。根 `dev` 使用 `concurrently` 管理两个明确命名的进程：
+Migration 成功后 Launcher 使用根依赖中的 `concurrently` 管理两个明确命名的包级进程：
 
 ```text
-api  → pnpm dev:api
-web  → pnpm dev:web
+api  → pnpm --filter @full-stack-example/api dev
+web  → pnpm --filter @full-stack-example/web dev
 ```
 
 配置要求：
@@ -598,7 +582,7 @@ interface HttpLogFields {
 请求日志规则：
 
 - 请求开始时创建 `logger.child({ requestId })`，并放入 Hono Context；
-- 只接受符合 UUID 格式的入站 `X-Request-ID`，否则使用 `crypto.randomUUID()`；
+- 使用 Hono 内置 `requestId()`；接受其允许的安全字符并限制长度为 128，非法值使用 `crypto.randomUUID()`；
 - 响应始终返回最终 `X-Request-ID`；
 - 2xx/3xx 记录 `info`，4xx 记录 `warn`，5xx 或未捕获异常记录 `error`；
 - `/health` 成功请求降为 `debug`，失败仍记录 `warn/error`；
@@ -735,7 +719,7 @@ WEB_ORIGIN=http://localhost:5173
 
 提供：
 
-- 基于 Hono 中间件的 Request ID，并保留现有 UUID 校验与生成规则；
+- Hono 内置 `requestId()` 与 Factory Helper 管理 Request ID 和 Context 变量类型；
 - 结构化请求日志；
 - Hono `cors`，仅允许配置来源；
 - Hono `secureHeaders`、`bodyLimit` 和请求 `timeout`；
@@ -760,6 +744,8 @@ export type AppType = typeof routes
 `@full-stack-example/api` 通过仅含类型的子路径（例如 `@full-stack-example/api/contract`）暴露 `AppType`。该入口不得导入 `bootstrap.ts`、数据库客户端或 Node.js 专用模块。
 
 `@full-stack-example/api-client` 仅包含手写的 RPC 基础设施：用 `hc<AppType>(baseUrl)` 创建客户端、配置 `credentials`/公共 headers，以及将非预期响应转换为统一错误。它只能以 `import type` 引用 API 的 contract 子路径，不得在浏览器中引入 API 的运行时代码。`parseResponse()` 仅用于所有非 2xx 都视为异常的调用；Health 的 `503` 是可展示的降级状态，必须按 `res.status` 分支解析。
+
+API contract 使用 Hono `ApplyGlobalResponse` 将统一 `500` JSON 响应加入 RPC 类型；API Client 包在构建时预计算 `hc<AppType>` 的返回类型，避免 Web IDE 重复实例化完整服务端路由类型。
 
 Web 层以小型 Query 函数或 Hooks 封装 RPC 方法；例如 `api.health.$get()` 作为 `useQuery` 的 `queryFn`。不得重复手写路由路径、请求体或成功响应类型。
 
@@ -965,7 +951,7 @@ VITE_API_BASE_URL=http://localhost:3000
 
 - 开发环境使用 pretty transport，生产环境始终输出合法的单行 JSON；
 - 非法 `LOG_LEVEL` 在启动配置校验阶段失败；
-- 有效入站 Request ID 被保留，无效值被替换为新 UUID；
+- 符合 Hono Request ID 安全字符和长度限制的入站值被保留，无效值被替换为新 UUID；
 - HTTP 完成日志包含 requestId、method、path、statusCode 和 durationMs；
 - authorization、cookie、密码、Token、API Key 和数据库凭据均被替换为 `[Redacted]`；
 - 4xx 不记录错误 stack，未预期 5xx 使用标准 Error serializer；

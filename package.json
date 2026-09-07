@@ -5,22 +5,6 @@
   "engines": {
     "node": ">=22"
   },
-  "scripts": {
-    "launch": "tsx scripts/launch.ts",
-    "launch:clean": "tsx scripts/launch.ts --stop-infra-on-exit",
-    "launch:doctor": "tsx scripts/launch.ts --doctor",
-    "dev": "concurrently --kill-others-on-fail --names api,web \"pnpm dev:api\" \"pnpm dev:web\"",
-    "dev:web": "pnpm --filter @full-stack-example/web dev",
-    "dev:api": "pnpm --filter @full-stack-example/api dev",
-    "build": "pnpm -r run build",
-    "typecheck": "pnpm -r run typecheck",
-    "test": "pnpm -r --if-present run test",
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --write .",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build"
-  },
   "devDependencies": {
     "@biomejs/biome": "^2.4.5",
     "@types/node": "^24.0.0",

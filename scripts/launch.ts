@@ -13,12 +13,13 @@ const logger = createLogger({
 });
 const stopInfraOnExit = process.argv.includes("--stop-infra-on-exit");
 const doctorOnly = process.argv.includes("--doctor");
-const pnpmCliPath = process.platform === "win32" ? process.env.npm_execpath : undefined;
-const pnpmCommand = pnpmCliPath ? process.execPath : "pnpm";
+const pnpmCommand =
+  process.platform === "win32" ? (process.env.ComSpec ?? "C:\\Windows\\System32\\cmd.exe") : "pnpm";
+const pnpmPrefixArgs = process.platform === "win32" ? ["/d", "/s", "/c", "pnpm.cmd"] : [];
 let receivedShutdownSignal = false;
 
 function pnpmArgs(args: readonly string[]): readonly string[] {
-  return pnpmCliPath ? [pnpmCliPath, ...args] : args;
+  return [...pnpmPrefixArgs, ...args];
 }
 
 function commandExists(command: string, args: readonly string[] = ["--version"]): boolean {
@@ -112,7 +113,18 @@ async function main(): Promise<void> {
   ]);
   await run(pnpmCommand, pnpmArgs(["--filter", "@full-stack-example/database", "db:migrate"]));
   try {
-    await run(pnpmCommand, pnpmArgs(["dev"]));
+    await run(
+      pnpmCommand,
+      pnpmArgs([
+        "exec",
+        "concurrently",
+        "--kill-others-on-fail",
+        "--names",
+        "api,web",
+        "pnpm --filter @full-stack-example/api dev",
+        "pnpm --filter @full-stack-example/web dev",
+      ]),
+    );
   } finally {
     if (stopInfraOnExit)
       await run("podman", [

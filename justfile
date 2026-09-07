@@ -9,46 +9,50 @@ init:
     pnpm install
 
 launch:
-    pnpm launch
+    pnpm exec tsx scripts/launch.ts
 
 launch-clean:
-    pnpm launch:clean
+    pnpm exec tsx scripts/launch.ts --stop-infra-on-exit
 
 launch-doctor:
-    pnpm launch:doctor
+    pnpm exec tsx scripts/launch.ts --doctor
 
 dev:
-    pnpm dev
+    pnpm exec concurrently --kill-others-on-fail --names api,web "pnpm --filter @full-stack-example/api dev" "pnpm --filter @full-stack-example/web dev"
 
 dev-web:
-    pnpm dev:web
+    pnpm --filter @full-stack-example/web dev
 
 dev-api:
-    pnpm dev:api
+    pnpm --filter @full-stack-example/api dev
 
 build:
-    pnpm build
+    pnpm -r run build
 
 typecheck:
-    pnpm typecheck
+    pnpm -r run typecheck
 
 test:
-    pnpm test
+    pnpm -r --if-present run test
 
 lint:
-    pnpm lint
+    pnpm exec biome lint .
 
 lint-fix:
-    pnpm lint:fix
+    pnpm exec biome lint --write .
 
 format:
-    pnpm format
+    pnpm exec biome format --write .
 
 format-check:
-    pnpm format:check
+    pnpm exec biome format .
 
 check:
-    pnpm check
+    just lint
+    just format-check
+    just typecheck
+    just test
+    just build
 
 db-generate:
     pnpm --filter @full-stack-example/database db:generate
