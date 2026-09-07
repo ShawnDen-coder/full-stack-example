@@ -1,9 +1,9 @@
 import type { Logger } from "@full-stack-example/logging";
-import type { Env, Hono } from "hono";
+import type { Env, Hono, Schema } from "hono";
 import { getHealth } from "./service.js";
 
-export function setupSystemApp<E extends Env>(
-  app: Hono<E>,
+export function setupSystemApp<E extends Env, S extends Schema, BasePath extends string>(
+  app: Hono<E, S, BasePath>,
   options: {
     readonly checkDatabase: () => Promise<void>;
     readonly logger: Logger;
