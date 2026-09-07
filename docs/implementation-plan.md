@@ -1,5 +1,12 @@
 # 轻量化 TypeScript 全栈模板实施计划
 
+> Observability update: section 6's Pino design and section 10's "Compose only runs PostgreSQL"
+> are superseded by the implemented LogTape + OpenTelemetry design. The API uses `@logtape/hono`,
+> writes redacted structured logs to stdout, and exposes an opt-in development-only in-memory SSE
+> log stream at `GET /api/logs/stream`. OpenTelemetry traces and metrics are sent to the local
+> Collector. No log persistence backend, cache, Redis, Loki, or OpenObserve is included. SSE is
+> explicitly non-persistent and single-process; production enablement requires authentication.
+
 ## 1. 建设目标
 
 将当前仅含 `packages/core` 的 pnpm workspace 改造成可运行的轻量模块化单体：
