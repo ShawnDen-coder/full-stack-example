@@ -5,19 +5,28 @@ import {
   defaultMigrationsFolder,
   migrateDatabase,
 } from "@full-stack-example/database";
-import { createLogger } from "@full-stack-example/logging";
+import { configureLogging, createLogStream, getAppLogger, shutdownLogging } from "@full-stack-example/logging";
 import { createApp } from "./app.js";
 import { parseConfig } from "./config.js";
+import { startTelemetry } from "./telemetry.js";
 
 export async function bootstrap(): Promise<() => Promise<void>> {
   const config = parseConfig();
-  const logger = createLogger({
+  const logStream = createLogStream();
+  await configureLogging({
     service: "api",
     environment: config.environment,
     level: config.logLevel,
     pretty: config.pretty,
+    stream: logStream,
   });
-  logger.info({ event: "database.migration.started" }, "Running database migrations");
+  const logger = getAppLogger(["api", "bootstrap"]);
+  logger.info("Running database migrations", { event: "database.migration.started" });
+  const telemetry = await startTelemetry({
+    enabled: config.otelEnabled,
+    endpoint: config.otelEndpoint,
+    metricExportIntervalMillis: config.otelMetricExportInterval,
+  });
   await migrateDatabase({
     databaseUrl: config.databaseUrl,
     migrationsFolder: defaultMigrationsFolder,
@@ -29,13 +38,15 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     webOrigin: config.webOrigin,
   });
   const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port });
-  logger.info({ event: "api.started", host: config.host, port: config.port }, "API server started");
+  logger.info("API server started", { event: "api.started", host: config.host, port: config.port });
   let closed = false;
   return async () => {
     if (closed) return;
     closed = true;
     server.close();
     await database.close();
-    logger.info({ event: "api.shutdown.completed" }, "API server stopped");
+    await telemetry.shutdown();
+    logger.info("API server stopped", { event: "api.shutdown.completed" });
+    await shutdownLogging();
   };
 }
