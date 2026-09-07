@@ -2,6 +2,7 @@
   "recommendations": [
     "folke.vscode-monorepo-workspace",
     "jacano.vscode-pnpm",
-    "biomejs.biome"
+    "biomejs.biome",
+    "formulahendry.code-runner"
   ]
 }
