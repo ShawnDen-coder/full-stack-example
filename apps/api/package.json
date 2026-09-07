@@ -1,0 +1,33 @@
+{
+  "name": "@full-stack-example/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/app.d.ts",
+      "import": "./dist/app.js",
+      "default": "./dist/app.js"
+    },
+    "./contract": {
+      "types": "./dist/contract.d.ts"
+    }
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --config ../../vitest.config.ts"
+  },
+  "dependencies": {
+    "@full-stack-example/database": "workspace:*",
+    "@full-stack-example/logging": "workspace:*",
+    "@full-stack-example/system": "workspace:*",
+    "@hono/node-server": "^1.19.6",
+    "@hono/zod-validator": "^0.7.5",
+    "hono": "^4.10.7",
+    "pino": "^10.3.1",
+    "zod": "^4.1.12"
+  }
+}
