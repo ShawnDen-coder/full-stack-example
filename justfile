@@ -60,6 +60,21 @@ verify:
     just check
     just build
 
+container-build:
+    podman build --file container/Dockerfile --ignorefile container/Dockerfile.dockerignore --tag full-stack-example:local .
+
+stack-up:
+    podman compose -f container/compose.yaml --profile application up -d --build --wait
+
+stack-down:
+    podman compose -f container/compose.yaml --profile application down
+
+stack-logs:
+    podman compose -f container/compose.yaml --profile application logs -f app postgres otel-collector
+
+stack-status:
+    podman compose -f container/compose.yaml --profile application ps
+
 db-generate:
     pnpm --filter @full-stack-example/database db:generate
 
