@@ -37,10 +37,10 @@ test:
     pnpm -r --if-present run test
 
 lint:
-    pnpm exec biome lint --config-path biome.json .
+    pnpm exec biome check --config-path biome.json --write .
 
-lint-fix:
-    pnpm exec biome lint --config-path biome.json --write .
+lint-check:
+    pnpm exec biome check --config-path biome.json .
 
 format:
     pnpm exec biome format --config-path biome.json --write .
@@ -49,8 +49,7 @@ format-check:
     pnpm exec biome format --config-path biome.json .
 
 check:
-    just lint
-    just format-check
+    just lint-check
     just typecheck
     just test
     just build

@@ -1,5 +1,5 @@
-import { z } from "zod";
 import type { Environment, LogLevel } from "@full-stack-example/logging";
+import { z } from "zod";
 
 const logLevels = ["trace", "debug", "info", "warn", "error", "fatal", "silent"] as const;
 const environmentSchema = z.object({
