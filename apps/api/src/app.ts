@@ -1,5 +1,6 @@
 import type { Logger, LogStream } from "@full-stack-example/logging";
 import { setupSystemApp } from "@full-stack-example/system";
+import { setupTodosApp, type TodoService } from "@full-stack-example/todos";
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { honoLogger } from "@logtape/hono";
 import { trace } from "@opentelemetry/api";
@@ -17,6 +18,7 @@ export function createApp(options: {
   readonly checkDatabase: () => Promise<void>;
   readonly logger: Logger;
   readonly webOrigin: string;
+  readonly todoService: TodoService;
   readonly logStream?: LogStream;
   readonly logStreamHeartbeatMs?: number;
   readonly webAssetsDirectory?: string;
@@ -61,7 +63,8 @@ export function createApp(options: {
     checkDatabase: options.checkDatabase,
     logger: options.logger.getChild("system"),
   });
-  const withLogStream = setupLogStreamApp(withSystem, {
+  const withTodos = setupTodosApp(withSystem, { service: options.todoService });
+  const withLogStream = setupLogStreamApp(withTodos, {
     stream: options.logStream,
     heartbeatMs: options.logStreamHeartbeatMs ?? 15_000,
   });
