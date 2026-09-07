@@ -13,7 +13,12 @@ const logger = createLogger({
 });
 const stopInfraOnExit = process.argv.includes("--stop-infra-on-exit");
 const doctorOnly = process.argv.includes("--doctor");
-const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const pnpmCliPath = process.platform === "win32" ? process.env.npm_execpath : undefined;
+const pnpmCommand = pnpmCliPath ? process.execPath : "pnpm";
+
+function pnpmArgs(args: readonly string[]): readonly string[] {
+  return pnpmCliPath ? [pnpmCliPath, ...args] : args;
+}
 
 function commandExists(command: string, args: readonly string[] = ["--version"]): boolean {
   return spawnSync(command, args, { cwd: root, stdio: "ignore", shell: false }).status === 0;
@@ -60,7 +65,7 @@ async function preflight(): Promise<void> {
     "Checking local prerequisites",
   );
   if (
-    !commandExists(pnpmCommand) ||
+    !commandExists(pnpmCommand, pnpmArgs(["--version"])) ||
     !commandExists("podman") ||
     !commandExists("podman", ["compose", "version"])
   ) {
@@ -94,9 +99,9 @@ async function main(): Promise<void> {
     "60",
     "postgres",
   ]);
-  await run(pnpmCommand, ["--filter", "@full-stack-example/database", "db:migrate"]);
+  await run(pnpmCommand, pnpmArgs(["--filter", "@full-stack-example/database", "db:migrate"]));
   try {
-    await run(pnpmCommand, ["dev"]);
+    await run(pnpmCommand, pnpmArgs(["dev"]));
   } finally {
     if (stopInfraOnExit)
       await run("podman", [
