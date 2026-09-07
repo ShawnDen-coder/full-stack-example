@@ -31,21 +31,22 @@ build:
 
 typecheck:
     pnpm -r run typecheck
+    pnpm exec tsc -p tsconfig.scripts.json --noEmit
 
 test:
     pnpm -r --if-present run test
 
 lint:
-    pnpm exec biome lint .
+    pnpm exec biome lint --config-path biome.json .
 
 lint-fix:
-    pnpm exec biome lint --write .
+    pnpm exec biome lint --config-path biome.json --write .
 
 format:
-    pnpm exec biome format --write .
+    pnpm exec biome format --config-path biome.json --write .
 
 format-check:
-    pnpm exec biome format .
+    pnpm exec biome format --config-path biome.json .
 
 check:
     just lint

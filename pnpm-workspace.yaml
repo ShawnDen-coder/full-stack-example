@@ -1,5 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+catalog:
+  hono: ^4.13.7
+  "@hono/zod-validator": ^0.7.5
+  zod: ^4.1.12
 allowBuilds:
   esbuild: true
+  protobufjs: set this to true or false
