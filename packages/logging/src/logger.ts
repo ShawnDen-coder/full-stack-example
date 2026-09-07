@@ -64,7 +64,7 @@ export async function configureLogging(options: ConfigureLoggingOptions): Promis
   const consoleSink = getConsoleSink({
     formatter:
       options.pretty && options.environment !== "production"
-        ? getPrettyFormatter({ properties: true, icons: false })
+        ? getPrettyFormatter({ properties: true, icons: false, timestamp: "time" })
         : jsonLinesFormatter,
   });
   const sinks: Record<string, Sink> = {
