@@ -11,7 +11,7 @@ import {
 } from "@logtape/logtape";
 import { getPrettyFormatter } from "@logtape/pretty";
 import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
-import { createLogStream as makeLogStream, type LogStream } from "./stream.js";
+import { type LogStream, createLogStream as makeLogStream } from "./stream.js";
 
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal" | "silent";
 export type Environment = "development" | "test" | "production";
