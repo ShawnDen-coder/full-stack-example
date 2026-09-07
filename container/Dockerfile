@@ -11,6 +11,7 @@ COPY packages/api-client/package.json packages/api-client/package.json
 COPY packages/database/package.json packages/database/package.json
 COPY packages/logging/package.json packages/logging/package.json
 COPY packages/system/package.json packages/system/package.json
+COPY packages/todos/package.json packages/todos/package.json
 RUN pnpm install --frozen-lockfile \
   --filter @full-stack-example/api... \
   --filter @full-stack-example/api-client \
@@ -25,6 +26,7 @@ FROM node@sha256:4caaaf42195bcd6f6f3559a413b20cb8f8ad089e231ee874cf7701643966689
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /output/app/ ./
+RUN mkdir -p /app/logs && chown node:node /app/logs
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=6 \

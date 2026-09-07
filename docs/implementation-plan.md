@@ -23,7 +23,7 @@ HonoX 调研后不引入 `honox` 或 `@hono/vite-build`：当前项目不需要 
 
 `just launch` 启动 PostgreSQL 和 OpenTelemetry Collector，等待两者 ready，执行迁移，再启动宿主机 API 与 Web watch。`just stack-up` 使用 `container/compose.yaml` 的 `application` profile 构建并启动单一应用镜像；Hono 在 3000 端口同时提供 API、React SPA 与静态资源。API 启动顺序为：配置 LogTape、启动 telemetry、迁移、创建数据库、创建 Hono 应用、监听端口。关闭顺序相反，并释放所有资源。
 
-日志使用 LogTape：开发环境输出 pretty 文本，生产输出脱敏 JSON Lines。每条记录包含 service、environment、可用时的 version，以及 request/trace/span 关联字段。禁止记录 body、完整 headers、SQL 参数、环境变量或凭据。
+日志使用 LogTape：开发环境输出 pretty 文本，生产输出脱敏 JSON Lines。设置 `LOG_FILE` 后，API 会将同样脱敏的 JSON Lines 追加到文件；Compose 通过命名卷保留 `/app/logs/api.jsonl`。每条记录包含 service、environment、可用时的 version，以及 request/trace/span 关联字段。禁止记录 body、完整 headers、SQL 参数、环境变量或凭据。
 
 `@hono/otel` 发送 traces 和 metrics 到本地 Collector 的 OTLP HTTP endpoint。当前 Collector 使用 debug exporter；不包含 Loki、OpenObserve、Tempo、Prometheus、Redis 或缓存。
 

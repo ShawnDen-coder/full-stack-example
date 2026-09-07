@@ -1,9 +1,14 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { createWriteStream } from "node:fs";
+import { mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
+import { Writable } from "node:stream";
 import {
   configure,
   dispose,
   getConsoleSink,
   getLogger,
+  getStreamSink,
   jsonLinesFormatter,
   type Logger,
   type LogRecord,
@@ -23,6 +28,7 @@ export interface ConfigureLoggingOptions {
   readonly version?: string;
   readonly pretty: boolean;
   readonly stream?: LogStream;
+  readonly filePath?: string;
 }
 
 const redactedFields = [
@@ -79,6 +85,19 @@ export async function configureLogging(options: ConfigureLoggingOptions): Promis
       action: () => "[Redacted]",
     }) as Sink;
   }
+  if (options.filePath) {
+    await mkdir(dirname(options.filePath), { recursive: true });
+    const fileSink = getStreamSink(
+      Writable.toWeb(createWriteStream(options.filePath, { flags: "a" })),
+      {
+        formatter: jsonLinesFormatter,
+      },
+    );
+    sinks.file = redactByField(withServiceMetadata(fileSink, options), {
+      fieldPatterns: redactedFields,
+      action: () => "[Redacted]",
+    }) as Sink;
+  }
   await configure({
     reset: true,
     contextLocalStorage: new AsyncLocalStorage<Record<string, unknown>>(),
@@ -86,7 +105,11 @@ export async function configureLogging(options: ConfigureLoggingOptions): Promis
     loggers: [
       {
         category: "full-stack-example",
-        sinks: options.stream ? ["console", "stream"] : ["console"],
+        sinks: [
+          "console",
+          ...(options.stream ? ["stream"] : []),
+          ...(options.filePath ? ["file"] : []),
+        ],
         lowestLevel: toLogTapeLevel(options.level),
       },
       { category: "logtape", sinks: ["console"], lowestLevel: "error" },

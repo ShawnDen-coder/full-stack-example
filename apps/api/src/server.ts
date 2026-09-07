@@ -1,4 +1,9 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { bootstrap } from "./bootstrap.js";
+
+const environmentFile = fileURLToPath(new URL("../../../.env", import.meta.url));
+if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
 
 let shutdown: (() => Promise<void>) | undefined;
 try {
