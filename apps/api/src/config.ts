@@ -13,6 +13,9 @@ const environmentSchema = z.object({
   OTEL_ENABLED: z.enum(["true", "false"]).optional(),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().default("http://localhost:4318"),
   OTEL_METRIC_EXPORT_INTERVAL: z.coerce.number().int().min(1000).default(10_000),
+  LOG_STREAM_ENABLED: z.enum(["true", "false"]).default("false"),
+  LOG_STREAM_BUFFER_SIZE: z.coerce.number().int().min(1).max(10_000).default(1000),
+  LOG_STREAM_HEARTBEAT_MS: z.coerce.number().int().min(1000).default(15_000),
 });
 
 export interface ApiConfig {
@@ -26,12 +29,17 @@ export interface ApiConfig {
   readonly otelEnabled: boolean;
   readonly otelEndpoint: string;
   readonly otelMetricExportInterval: number;
+  readonly logStreamEnabled: boolean;
+  readonly logStreamBufferSize: number;
+  readonly logStreamHeartbeatMs: number;
 }
 
 export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiConfig {
   const parsed = environmentSchema.parse(environment);
   const defaultLevel: LogLevel =
     parsed.NODE_ENV === "production" ? "info" : parsed.NODE_ENV === "test" ? "silent" : "debug";
+  if (parsed.LOG_STREAM_ENABLED === "true" && parsed.NODE_ENV === "production")
+    throw new Error("LOG_STREAM_ENABLED requires authentication before production use");
   return {
     databaseUrl: parsed.DATABASE_URL,
     host: parsed.HOST,
@@ -43,5 +51,8 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
     otelEnabled: parsed.OTEL_ENABLED ? parsed.OTEL_ENABLED === "true" : parsed.NODE_ENV !== "test",
     otelEndpoint: parsed.OTEL_EXPORTER_OTLP_ENDPOINT,
     otelMetricExportInterval: parsed.OTEL_METRIC_EXPORT_INTERVAL,
+    logStreamEnabled: parsed.LOG_STREAM_ENABLED === "true",
+    logStreamBufferSize: parsed.LOG_STREAM_BUFFER_SIZE,
+    logStreamHeartbeatMs: parsed.LOG_STREAM_HEARTBEAT_MS,
   };
 }

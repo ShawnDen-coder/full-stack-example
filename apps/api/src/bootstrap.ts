@@ -12,7 +12,7 @@ import { startTelemetry } from "./telemetry.js";
 
 export async function bootstrap(): Promise<() => Promise<void>> {
   const config = parseConfig();
-  const logStream = createLogStream();
+  const logStream = createLogStream({ capacity: config.logStreamBufferSize });
   await configureLogging({
     service: "api",
     environment: config.environment,
@@ -36,6 +36,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     checkDatabase: () => checkDatabase(database.db),
     logger,
     webOrigin: config.webOrigin,
+    ...(config.logStreamEnabled ? { logStream, logStreamHeartbeatMs: config.logStreamHeartbeatMs } : {}),
   });
   const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port });
   logger.info("API server started", { event: "api.started", host: config.host, port: config.port });

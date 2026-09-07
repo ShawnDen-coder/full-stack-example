@@ -69,5 +69,8 @@ infra-up:
 infra-down:
     podman compose -f container/compose.yaml down
 
-infra-logs:
-    podman compose -f container/compose.yaml logs -f postgres
+infra-logs service="postgres":
+    podman compose -f container/compose.yaml logs -f {{service}}
+
+otel-logs:
+    podman compose -f container/compose.yaml logs -f otel-collector

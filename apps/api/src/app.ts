@@ -10,11 +10,15 @@ import { honoLogger } from "@logtape/hono";
 import { trace } from "@opentelemetry/api";
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { appFactory } from "./factory.js";
+import { createLogStreamRoute } from "./log-stream.js";
+import type { LogStream } from "@full-stack-example/logging";
 
 export function createApp(options: {
   readonly checkDatabase: () => Promise<void>;
   readonly logger: Logger;
   readonly webOrigin: string;
+  readonly logStream?: LogStream;
+  readonly logStreamHeartbeatMs?: number;
 }) {
   const routes = appFactory
     .createApp()
@@ -59,6 +63,12 @@ export function createApp(options: {
         logger: options.logger.getChild("system"),
       }),
     );
+  if (options.logStream) {
+    routes.get(
+      "/api/logs/stream",
+      createLogStreamRoute({ stream: options.logStream, heartbeatMs: options.logStreamHeartbeatMs ?? 15_000 }),
+    );
+  }
   return routes;
 }
 
