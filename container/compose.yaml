@@ -1,4 +1,31 @@
 services:
+  app:
+    profiles: [application]
+    build:
+      context: ..
+      dockerfile: container/Dockerfile
+    environment:
+      DATABASE_URL: postgres://app:app@postgres:5432/app
+      HOST: 0.0.0.0
+      PORT: 3000
+      WEB_ORIGIN: http://localhost:3000
+      WEB_ASSETS_DIR: ./public
+      NODE_ENV: production
+      LOG_LEVEL: info
+      LOG_PRETTY: "false"
+      LOG_STREAM_ENABLED: "false"
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_METRIC_EXPORT_INTERVAL: 10000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector-health:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
   otel-collector:
     image: otel/opentelemetry-collector:0.121.0
     command: ["--config=/etc/otelcol/config.yaml"]
@@ -8,6 +35,23 @@ services:
       - "13133:13133"
     volumes:
       - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+
+  otel-collector-health:
+    profiles: [application]
+    image: curlimages/curl:8.12.1
+    command:
+      - --fail
+      - --silent
+      - --show-error
+      - --retry
+      - "30"
+      - --retry-delay
+      - "2"
+      - http://otel-collector:13133/
+    depends_on:
+      - otel-collector
+    restart: "no"
+
   postgres:
     image: postgres:17-alpine
     environment:
