@@ -3,13 +3,12 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
     "paths": {
-      "@full-stack-example/database": ["packages/database/src/index.ts"],
-      "@full-stack-example/logging": ["packages/logging/src/index.ts"],
-      "@full-stack-example/system": ["packages/system/src/index.ts"],
-      "@full-stack-example/api-client": ["packages/api-client/src/index.ts"],
-      "@full-stack-example/api/contract": ["apps/api/src/contract.ts"]
+      "@full-stack-example/database": ["./packages/database/src/index.ts"],
+      "@full-stack-example/logging": ["./packages/logging/src/index.ts"],
+      "@full-stack-example/system": ["./packages/system/src/index.ts"],
+      "@full-stack-example/api-client": ["./packages/api-client/src/index.ts"],
+      "@full-stack-example/api/contract": ["./apps/api/src/contract.ts"]
     },
     "lib": ["ES2022"],
     "strict": true,

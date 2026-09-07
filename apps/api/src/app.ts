@@ -1,17 +1,16 @@
-import { bodyLimit } from "hono/body-limit";
-import { cors } from "hono/cors";
-import type { ApplyGlobalResponse } from "hono/client";
-import { secureHeaders } from "hono/secure-headers";
-import { timeout } from "hono/timeout";
-import { requestId } from "hono/request-id";
+import type { Logger, LogStream } from "@full-stack-example/logging";
 import { createSystemModule } from "@full-stack-example/system";
-import type { Logger } from "@full-stack-example/logging";
+import { httpInstrumentationMiddleware } from "@hono/otel";
 import { honoLogger } from "@logtape/hono";
 import { trace } from "@opentelemetry/api";
-import { httpInstrumentationMiddleware } from "@hono/otel";
+import { bodyLimit } from "hono/body-limit";
+import type { ApplyGlobalResponse } from "hono/client";
+import { cors } from "hono/cors";
+import { requestId } from "hono/request-id";
+import { secureHeaders } from "hono/secure-headers";
+import { timeout } from "hono/timeout";
 import { appFactory } from "./factory.js";
 import { createLogStreamRoute } from "./log-stream.js";
-import type { LogStream } from "@full-stack-example/logging";
 
 export function createApp(options: {
   readonly checkDatabase: () => Promise<void>;
