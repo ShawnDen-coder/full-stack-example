@@ -1,5 +1,5 @@
-import { hc } from "hono/client";
 import type { AppType } from "@full-stack-example/api/contract";
+import { hc } from "hono/client";
 
 export type ApiClient = ReturnType<typeof hc<AppType>>;
 

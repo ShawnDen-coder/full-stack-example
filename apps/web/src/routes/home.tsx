@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { createApiClient, parseResponse } from "@full-stack-example/api-client";
+import { useQuery } from "@tanstack/react-query";
 
 const api = createApiClient(import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000");
 
