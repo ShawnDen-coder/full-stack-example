@@ -13,6 +13,35 @@ just launch
 
 `just launch` 会启动 PostgreSQL 与 OpenTelemetry Collector、执行迁移，并运行 API（`http://localhost:3000`）与 Web（`http://localhost:5173`）。默认退出时保留基础设施；`just launch-clean` 会停止容器但不会删除数据卷。
 
+## 开发流程与热更新
+
+从干净环境开始时依次执行：
+
+```bash
+just init
+Copy-Item .env.example .env
+just launch-doctor
+just launch
+```
+
+开发服务由两个 watch 进程组成：
+
+- API 使用 `tsx watch`。修改 API 或被 API 直接引用的共享 TypeScript 包后，进程会自动重启；这不是保留运行时状态的 HMR。
+- Web 使用 Vite。React 组件和样式支持 HMR，通常无需完整刷新浏览器；`api-client` 通过 Vite alias 直接加载源码，修改后会重新编译。
+
+API 重启会丢失进程内状态（包括 SSE 日志流和临时状态），但不会删除 PostgreSQL 数据。修改数据库 schema 或 migration 后需要显式执行：
+
+```bash
+just db-generate
+just db-migrate
+```
+
+修改 `.env`、依赖、Vite/TypeScript/Compose 配置后，请停止当前进程并重新运行 `just launch`。`just stack-up` 是生产形态验证，不支持源码热更新；源码变化后需要重新构建镜像。
+
+开发地址：Web `http://localhost:5173`，API `http://localhost:3000`，Health `http://localhost:3000/health`，Collector health `http://localhost:13133`。
+
+按 `Ctrl+C` 停止宿主机 API/Web；默认保留基础设施。使用 `just launch-clean` 同时停止基础设施，使用 `just infra-down` 仅停止基础设施。
+
 ## 常用命令
 
 ```bash
@@ -27,6 +56,21 @@ just otel-logs
 
 `just check` 是日常快速反馈，只执行只读 lint、类型检查和源码测试，不要求预先构建；测试由根 Vitest 配置运行一次。
 `just verify` 在此基础上构建全部 workspace，适合作为提交或发布前的完整质量门禁。
+
+命令分层如下：
+
+| 命令 | 用途 |
+| --- | --- |
+| `just dev` | 仅启动 API/Web 热更新开发进程 |
+| `just launch` | 启动基础设施、迁移数据库并启动开发进程 |
+| `just check` | lint、typecheck、源码测试，不构建 `dist` |
+| `just test-watch` | Vitest 监听模式 |
+| `just verify` | `check` 后构建全部 workspace |
+| `just container-build` | 构建单一生产镜像 |
+| `just stack-up` | 启动 PostgreSQL、Collector 和应用容器 |
+| `just stack-down` | 停止完整容器栈 |
+
+日常修改使用 `just launch` 或 `just dev`，提交前使用 `just check`，发布或容器验证使用 `just verify` 与 `just stack-up`。测试直接消费 TypeScript 源码，不依赖预先存在的 `dist`。
 
 `container/Dockerfile` 会在干净环境中安装锁定依赖并构建完整项目，最终生成一个同时提供 API 和 Web 的 Node 镜像：
 
@@ -67,3 +111,11 @@ curl -N http://localhost:3000/api/logs/stream
 ```
 
 该流只保留当前 API 进程的有限内存记录，重启即丢失；它不是审计或长期日志存储。生产环境必须先提供管理员认证。
+
+## 计划状态与边界
+
+当前已完成：React/Vite 与 Hono API workspace、`setupXxxApp(app, options)` 依赖倒置组合、LogTape 脱敏日志、OpenTelemetry Collector、开发期 SSE 日志流、Hono 单进程托管生产 Web、单镜像 Dockerfile/Compose profile，以及根级 Biome、统一 Vitest 和 `check`/`verify` 验证链路。
+
+当前明确不包含 Loki、OpenObserve、Tempo、Prometheus、Redis、缓存、日志持久化或 OpenAPI/Orval。SSE 是单进程、易失、非审计的实时诊断流，生产环境在管理员认证完成前禁止启用。HonoX 调研结论是暂不引入 SSR、SSG、文件路由或 islands，仅借鉴其构建边界和测试思路。
+
+后续可按需求增加管理员认证与日志页面、多实例日志聚合或持久化后端，并保持现有 SSE 事件协议兼容。
