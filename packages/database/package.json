@@ -22,7 +22,6 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@full-stack-example/todos": "workspace:*",
     "drizzle-orm": "^0.44.7",
     "postgres": "^3.4.7",
     "zod": "catalog:"

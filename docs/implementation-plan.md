@@ -8,7 +8,7 @@
 apps/api       Hono HTTP/RPC 宿主、SSE、OpenTelemetry 生命周期
 apps/web       React/Vite、TanStack Query 与 Hono RPC 客户端
 packages/api-client  浏览器安全的 hc 封装
-packages/database    Drizzle、postgres.js 与迁移
+packages/database    Drizzle schema、postgres.js 连接与迁移
 packages/logging     LogTape、脱敏与进程内日志流
 packages/system      Health route/service/schema
 container            单镜像 Dockerfile、Compose、Collector 配置与 ignore 规则

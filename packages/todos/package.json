@@ -18,7 +18,9 @@
   },
   "type": "module",
   "dependencies": {
+    "@full-stack-example/database": "workspace:*",
     "@hono/zod-validator": "catalog:",
+    "drizzle-orm": "^0.44.7",
     "hono": "catalog:",
     "zod": "catalog:"
   }

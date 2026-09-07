@@ -1,7 +1,7 @@
-import type { CreateTodoInput, Todo, UpdateTodoInput } from "@full-stack-example/todos";
+import type { Database } from "@full-stack-example/database";
+import { todos } from "@full-stack-example/database";
 import { desc, eq } from "drizzle-orm";
-import type { Database } from "./client.js";
-import { todos } from "./schema/index.js";
+import type { CreateTodoInput, Todo, UpdateTodoInput } from "./schemas.js";
 
 export function createTodoRepository(database: Database) {
   return {
