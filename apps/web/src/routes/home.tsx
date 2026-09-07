@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { createApiClient } from "@full-stack-example/api-client";
+import { createApiClient, parseResponse } from "@full-stack-example/api-client";
 
 const api = createApiClient(import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000");
 
 async function getHealth() {
   const response = await api.health.$get();
-  return response.json();
+  if (response.status === 200 || response.status === 503) return response.json();
+  return parseResponse(response);
 }
 
 export function Home() {

@@ -1,10 +1,12 @@
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
-import { Hono } from "hono";
+import type { ApplyGlobalResponse } from "hono/client";
 import { secureHeaders } from "hono/secure-headers";
 import { timeout } from "hono/timeout";
+import { requestId } from "hono/request-id";
 import { createSystemModule } from "@full-stack-example/system";
 import type { Logger } from "pino";
+import { appFactory } from "./factory.js";
 import { requestLogging } from "./middleware.js";
 
 export function createApp(options: {
@@ -12,7 +14,9 @@ export function createApp(options: {
   readonly logger: Logger;
   readonly webOrigin: string;
 }) {
-  const routes = new Hono<{ Variables: { logger: Logger } }>()
+  const routes = appFactory
+    .createApp()
+    .use("*", requestId({ limitLength: 128 }))
     .use("*", requestLogging(options.logger))
     .use("*", cors({ origin: options.webOrigin }))
     .use("*", secureHeaders())
@@ -35,4 +39,7 @@ export function createApp(options: {
   return routes;
 }
 
-export type AppType = ReturnType<typeof createApp>;
+export type AppType = ApplyGlobalResponse<
+  ReturnType<typeof createApp>,
+  { 500: { json: { error: string } } }
+>;

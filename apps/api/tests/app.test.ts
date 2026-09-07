@@ -47,4 +47,30 @@ describe("API", () => {
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ error: "Not found" });
   });
+
+  it("preserves a valid inbound request ID", async () => {
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      webOrigin: "http://localhost:5173",
+    });
+    const response = await app.request("http://localhost/health", {
+      headers: { "X-Request-ID": "upstream-trace-123" },
+    });
+    expect(response.headers.get("X-Request-ID")).toBe("upstream-trace-123");
+  });
+
+  it("replaces an invalid inbound request ID", async () => {
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      webOrigin: "http://localhost:5173",
+    });
+    const response = await app.request("http://localhost/health", {
+      headers: { "X-Request-ID": "invalid request id" },
+    });
+    expect(response.headers.get("X-Request-ID")).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu,
+    );
+  });
 });
