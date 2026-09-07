@@ -1,12 +1,15 @@
-import { Hono } from "hono";
 import type { Logger } from "@full-stack-example/logging";
+import type { Env, Hono } from "hono";
 import { getHealth } from "./service.js";
 
-export function createSystemModule(options: {
-  readonly checkDatabase: () => Promise<void>;
-  readonly logger: Logger;
-}) {
-  return new Hono().get("/health", async (context) => {
+export function setupSystemApp<E extends Env>(
+  app: Hono<E>,
+  options: {
+    readonly checkDatabase: () => Promise<void>;
+    readonly logger: Logger;
+  },
+) {
+  return app.get("/health", async (context) => {
     const health = await getHealth(options.checkDatabase);
     context.header("Cache-Control", "no-store");
     if (health.status === "ok") return context.json(health, 200);
