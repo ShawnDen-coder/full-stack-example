@@ -17,12 +17,16 @@ export function createLogStreamRoute(options: {
       let unsubscribe: () => void = () => undefined;
       try {
         while (!stream.aborted) {
-          const next = await new Promise<ReturnType<LogStream["snapshotAfter"]>["records"][number]>((resolve) => {
-            unsubscribe = options.stream.subscribe(resolve);
+          const next = await new Promise<ReturnType<LogStream["snapshotAfter"]>["records"][number] | undefined>((resolve) => {
+            const timer = setTimeout(() => resolve(undefined), options.heartbeatMs);
+            unsubscribe = options.stream.subscribe((record) => {
+              clearTimeout(timer);
+              resolve(record);
+            });
           });
           unsubscribe();
-          await stream.writeSSE({ event: "log", id: next.id, data: JSON.stringify(next) });
-          await stream.sleep(options.heartbeatMs);
+          if (next) await stream.writeSSE({ event: "log", id: next.id, data: JSON.stringify(next) });
+          else await stream.write(": heartbeat\n\n");
         }
       } finally {
         unsubscribe();
