@@ -17,9 +17,7 @@ RUN pnpm install --frozen-lockfile \
   --filter @full-stack-example/web
 
 COPY . .
-RUN pnpm --filter @full-stack-example/api... run build
-RUN pnpm --filter @full-stack-example/api-client run build
-RUN pnpm --filter @full-stack-example/web run build
+RUN pnpm -r run build
 RUN pnpm --filter @full-stack-example/api --prod deploy --legacy /output/app
 RUN cp -R apps/web/dist /output/app/public
 
