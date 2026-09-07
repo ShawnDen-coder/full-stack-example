@@ -151,9 +151,6 @@ importers:
 
   packages/database:
     dependencies:
-      '@full-stack-example/todos':
-        specifier: workspace:*
-        version: link:../todos
       drizzle-orm:
         specifier: ^0.44.7
         version: 0.44.7(@opentelemetry/api@1.9.1)(postgres@3.4.9)
@@ -197,9 +194,15 @@ importers:
 
   packages/todos:
     dependencies:
+      '@full-stack-example/database':
+        specifier: workspace:*
+        version: link:../database
       '@hono/zod-validator':
         specifier: 'catalog:'
         version: 0.7.6(hono@4.13.7)(zod@4.5.4)
+      drizzle-orm:
+        specifier: ^0.44.7
+        version: 0.44.7(@opentelemetry/api@1.9.1)(postgres@3.4.9)
       hono:
         specifier: 'catalog:'
         version: 4.13.7

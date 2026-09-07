@@ -11,10 +11,10 @@
 │   └── web/                      # React/Vite 单页应用：页面、路由、TanStack Query 数据访问
 ├── packages/                     # 可复用的领域与基础设施模块
 │   ├── api-client/               # 基于 Hono AppType 的浏览器安全 RPC 客户端与错误处理
-│   ├── database/                 # Drizzle schema、迁移、PostgreSQL 连接和数据仓储实现
+│   ├── database/                 # Drizzle schema、迁移和 PostgreSQL 连接
 │   ├── logging/                  # LogTape 配置、脱敏日志与开发期 SSE 日志流
 │   ├── system/                   # 系统健康检查的 schema、service 和 HTTP 路由
-│   └── todos/                    # Todo 领域 schema、service、仓储契约和 HTTP 路由
+│   └── todos/                    # Todo schema、Drizzle repository、service 和 HTTP 路由
 ├── container/                    # 单镜像 Dockerfile、Compose 和 OpenTelemetry Collector 配置
 ├── docs/                         # 架构决策、设计说明和实施计划
 ├── scripts/                      # 本地基础设施、迁移与开发子进程编排
