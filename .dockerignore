@@ -1,0 +1,14 @@
+# Compose providers read the ignore file from the build context root.
+# Keep this in sync with container/Dockerfile.dockerignore.
+.git
+.github
+.vscode
+.env
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+logs
+*.log
+*.local

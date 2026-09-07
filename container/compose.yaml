@@ -45,6 +45,7 @@ services:
       - --show-error
       - --retry
       - "30"
+      - --retry-connrefused
       - --retry-delay
       - "2"
       - http://otel-collector:13133/
