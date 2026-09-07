@@ -34,7 +34,7 @@ typecheck:
     pnpm exec tsc -p tsconfig.scripts.json --noEmit
 
 test:
-    pnpm -r --if-present run test
+    pnpm exec vitest run --config vitest.config.ts
 
 lint:
     pnpm exec biome check --config-path biome.json --write .
