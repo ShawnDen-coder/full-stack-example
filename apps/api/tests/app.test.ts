@@ -1,12 +1,12 @@
-import { createLogger } from "@full-stack-example/logging";
-import { describe, expect, it } from "vitest";
+import { configureLogging, getAppLogger } from "@full-stack-example/logging";
+import { beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 
-const logger = createLogger({
-  service: "test",
-  environment: "test",
-  level: "silent",
-  pretty: false,
+let logger = getAppLogger("test");
+
+beforeAll(async () => {
+  await configureLogging({ service: "test", environment: "test", level: "silent", pretty: false });
+  logger = getAppLogger("test");
 });
 
 describe("API", () => {

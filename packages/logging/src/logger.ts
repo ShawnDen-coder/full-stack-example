@@ -1,47 +1,94 @@
-import pino, { type Logger } from "pino";
+import { AsyncLocalStorage } from "node:async_hooks";
+import {
+  configure,
+  dispose,
+  getConsoleSink,
+  getLogger,
+  jsonLinesFormatter,
+  type Logger,
+  type LogRecord,
+  type Sink,
+} from "@logtape/logtape";
+import { getPrettyFormatter } from "@logtape/pretty";
+import { DEFAULT_REDACT_FIELDS, redactByField } from "@logtape/redaction";
+import { createLogStream as makeLogStream, type LogStream } from "./stream.js";
 
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal" | "silent";
 export type Environment = "development" | "test" | "production";
 
-export interface CreateLoggerOptions {
+export interface ConfigureLoggingOptions {
   readonly service: string;
   readonly environment: Environment;
   readonly level: LogLevel;
   readonly version?: string;
   readonly pretty: boolean;
+  readonly stream?: LogStream;
 }
 
-export function createLogger(options: CreateLoggerOptions): Logger {
-  const loggerOptions = {
-    level: options.level,
-    base: {
-      service: options.service,
-      environment: options.environment,
-      ...(options.version ? { version: options.version } : {}),
-    },
-    redact: {
-      paths: [
-        "authorization",
-        "cookie",
-        "set-cookie",
-        "password",
-        "token",
-        "accessToken",
-        "refreshToken",
-        "apiKey",
-        "secret",
-        "databaseUrl",
-        "req.headers.authorization",
-        "req.headers.cookie",
-        "res.headers.set-cookie",
-      ],
-      censor: "[Redacted]",
-    },
-  };
-  return options.pretty && options.environment !== "production"
-    ? pino({
-        ...loggerOptions,
-        transport: { target: "pino-pretty", options: { colorize: true, singleLine: true } },
-      })
-    : pino(loggerOptions);
+const redactedFields = [
+  ...DEFAULT_REDACT_FIELDS,
+  "authorization",
+  "cookie",
+  "set-cookie",
+  "accessToken",
+  "refreshToken",
+  "apiKey",
+  "databaseUrl",
+];
+
+function toLogTapeLevel(level: LogLevel): "trace" | "debug" | "info" | "warning" | "error" | "fatal" | null {
+  if (level === "silent") return null;
+  return level === "warn" ? "warning" : level;
 }
+
+function streamSink(stream: LogStream): Sink {
+  return (record: LogRecord) => stream.publish(record);
+}
+
+export async function configureLogging(options: ConfigureLoggingOptions): Promise<void> {
+  const consoleSink = getConsoleSink({
+    formatter:
+      options.pretty && options.environment !== "production"
+        ? getPrettyFormatter({ properties: true, icons: false })
+        : jsonLinesFormatter,
+  });
+  const sinks: Record<string, Sink> = {
+    console: redactByField(consoleSink, {
+      fieldPatterns: redactedFields,
+      action: () => "[Redacted]",
+    }) as Sink,
+  };
+  if (options.stream) {
+    sinks.stream = redactByField(streamSink(options.stream), {
+      fieldPatterns: redactedFields,
+      action: () => "[Redacted]",
+    }) as Sink;
+  }
+  await configure({
+    reset: true,
+    contextLocalStorage: new AsyncLocalStorage<Record<string, unknown>>(),
+    sinks,
+    loggers: [
+      {
+        category: "full-stack-example",
+        sinks: options.stream ? ["console", "stream"] : ["console"],
+        lowestLevel: toLogTapeLevel(options.level),
+      },
+      { category: "logtape", sinks: ["console"], lowestLevel: "error" },
+    ],
+  });
+}
+
+export function getAppLogger(category: string | readonly string[]): Logger {
+  return getLogger(["full-stack-example", ...(typeof category === "string" ? category.split(".") : category)]);
+}
+
+export function createLogStream(options?: { readonly capacity?: number }): LogStream {
+  return makeLogStream(options);
+}
+
+export async function shutdownLogging(): Promise<void> {
+  await dispose();
+}
+
+export type { Logger } from "@logtape/logtape";

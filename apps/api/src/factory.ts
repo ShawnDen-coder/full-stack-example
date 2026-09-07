@@ -1,6 +1,6 @@
 import { createFactory } from "hono/factory";
 import type { RequestIdVariables } from "hono/request-id";
-import type { Logger } from "pino";
+import type { Logger } from "@full-stack-example/logging";
 
 export type AppEnv = {
   Variables: RequestIdVariables & {

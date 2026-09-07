@@ -10,6 +10,9 @@ const environmentSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   LOG_LEVEL: z.enum(logLevels).optional(),
   LOG_PRETTY: z.enum(["true", "false"]).default("true"),
+  OTEL_ENABLED: z.enum(["true", "false"]).optional(),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.url().default("http://localhost:4318"),
+  OTEL_METRIC_EXPORT_INTERVAL: z.coerce.number().int().min(1000).default(10_000),
 });
 
 export interface ApiConfig {
@@ -20,6 +23,9 @@ export interface ApiConfig {
   readonly environment: Environment;
   readonly logLevel: LogLevel;
   readonly pretty: boolean;
+  readonly otelEnabled: boolean;
+  readonly otelEndpoint: string;
+  readonly otelMetricExportInterval: number;
 }
 
 export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiConfig {
@@ -34,5 +40,8 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
     environment: parsed.NODE_ENV,
     logLevel: parsed.LOG_LEVEL ?? defaultLevel,
     pretty: parsed.LOG_PRETTY === "true" && parsed.NODE_ENV !== "production",
+    otelEnabled: parsed.OTEL_ENABLED ? parsed.OTEL_ENABLED === "true" : parsed.NODE_ENV !== "test",
+    otelEndpoint: parsed.OTEL_EXPORTER_OTLP_ENDPOINT,
+    otelMetricExportInterval: parsed.OTEL_METRIC_EXPORT_INTERVAL,
   };
 }
