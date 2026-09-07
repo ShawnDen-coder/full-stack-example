@@ -49,7 +49,7 @@ export function createApp(options: {
         },
       }),
     )
-    .use("*", cors({ origin: options.webOrigin }))
+    .use("*", cors({ origin: options.webOrigin, credentials: true }))
     .use("*", secureHeaders())
     .use("*", bodyLimit({ maxSize: 1_048_576 }))
     .use("*", timeout(10_000))
