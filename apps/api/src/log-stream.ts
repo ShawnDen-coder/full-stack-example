@@ -1,9 +1,9 @@
 import type { LogStream } from "@full-stack-example/logging";
-import type { Env, Hono } from "hono";
+import type { Env, Hono, Schema } from "hono";
 import { streamSSE } from "hono/streaming";
 
-export function setupLogStreamApp<E extends Env>(
-  app: Hono<E>,
+export function setupLogStreamApp<E extends Env, S extends Schema, BasePath extends string>(
+  app: Hono<E, S, BasePath>,
   options: { readonly stream: LogStream | undefined; readonly heartbeatMs: number },
 ) {
   return app.get("/api/logs/stream", async (context) => {
