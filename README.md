@@ -144,7 +144,7 @@ pnpm --filter @full-stack-example/database db:migrate
 
 ## 日志与遥测
 
-LogTape 在开发环境输出可读日志，生产输出脱敏 JSON Lines。Trace 和 metrics 经 OTLP 发往本地 Collector；当前不包含 Loki、OpenObserve、Tempo、Prometheus、Redis 或缓存。
+LogTape 在开发环境输出可读日志，生产输出脱敏 JSON Lines。设置 `LOG_FILE` 后，API 会追加经过同样脱敏处理的 JSON Lines 文件；开发默认写入 `logs/api.jsonl`，生产 Compose 写入命名卷挂载的 `/app/logs/api.jsonl`。Trace 和 metrics 经 OTLP 发往本地 Collector；当前不包含 Loki、OpenObserve、Tempo、Prometheus、Redis 或缓存。
 
 实时日志 SSE 默认关闭。仅开发环境可在 `.env` 设置 `LOG_STREAM_ENABLED=true` 后访问 `GET /api/logs/stream`：
 

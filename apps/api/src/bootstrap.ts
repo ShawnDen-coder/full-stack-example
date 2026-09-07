@@ -26,6 +26,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     level: config.logLevel,
     pretty: config.pretty,
     stream: logStream,
+    ...(config.logFile ? { filePath: config.logFile } : {}),
   });
   const logger = getAppLogger(["api", "bootstrap"]);
   logger.info("Running database migrations", { event: "database.migration.started" });
