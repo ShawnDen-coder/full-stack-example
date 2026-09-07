@@ -23,6 +23,10 @@ Use `just check` for the full quality gate. The API uses LogTape, OpenTelemetry 
 
 Use TypeScript ES modules, strict compiler settings, two-space indentation, and double quotes in source files governed by Biome. Keep imports organized and avoid unused locals or parameters. Use `camelCase` for variables/functions, `PascalCase` for types/classes, and lowercase kebab-case for new package directories.
 
+## API Composition
+
+Keep `apps/api/src/app.ts` as the explicit composition root. Cross-cutting HTTP policy belongs there; feature and infrastructure modules receive the host Hono app plus explicit dependencies through concrete `setupXxxApp(app, options)` functions and return the chained app. Do not let modules create a second host app unless they are intentionally mounted sub-applications. Avoid a generic module interface or registry: it erases Hono's precise route types and weakens the exported RPC `AppType` contract.
+
 ## Testing Guidelines
 
 Tests use Vitest and live under an app or package's `tests/` directory. Name files `*.test.ts` and describe behavior from the caller's perspective. Add or update tests with every behavioral change. Keep tests deterministic and do not depend on network services.
