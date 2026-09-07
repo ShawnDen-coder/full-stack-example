@@ -7,6 +7,7 @@ const environmentSchema = z.object({
   HOST: z.string().default("0.0.0.0"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   WEB_ORIGIN: z.url().default("http://localhost:5173"),
+  WEB_ASSETS_DIR: z.string().min(1).optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   LOG_LEVEL: z.enum(logLevels).optional(),
   LOG_PRETTY: z.enum(["true", "false"]).default("true"),
@@ -23,6 +24,7 @@ export interface ApiConfig {
   readonly host: string;
   readonly port: number;
   readonly webOrigin: string;
+  readonly webAssetsDirectory?: string;
   readonly environment: Environment;
   readonly logLevel: LogLevel;
   readonly pretty: boolean;
@@ -45,6 +47,7 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
     host: parsed.HOST,
     port: parsed.PORT,
     webOrigin: parsed.WEB_ORIGIN,
+    ...(parsed.WEB_ASSETS_DIR ? { webAssetsDirectory: parsed.WEB_ASSETS_DIR } : {}),
     environment: parsed.NODE_ENV,
     logLevel: parsed.LOG_LEVEL ?? defaultLevel,
     pretty: parsed.LOG_PRETTY === "true" && parsed.NODE_ENV !== "production",

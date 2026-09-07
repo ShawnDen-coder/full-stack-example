@@ -11,6 +11,7 @@ import { secureHeaders } from "hono/secure-headers";
 import { timeout } from "hono/timeout";
 import { appFactory } from "./factory.js";
 import { setupLogStreamApp } from "./log-stream.js";
+import { setupWebApp } from "./web-app.js";
 
 export function createApp(options: {
   readonly checkDatabase: () => Promise<void>;
@@ -18,6 +19,7 @@ export function createApp(options: {
   readonly webOrigin: string;
   readonly logStream?: LogStream;
   readonly logStreamHeartbeatMs?: number;
+  readonly webAssetsDirectory?: string;
 }) {
   const app = appFactory
     .createApp()
@@ -59,10 +61,11 @@ export function createApp(options: {
     checkDatabase: options.checkDatabase,
     logger: options.logger.getChild("system"),
   });
-  return setupLogStreamApp(withSystem, {
+  const withLogStream = setupLogStreamApp(withSystem, {
     stream: options.logStream,
     heartbeatMs: options.logStreamHeartbeatMs ?? 15_000,
   });
+  return setupWebApp(withLogStream, { assetsDirectory: options.webAssetsDirectory });
 }
 
 export type AppType = ApplyGlobalResponse<

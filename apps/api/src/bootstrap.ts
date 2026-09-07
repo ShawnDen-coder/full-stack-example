@@ -61,6 +61,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       checkDatabase: () => checkDatabase(databaseContext.db),
       logger,
       webOrigin: config.webOrigin,
+      ...(config.webAssetsDirectory ? { webAssetsDirectory: config.webAssetsDirectory } : {}),
       ...(config.logStreamEnabled
         ? { logStream, logStreamHeartbeatMs: config.logStreamHeartbeatMs }
         : {}),
