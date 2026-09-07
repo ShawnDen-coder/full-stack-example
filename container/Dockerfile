@@ -11,10 +11,11 @@ COPY packages/api-client/package.json packages/api-client/package.json
 COPY packages/database/package.json packages/database/package.json
 COPY packages/logging/package.json packages/logging/package.json
 COPY packages/system/package.json packages/system/package.json
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --filter @full-stack-example/api... --filter @full-stack-example/web
 
 COPY . .
-RUN pnpm -r run build
+RUN pnpm --filter @full-stack-example/api... run build
+RUN pnpm --filter @full-stack-example/web run build
 RUN pnpm --filter @full-stack-example/api --prod deploy --legacy /output/app
 RUN cp -R apps/web/dist /output/app/public
 
