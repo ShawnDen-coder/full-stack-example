@@ -1,34 +1,38 @@
-import { streamSSE } from "hono/streaming";
 import type { LogStream } from "@full-stack-example/logging";
+import type { Env, Hono } from "hono";
+import { streamSSE } from "hono/streaming";
 
-export function createLogStreamRoute(options: {
-  readonly stream: LogStream;
-  readonly heartbeatMs: number;
-}) {
-  return async (context: {
-    req: { header: (name: string) => string | undefined };
-    header: (name: string, value: string) => void;
-  }) => {
-    context.header("Cache-Control", "no-cache, no-transform");
-    context.header("X-Accel-Buffering", "no");
-    const subscription = options.stream.subscribe(context.req.header("Last-Event-ID"));
-    return streamSSE(context as never, async (stream) => {
-      stream.onAbort(subscription.close);
-      await stream.writeSSE({
+export function setupLogStreamApp<E extends Env>(
+  app: Hono<E>,
+  options: { readonly stream: LogStream | undefined; readonly heartbeatMs: number },
+) {
+  return app.get("/api/logs/stream", async (context) => {
+    if (!options.stream) return context.notFound();
+    const stream = options.stream;
+    const requestContext: {
+      req: { header: (name: string) => string | undefined };
+      header: (name: string, value: string) => void;
+    } = context;
+    requestContext.header("Cache-Control", "no-cache, no-transform");
+    requestContext.header("X-Accel-Buffering", "no");
+    const subscription = stream.subscribe(requestContext.req.header("Last-Event-ID"));
+    return streamSSE(context, async (streaming) => {
+      streaming.onAbort(subscription.close);
+      await streaming.writeSSE({
         event: "ready",
-        data: JSON.stringify({ latestId: options.stream.latestId() }),
+        data: JSON.stringify({ latestId: stream.latestId() }),
         retry: 3000,
       });
       if (subscription.replay.truncated)
-        await stream.writeSSE({
+        await streaming.writeSSE({
           event: "reset",
           data: JSON.stringify({ reason: "buffer-truncated" }),
         });
       for (const record of subscription.replay.records)
-        await stream.writeSSE({ event: "log", id: record.id, data: JSON.stringify(record) });
+        await streaming.writeSSE({ event: "log", id: record.id, data: JSON.stringify(record) });
       let pending = subscription.next();
       try {
-        while (!stream.aborted) {
+        while (!streaming.aborted) {
           const result = await Promise.race([
             pending.then((record) => ({ record })),
             new Promise<{ readonly heartbeat: true }>((resolve) =>
@@ -36,15 +40,15 @@ export function createLogStreamRoute(options: {
             ),
           ]);
           if (subscription.overflowed()) {
-            await stream.writeSSE({
+            await streaming.writeSSE({
               event: "overflow",
               data: JSON.stringify({ reason: "slow-client" }),
             });
             return;
           }
-          if ("heartbeat" in result) await stream.write(": heartbeat\n\n");
+          if ("heartbeat" in result) await streaming.write(": heartbeat\n\n");
           else if (result.record) {
-            await stream.writeSSE({
+            await streaming.writeSSE({
               event: "log",
               id: result.record.id,
               data: JSON.stringify(result.record),
@@ -56,5 +60,5 @@ export function createLogStreamRoute(options: {
         subscription.close();
       }
     });
-  };
+  });
 }

@@ -1,5 +1,5 @@
 import type { Logger, LogStream } from "@full-stack-example/logging";
-import { createSystemModule } from "@full-stack-example/system";
+import { setupSystemApp } from "@full-stack-example/system";
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { honoLogger } from "@logtape/hono";
 import { trace } from "@opentelemetry/api";
@@ -10,7 +10,7 @@ import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 import { timeout } from "hono/timeout";
 import { appFactory } from "./factory.js";
-import { createLogStreamRoute } from "./log-stream.js";
+import { setupLogStreamApp } from "./log-stream.js";
 
 export function createApp(options: {
   readonly checkDatabase: () => Promise<void>;
@@ -19,7 +19,7 @@ export function createApp(options: {
   readonly logStream?: LogStream;
   readonly logStreamHeartbeatMs?: number;
 }) {
-  const routes = appFactory
+  const app = appFactory
     .createApp()
     .use("*", httpInstrumentationMiddleware({ serviceName: "full-stack-example-api" }))
     .use("*", requestId({ limitLength: 128 }))
@@ -54,26 +54,15 @@ export function createApp(options: {
     .use("*", bodyLimit({ maxSize: 1_048_576 }))
     .use("*", timeout(10_000))
     .notFound((context) => context.json({ error: "Not found" }, 404))
-    .onError((_error, context) => {
-      return context.json({ error: "Internal server error" }, 500);
-    })
-    .route(
-      "/",
-      createSystemModule({
-        checkDatabase: options.checkDatabase,
-        logger: options.logger.getChild("system"),
-      }),
-    );
-  if (options.logStream) {
-    routes.get(
-      "/api/logs/stream",
-      createLogStreamRoute({
-        stream: options.logStream,
-        heartbeatMs: options.logStreamHeartbeatMs ?? 15_000,
-      }),
-    );
-  }
-  return routes;
+    .onError((_error, context) => context.json({ error: "Internal server error" }, 500));
+  const withSystem = setupSystemApp(app, {
+    checkDatabase: options.checkDatabase,
+    logger: options.logger.getChild("system"),
+  });
+  return setupLogStreamApp(withSystem, {
+    stream: options.logStream,
+    heartbeatMs: options.logStreamHeartbeatMs ?? 15_000,
+  });
 }
 
 export type AppType = ApplyGlobalResponse<
