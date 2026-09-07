@@ -2,6 +2,30 @@
 
 轻量化 TypeScript 模块化单体：React/Vite 前端、Hono RPC API、Drizzle/PostgreSQL、LogTape 与 OpenTelemetry Collector。
 
+## 模块结构
+
+```text
+.
+├── apps/                         # 可独立运行的应用
+│   ├── api/                      # Hono API 宿主：中间件、组合根、启动和生产静态资源托管
+│   └── web/                      # React/Vite 单页应用：页面、路由、TanStack Query 数据访问
+├── packages/                     # 可复用的领域与基础设施模块
+│   ├── api-client/               # 基于 Hono AppType 的浏览器安全 RPC 客户端与错误处理
+│   ├── database/                 # Drizzle schema、迁移、PostgreSQL 连接和数据仓储实现
+│   ├── logging/                  # LogTape 配置、脱敏日志与开发期 SSE 日志流
+│   ├── system/                   # 系统健康检查的 schema、service 和 HTTP 路由
+│   └── todos/                    # Todo 领域 schema、service、仓储契约和 HTTP 路由
+├── container/                    # 单镜像 Dockerfile、Compose 和 OpenTelemetry Collector 配置
+├── docs/                         # 架构决策、设计说明和实施计划
+├── scripts/                      # 本地基础设施、迁移与开发子进程编排
+├── biome.json                    # 全仓唯一的 lint 与格式化配置
+├── justfile                      # 安装、开发、测试、迁移和容器命令入口
+├── package.json                  # pnpm workspace 根依赖与工具版本
+└── pnpm-workspace.yaml           # workspace 包发现范围与共享依赖 catalog
+```
+
+`apps/api/src/app.ts` 是唯一的 HTTP 组合根。功能包通过 `setupXxxApp(app, options)` 注册路由并返回 Hono app，因而导出的 `AppType` 会传递到 `packages/api-client` 和 Web，避免前后端重复维护接口类型。
+
 ## 开始使用
 
 ```bash
@@ -99,6 +123,24 @@ just stack-down
 | Collector health | http://localhost:13133 |
 
 Health 端点为 `GET /health`，响应带 `Cache-Control: no-store`。浏览器端通过 Hono 的 `hc` 客户端和 TanStack Query 调用该端点，不生成 OpenAPI 或 Orval 客户端。
+
+## Todo 示例
+
+首页保留 API 与数据库健康检查，点击“打开 Todo”可进入 `http://localhost:5173/todos`。Todo 页面支持新增、完成/取消完成与删除，数据写入 PostgreSQL；生产环境则从同源地址的 `/todos` 访问。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `GET` | `/api/todos` | 返回按最新创建顺序排列的 Todo 列表。 |
+| `POST` | `/api/todos` | 创建 Todo，JSON body 为 `{ "title": "..." }`。 |
+| `PATCH` | `/api/todos/:id` | 更新完成状态，JSON body 为 `{ "completed": true }`。 |
+| `DELETE` | `/api/todos/:id` | 永久删除一个 Todo。 |
+
+Todo schema 变更后生成并执行迁移：
+
+```bash
+pnpm --filter @full-stack-example/database db:generate
+pnpm --filter @full-stack-example/database db:migrate
+```
 
 ## 日志与遥测
 

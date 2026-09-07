@@ -1,10 +1,7 @@
-import { createApiClient, parseResponse } from "@full-stack-example/api-client";
+import { parseResponse } from "@full-stack-example/api-client";
 import { useQuery } from "@tanstack/react-query";
-import { resolveApiBaseUrl } from "../api-base-url.js";
-
-const api = createApiClient(
-  resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL, globalThis.location.origin),
-);
+import { Link } from "react-router";
+import { api } from "../api.js";
 
 async function getHealth() {
   const response = await api.health.$get();
@@ -38,6 +35,9 @@ export function Home() {
             </div>
           ) : null}
           <div className="card-actions justify-end">
+            <Link className="btn btn-ghost" to="/todos">
+              打开 Todo
+            </Link>
             <button className="btn btn-primary" type="button" onClick={() => void health.refetch()}>
               重新检查
             </button>

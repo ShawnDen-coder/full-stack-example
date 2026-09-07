@@ -1,6 +1,7 @@
 import {
   checkDatabase,
   createDatabase,
+  createTodoRepository,
   defaultMigrationsFolder,
   migrateDatabase,
 } from "@full-stack-example/database";
@@ -10,6 +11,7 @@ import {
   getAppLogger,
   shutdownLogging,
 } from "@full-stack-example/logging";
+import { createTodoService } from "@full-stack-example/todos";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { parseConfig } from "./config.js";
@@ -57,10 +59,12 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     });
     const databaseContext = createDatabase({ databaseUrl: config.databaseUrl });
     database = databaseContext;
+    const todoService = createTodoService(createTodoRepository(databaseContext.db));
     const app = createApp({
       checkDatabase: () => checkDatabase(databaseContext.db),
       logger,
       webOrigin: config.webOrigin,
+      todoService,
       ...(config.webAssetsDirectory ? { webAssetsDirectory: config.webAssetsDirectory } : {}),
       ...(config.logStreamEnabled
         ? { logStream, logStreamHeartbeatMs: config.logStreamHeartbeatMs }

@@ -1,8 +1,15 @@
 import { configureLogging, getAppLogger } from "@full-stack-example/logging";
+import type { TodoService } from "@full-stack-example/todos";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 
 let logger = getAppLogger("test");
+const todoService: TodoService = {
+  listTodos: async () => [],
+  createTodo: async (input) => ({ id: 1, title: input.title, completed: false }),
+  updateTodo: async ({ id, completed }) => ({ id, title: "Todo", completed }),
+  deleteTodo: async () => true,
+};
 
 beforeAll(async () => {
   await configureLogging({ service: "test", environment: "test", level: "silent", pretty: false });
@@ -14,6 +21,7 @@ describe("API", () => {
     const app = createApp({
       checkDatabase: async () => undefined,
       logger,
+      todoService,
       webOrigin: "http://localhost:5173",
     });
     const response = await app.request("http://localhost/health");
@@ -30,6 +38,7 @@ describe("API", () => {
         throw new Error("postgres password");
       },
       logger,
+      todoService,
       webOrigin: "http://localhost:5173",
     });
     const response = await app.request("http://localhost/health");
@@ -41,6 +50,7 @@ describe("API", () => {
     const app = createApp({
       checkDatabase: async () => undefined,
       logger,
+      todoService,
       webOrigin: "http://localhost:5173",
     });
     const response = await app.request("http://localhost/unknown");
@@ -52,6 +62,7 @@ describe("API", () => {
     const app = createApp({
       checkDatabase: async () => undefined,
       logger,
+      todoService,
       webOrigin: "http://localhost:3000",
       webAssetsDirectory: "apps/api/tests/fixtures/web",
     });
@@ -74,6 +85,7 @@ describe("API", () => {
     const app = createApp({
       checkDatabase: async () => undefined,
       logger,
+      todoService,
       webOrigin: "http://localhost:3000",
       webAssetsDirectory: "apps/api/tests/fixtures/web",
     });
@@ -86,6 +98,7 @@ describe("API", () => {
     const app = createApp({
       checkDatabase: async () => undefined,
       logger,
+      todoService,
       webOrigin: "http://localhost:5173",
     });
     const response = await app.request("http://localhost/health", {
@@ -99,6 +112,7 @@ describe("API", () => {
     const app = createApp({
       checkDatabase: async () => undefined,
       logger,
+      todoService,
       webOrigin: "http://localhost:5173",
     });
     const response = await app.request("http://localhost/health", {
@@ -111,6 +125,7 @@ describe("API", () => {
     const app = createApp({
       checkDatabase: async () => undefined,
       logger,
+      todoService,
       webOrigin: "http://localhost:5173",
     });
     const response = await app.request("http://localhost/health", {
