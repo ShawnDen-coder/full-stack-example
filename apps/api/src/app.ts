@@ -5,7 +5,7 @@ import { secureHeaders } from "hono/secure-headers";
 import { timeout } from "hono/timeout";
 import { requestId } from "hono/request-id";
 import { createSystemModule } from "@full-stack-example/system";
-import { type Logger } from "@full-stack-example/logging";
+import type { Logger } from "@full-stack-example/logging";
 import { honoLogger } from "@logtape/hono";
 import { trace } from "@opentelemetry/api";
 import { httpInstrumentationMiddleware } from "@hono/otel";
@@ -42,7 +42,9 @@ export function createApp(options: {
             const spanContext = trace.getActiveSpan()?.spanContext();
             return {
               requestId: context.get("requestId"),
-              ...(spanContext?.traceId ? { traceId: spanContext.traceId, spanId: spanContext.spanId } : {}),
+              ...(spanContext?.traceId
+                ? { traceId: spanContext.traceId, spanId: spanContext.spanId }
+                : {}),
             };
           },
         },
@@ -66,7 +68,10 @@ export function createApp(options: {
   if (options.logStream) {
     routes.get(
       "/api/logs/stream",
-      createLogStreamRoute({ stream: options.logStream, heartbeatMs: options.logStreamHeartbeatMs ?? 15_000 }),
+      createLogStreamRoute({
+        stream: options.logStream,
+        heartbeatMs: options.logStreamHeartbeatMs ?? 15_000,
+      }),
     );
   }
   return routes;

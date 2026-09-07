@@ -9,7 +9,9 @@ export interface TelemetryOptions {
   readonly metricExportIntervalMillis: number;
 }
 
-export async function startTelemetry(options: TelemetryOptions): Promise<{ readonly shutdown: () => Promise<void> }> {
+export async function startTelemetry(
+  options: TelemetryOptions,
+): Promise<{ readonly shutdown: () => Promise<void> }> {
   if (!options.enabled) return { shutdown: async () => undefined };
   const sdk = new NodeSDK({
     traceExporter: new OTLPTraceExporter({ url: `${options.endpoint}/v1/traces` }),
