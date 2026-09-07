@@ -89,7 +89,7 @@ async function preflight(): Promise<void> {
   for (const file of ["container/compose.yaml", "packages/database/migrations"]) {
     if (!existsSync(resolve(root, file))) throw new Error(`Missing ${file}`);
   }
-  for (const port of [3000, 5173, 5432])
+  for (const port of [3000, 5173, 5432, 4318, 13133])
     if (!(await portAvailable(port))) throw new Error(`Port ${port} is already in use`);
 }
 
@@ -110,6 +110,7 @@ async function main(): Promise<void> {
     "--wait-timeout",
     "60",
     "postgres",
+    "otel-collector",
   ]);
   await run(pnpmCommand, pnpmArgs(["--filter", "@full-stack-example/database", "db:migrate"]));
   try {
