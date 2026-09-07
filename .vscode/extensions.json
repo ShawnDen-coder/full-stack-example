@@ -1,6 +1,7 @@
 {
   "recommendations": [
     "folke.vscode-monorepo-workspace",
-    "jacano.vscode-pnpm"
+    "jacano.vscode-pnpm",
+    "biomejs.biome"
   ]
 }
