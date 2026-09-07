@@ -2,7 +2,10 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
+const root = fileURLToPath(new URL(".", import.meta.url));
+
 export default defineConfig({
+  root,
   test: {
     include: ["apps/*/tests/**/*.test.ts", "packages/*/tests/**/*.test.ts"],
     exclude: ["**/dist/**", "**/node_modules/**", "**/coverage/**"],
