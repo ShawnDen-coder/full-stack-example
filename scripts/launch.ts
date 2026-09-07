@@ -2,7 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
-import { configureLogging, getAppLogger, shutdownLogging } from "@full-stack-example/logging";
+import { configureLogging, getAppLogger, shutdownLogging } from "../packages/logging/src/index.js";
 
 const root = resolve(import.meta.dirname, "..");
 let logger = getAppLogger("launcher");
