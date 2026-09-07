@@ -17,6 +17,6 @@
   },
   "dependencies": {
     "@full-stack-example/api": "workspace:*",
-    "hono": "^4.10.7"
+    "hono": "catalog:"
   }
 }
