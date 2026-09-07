@@ -2,15 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
-import { createLogger } from "@full-stack-example/logging";
+import { configureLogging, getAppLogger, shutdownLogging } from "@full-stack-example/logging";
 
 const root = resolve(import.meta.dirname, "..");
-const logger = createLogger({
-  service: "launcher",
-  environment: "development",
-  level: "debug",
-  pretty: true,
-});
+let logger = getAppLogger("launcher");
 const stopInfraOnExit = process.argv.includes("--stop-infra-on-exit");
 const doctorOnly = process.argv.includes("--doctor");
 const pnpmCommand =
@@ -34,17 +29,40 @@ function portAvailable(port: number): Promise<boolean> {
   });
 }
 
+async function waitForCollector(): Promise<void> {
+  const deadline = Date.now() + 60_000;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch("http://localhost:13133/");
+      if (response.ok) return;
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  await run("podman", [
+    "compose",
+    "-f",
+    "container/compose.yaml",
+    "logs",
+    "--tail",
+    "100",
+    "otel-collector",
+  ]);
+  throw new Error("OpenTelemetry Collector did not become ready within 60 seconds");
+}
+
 function loadEnvironment(): void {
   const envFile = existsSync(resolve(root, ".env")) ? ".env" : ".env.example";
   if (!existsSync(resolve(root, envFile))) throw new Error("Missing .env or .env.example");
   for (const line of readFileSync(resolve(root, envFile), "utf8").split(/\r?\n/u)) {
     const match = /^([A-Z0-9_]+)=(.*)$/u.exec(line);
-    if (match && process.env[match[1]] === undefined) process.env[match[1]] = match[2];
+    const key = match?.[1];
+    const value = match?.[2];
+    if (key && value !== undefined && process.env[key] === undefined) process.env[key] = value;
   }
 }
 
 function run(command: string, args: readonly string[]): Promise<void> {
-  logger.info({ event: "launch.command.started", command, args }, "Running command");
+  logger.info("Running command", { event: "launch.command.started", command, args });
   return new Promise((resolveRun, rejectRun) => {
     const child = spawn(command, args, {
       cwd: root,
@@ -72,10 +90,10 @@ function run(command: string, args: readonly string[]): Promise<void> {
 }
 
 async function preflight(): Promise<void> {
-  logger.info(
-    { event: "launch.preflight.started", phase: "PREFLIGHT" },
-    "Checking local prerequisites",
-  );
+  logger.info("Checking local prerequisites", {
+    event: "launch.preflight.started",
+    phase: "PREFLIGHT",
+  });
   if (
     !commandExists(pnpmCommand, pnpmArgs(["--version"])) ||
     !commandExists("podman") ||
@@ -112,6 +130,7 @@ async function main(): Promise<void> {
     "postgres",
     "otel-collector",
   ]);
+  await waitForCollector();
   await run(pnpmCommand, pnpmArgs(["--filter", "@full-stack-example/database", "db:migrate"]));
   try {
     await run(
@@ -140,7 +159,22 @@ async function main(): Promise<void> {
   if (receivedShutdownSignal) process.exitCode = 0;
 }
 
-main().catch((error: unknown) => {
-  logger.error({ err: error, event: "launch.failed" }, "Launcher failed");
-  process.exitCode = 1;
-});
+async function entry(): Promise<void> {
+  await configureLogging({
+    service: "launcher",
+    environment: "development",
+    level: "debug",
+    pretty: true,
+  });
+  logger = getAppLogger("launcher");
+  try {
+    await main();
+  } catch (error) {
+    logger.error("Launcher failed", { error, event: "launch.failed" });
+    process.exitCode = 1;
+  } finally {
+    await shutdownLogging();
+  }
+}
+
+void entry();
