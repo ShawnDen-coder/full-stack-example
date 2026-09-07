@@ -8,4 +8,4 @@ export {
   type Logger,
   type LogLevel,
 } from "./logger.js";
-export type { LogReplay, LogStream, StreamLogRecord } from "./stream.js";
+export type { LogReplay, LogStream, LogSubscription, StreamLogRecord } from "./stream.js";

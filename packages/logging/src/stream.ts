@@ -16,9 +16,15 @@ export interface LogReplay {
 
 export interface LogStream {
   readonly publish: (record: LogRecord) => void;
-  readonly snapshotAfter: (lastEventId?: string) => LogReplay;
-  readonly subscribe: (listener: (record: StreamLogRecord) => void) => () => void;
+  readonly subscribe: (lastEventId?: string) => LogSubscription;
   readonly latestId: () => string;
+}
+
+export interface LogSubscription {
+  readonly replay: LogReplay;
+  readonly next: () => Promise<StreamLogRecord | undefined>;
+  readonly close: () => void;
+  readonly overflowed: () => boolean;
 }
 
 export function createLogStream(options: { readonly capacity?: number } = {}): LogStream {
@@ -40,17 +46,61 @@ export function createLogStream(options: { readonly capacity?: number } = {}): L
       if (records.length > capacity) records.shift();
       for (const listener of listeners) listener(entry);
     },
-    snapshotAfter(lastEventId) {
-      if (!lastEventId) return { records: [...records], truncated: false };
-      const requested = Number(lastEventId);
-      const first = records[0] ? Number(records[0].id) : sequence;
-      if (!Number.isSafeInteger(requested) || requested < first - 1)
-        return { records: [...records], truncated: true };
-      return { records: records.filter((record) => Number(record.id) > requested), truncated: false };
-    },
-    subscribe(listener) {
+    subscribe(lastEventId) {
+      let closed = false;
+      let overflow = false;
+      const queue: StreamLogRecord[] = [];
+      let resolveNext: ((record: StreamLogRecord | undefined) => void) | undefined;
+      const snapshot = (): LogReplay => {
+        if (!lastEventId) return { records: [...records], truncated: false };
+        const requested = Number(lastEventId);
+        const first = records[0] ? Number(records[0].id) : sequence;
+        if (!Number.isSafeInteger(requested) || requested < first - 1)
+          return { records: [...records], truncated: true };
+        return {
+          records: records.filter((record) => Number(record.id) > requested),
+          truncated: false,
+        };
+      };
+      const listener = (record: StreamLogRecord) => {
+        if (closed) return;
+        if (resolveNext) {
+          const resolve = resolveNext;
+          resolveNext = undefined;
+          resolve(record);
+          return;
+        }
+        if (queue.length >= 100) {
+          overflow = true;
+          close();
+          return;
+        }
+        queue.push(record);
+      };
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        listeners.delete(listener);
+        if (resolveNext) {
+          resolveNext(undefined);
+          resolveNext = undefined;
+        }
+      };
       listeners.add(listener);
-      return () => listeners.delete(listener);
+      const replay = snapshot();
+      return {
+        replay,
+        next: () => {
+          const queued = queue.shift();
+          if (queued) return Promise.resolve(queued);
+          if (closed) return Promise.resolve(undefined);
+          return new Promise((resolve) => {
+            resolveNext = resolve;
+          });
+        },
+        close,
+        overflowed: () => overflow,
+      };
     },
     latestId: () => String(sequence),
   };
