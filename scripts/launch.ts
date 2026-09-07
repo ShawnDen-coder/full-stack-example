@@ -15,6 +15,7 @@ const stopInfraOnExit = process.argv.includes("--stop-infra-on-exit");
 const doctorOnly = process.argv.includes("--doctor");
 const pnpmCliPath = process.platform === "win32" ? process.env.npm_execpath : undefined;
 const pnpmCommand = pnpmCliPath ? process.execPath : "pnpm";
+let receivedShutdownSignal = false;
 
 function pnpmArgs(args: readonly string[]): readonly string[] {
   return pnpmCliPath ? [pnpmCliPath, ...args] : args;
@@ -50,12 +51,22 @@ function run(command: string, args: readonly string[]): Promise<void> {
       shell: false,
       env: process.env,
     });
+    const forwardSignal = (signal: NodeJS.Signals) => {
+      receivedShutdownSignal = true;
+      child.kill(signal);
+    };
+    process.once("SIGINT", forwardSignal);
+    process.once("SIGTERM", forwardSignal);
+    const removeSignalHandlers = () => {
+      process.removeListener("SIGINT", forwardSignal);
+      process.removeListener("SIGTERM", forwardSignal);
+    };
     child.once("error", rejectRun);
-    child.once("exit", (code) =>
-      code === 0
-        ? resolveRun()
-        : rejectRun(new Error(`${command} exited with ${code ?? "unknown"}`)),
-    );
+    child.once("exit", (code) => {
+      removeSignalHandlers();
+      if (code === 0 || receivedShutdownSignal) resolveRun();
+      else rejectRun(new Error(`${command} exited with ${code ?? "unknown"}`));
+    });
   });
 }
 
@@ -113,6 +124,7 @@ async function main(): Promise<void> {
         "down",
       ]);
   }
+  if (receivedShutdownSignal) process.exitCode = 0;
 }
 
 main().catch((error: unknown) => {
