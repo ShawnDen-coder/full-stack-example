@@ -36,13 +36,28 @@ const redactedFields = [
   "databaseUrl",
 ];
 
-function toLogTapeLevel(level: LogLevel): "trace" | "debug" | "info" | "warning" | "error" | "fatal" | null {
+function toLogTapeLevel(
+  level: LogLevel,
+): "trace" | "debug" | "info" | "warning" | "error" | "fatal" | null {
   if (level === "silent") return null;
   return level === "warn" ? "warning" : level;
 }
 
 function streamSink(stream: LogStream): Sink {
   return (record: LogRecord) => stream.publish(record);
+}
+
+function withServiceMetadata(sink: Sink, options: ConfigureLoggingOptions): Sink {
+  return (record) =>
+    sink({
+      ...record,
+      properties: {
+        service: options.service,
+        environment: options.environment,
+        ...(options.version ? { version: options.version } : {}),
+        ...record.properties,
+      },
+    });
 }
 
 export async function configureLogging(options: ConfigureLoggingOptions): Promise<void> {
@@ -53,13 +68,13 @@ export async function configureLogging(options: ConfigureLoggingOptions): Promis
         : jsonLinesFormatter,
   });
   const sinks: Record<string, Sink> = {
-    console: redactByField(consoleSink, {
+    console: redactByField(withServiceMetadata(consoleSink, options), {
       fieldPatterns: redactedFields,
       action: () => "[Redacted]",
     }) as Sink,
   };
   if (options.stream) {
-    sinks.stream = redactByField(streamSink(options.stream), {
+    sinks.stream = redactByField(withServiceMetadata(streamSink(options.stream), options), {
       fieldPatterns: redactedFields,
       action: () => "[Redacted]",
     }) as Sink;
@@ -80,7 +95,10 @@ export async function configureLogging(options: ConfigureLoggingOptions): Promis
 }
 
 export function getAppLogger(category: string | readonly string[]): Logger {
-  return getLogger(["full-stack-example", ...(typeof category === "string" ? category.split(".") : category)]);
+  return getLogger([
+    "full-stack-example",
+    ...(typeof category === "string" ? category.split(".") : category),
+  ]);
 }
 
 export function createLogStream(options?: { readonly capacity?: number }): LogStream {
