@@ -1,7 +1,10 @@
 import { createApiClient, parseResponse } from "@full-stack-example/api-client";
 import { useQuery } from "@tanstack/react-query";
+import { resolveApiBaseUrl } from "../api-base-url.js";
 
-const api = createApiClient(import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000");
+const api = createApiClient(
+  resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL, globalThis.location.origin),
+);
 
 async function getHealth() {
   const response = await api.health.$get();

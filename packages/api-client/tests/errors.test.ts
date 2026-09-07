@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createApiClient } from "../src/client.js";
 import { type ApiError, parseResponse } from "../src/errors.js";
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("parseResponse", () => {
   it("normalizes an unexpected HTTP failure", async () => {
@@ -12,5 +15,17 @@ describe("parseResponse", () => {
       message: "Bad gateway",
       requestId: "request-1",
     } satisfies Partial<ApiError>);
+  });
+});
+
+describe("createApiClient", () => {
+  it("includes credentials in API requests", async () => {
+    const fetch = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetch);
+    await createApiClient("https://example.test").health.$get();
+    expect(fetch).toHaveBeenCalledWith(
+      "https://example.test/health",
+      expect.objectContaining({ credentials: "include" }),
+    );
   });
 });
