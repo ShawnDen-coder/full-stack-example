@@ -4,5 +4,14 @@
   "editor.codeActionsOnSave": {
     "source.organizeImports.biome": "explicit",
     "source.fixAll.biome": "explicit"
+  },
+  "code-runner.cwd": "$workspaceRoot",
+  "code-runner.fileDirectoryAsCwd": false,
+  "code-runner.ignoreSelection": true,
+  "code-runner.runInTerminal": true,
+  "code-runner.saveFileBeforeRun": true,
+  "code-runner.executorMap": {
+    "typescript": "pnpm exec tsx",
+    "typescriptreact": "pnpm exec tsx"
   }
 }
