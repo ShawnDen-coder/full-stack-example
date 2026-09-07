@@ -1,4 +1,3 @@
-import { serve } from "@hono/node-server";
 import {
   checkDatabase,
   createDatabase,
@@ -11,6 +10,7 @@ import {
   getAppLogger,
   shutdownLogging,
 } from "@full-stack-example/logging";
+import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { parseConfig } from "./config.js";
 import { startTelemetry } from "./telemetry.js";
