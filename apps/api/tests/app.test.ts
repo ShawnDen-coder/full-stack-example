@@ -48,6 +48,40 @@ describe("API", () => {
     await expect(response.json()).resolves.toEqual({ error: "Not found" });
   });
 
+  it("serves production web assets and preserves API 404 responses", async () => {
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      webOrigin: "http://localhost:3000",
+      webAssetsDirectory: "apps/api/tests/fixtures/web",
+    });
+
+    const indexResponse = await app.request("http://localhost/dashboard");
+    expect(indexResponse.status).toBe(200);
+    expect(indexResponse.headers.get("Cache-Control")).toBe("no-cache");
+    expect(await indexResponse.text()).toContain("test application");
+
+    const assetResponse = await app.request("http://localhost/assets/app.js");
+    expect(assetResponse.status).toBe(200);
+    expect(assetResponse.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
+
+    const apiResponse = await app.request("http://localhost/api/unknown");
+    expect(apiResponse.status).toBe(404);
+    expect(apiResponse.headers.get("Content-Type")).toContain("application/json");
+  });
+
+  it("does not use the SPA fallback for unsupported methods", async () => {
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      webOrigin: "http://localhost:3000",
+      webAssetsDirectory: "apps/api/tests/fixtures/web",
+    });
+    const response = await app.request("http://localhost/dashboard", { method: "POST" });
+    expect(response.status).toBe(404);
+    expect(response.headers.get("Content-Type")).toContain("application/json");
+  });
+
   it("allows credentialed requests from the configured web origin", async () => {
     const app = createApp({
       checkDatabase: async () => undefined,
