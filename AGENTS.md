@@ -13,11 +13,14 @@ pnpm install                 # or: just init
 just build
 just typecheck
 just test
+just test-watch
 just lint
 just format
+just verify
+just container-build
 ```
 
-Use `just check` for the full quality gate. The API uses LogTape, OpenTelemetry and an opt-in development-only SSE log stream; do not add Pino, package-level Biome config, log persistence backends, or caches without an explicit design change.
+Use `just check` for the fast source quality gate and `just verify` when compiled artifacts must also be validated. `just test` runs the root Vitest configuration once; do not add package scripts that rediscover the same global suite. Tests consume TypeScript source and must not depend on a prior build. Container files belong under `container/`; its Dockerfile produces one Node image that serves both API and Web through Hono, while Compose's `application` profile runs the complete stack. The API uses LogTape, OpenTelemetry and an opt-in development-only SSE log stream; do not add Pino, package-level Biome config, log persistence backends, or caches without an explicit design change.
 
 ## Coding Style & Naming Conventions
 

@@ -11,15 +11,17 @@ packages/api-client  浏览器安全的 hc 封装
 packages/database    Drizzle、postgres.js 与迁移
 packages/logging     LogTape、脱敏与进程内日志流
 packages/system      Health route/service/schema
-container            PostgreSQL 与 OpenTelemetry Collector
+container            单镜像 Dockerfile、Compose、Collector 配置与 ignore 规则
 scripts/launch.ts    本地基础设施和子进程编排
 ```
 
-根 `biome.json` 是唯一 lint 与格式化配置；所有手写源码通过 `just check` 验证。包级 `tsconfig.build.json` 用于构建声明文件，不能删除。
+根 `biome.json` 是唯一 lint 与格式化配置；所有手写源码通过 `just check` 验证。包级 `tsconfig.build.json` 用于构建声明文件，不能删除。所有容器文件必须放在 `container/`。
+
+HonoX 调研后不引入 `honox` 或 `@hono/vite-build`：当前项目不需要 SSR、SSG、islands 或文件路由。借鉴其 client/server 构建边界、生产资源与 Hono 服务共置以及 `app.request()` 集成测试方式；生产部署采用 Node/Hono 单进程。
 
 ## 运行与可观测性
 
-`just launch` 启动 PostgreSQL 和 OpenTelemetry Collector，等待两者 ready，执行迁移，再启动 API 和 Web。API 启动顺序为：配置 LogTape、启动 telemetry、迁移、创建数据库、创建 Hono 应用、监听端口。关闭顺序相反，并释放所有资源。
+`just launch` 启动 PostgreSQL 和 OpenTelemetry Collector，等待两者 ready，执行迁移，再启动宿主机 API 与 Web watch。`just stack-up` 使用 `container/compose.yaml` 的 `application` profile 构建并启动单一应用镜像；Hono 在 3000 端口同时提供 API、React SPA 与静态资源。API 启动顺序为：配置 LogTape、启动 telemetry、迁移、创建数据库、创建 Hono 应用、监听端口。关闭顺序相反，并释放所有资源。
 
 日志使用 LogTape：开发环境输出 pretty 文本，生产输出脱敏 JSON Lines。每条记录包含 service、environment、可用时的 version，以及 request/trace/span 关联字段。禁止记录 body、完整 headers、SQL 参数、环境变量或凭据。
 
@@ -36,9 +38,13 @@ just lint
 just format-check
 just typecheck
 just test
-just build
-just launch-doctor
+just test-watch
 just check
+just build
+just verify
+just container-build
+just stack-up
+just launch-doctor
 ```
 
-测试只发现 `apps/*/tests` 与 `packages/*/tests` 下的 TypeScript 源码，忽略 `dist`。提交使用 Conventional Commits；仅纯文档提交使用 `[skip ci]`。不提交 `.env`、生成的 `dist` 或本地编辑器配置。
+`just check` 是不构建产物的快速源码门禁；`just verify` 才包含 workspace build。测试只发现 `apps/*/tests` 与 `packages/*/tests` 下的 TypeScript 源码，忽略 `dist`，并由根 Vitest 配置统一运行一次。CI 执行 `just verify` 后再构建 `container/Dockerfile`。提交使用 Conventional Commits；仅纯文档提交使用 `[skip ci]`。不提交 `.env`、生成的 `dist` 或本地编辑器配置。
