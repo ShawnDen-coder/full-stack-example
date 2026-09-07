@@ -48,6 +48,19 @@ describe("API", () => {
     await expect(response.json()).resolves.toEqual({ error: "Not found" });
   });
 
+  it("allows credentialed requests from the configured web origin", async () => {
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      webOrigin: "http://localhost:5173",
+    });
+    const response = await app.request("http://localhost/health", {
+      headers: { Origin: "http://localhost:5173" },
+    });
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:5173");
+    expect(response.headers.get("Access-Control-Allow-Credentials")).toBe("true");
+  });
+
   it("preserves a valid inbound request ID", async () => {
     const app = createApp({
       checkDatabase: async () => undefined,
