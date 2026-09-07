@@ -36,6 +36,9 @@ typecheck:
 test:
     pnpm exec vitest run --config vitest.config.ts
 
+test-watch:
+    pnpm exec vitest --config vitest.config.ts
+
 lint:
     pnpm exec biome check --config-path biome.json --write .
 
@@ -52,6 +55,9 @@ check:
     just lint-check
     just typecheck
     just test
+
+verify:
+    just check
     just build
 
 db-generate:
