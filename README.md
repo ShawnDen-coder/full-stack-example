@@ -17,10 +17,36 @@ just launch
 
 ```bash
 just check
+just verify
+just container-build
+just stack-up
 just db-migrate
 just infra-down
 just otel-logs
 ```
+
+`just check` 是日常快速反馈，只执行只读 lint、类型检查和源码测试，不要求预先构建；测试由根 Vitest 配置运行一次。
+`just verify` 在此基础上构建全部 workspace，适合作为提交或发布前的完整质量门禁。
+
+`container/Dockerfile` 会在干净环境中安装锁定依赖并构建完整项目，最终生成一个同时提供 API 和 Web 的 Node 镜像：
+
+```bash
+podman build --file container/Dockerfile --tag full-stack-example:local .
+```
+
+镜像内只有一个 Node 进程：Hono 在 3000 端口提供 API、React SPA 和静态资源，Web 生产请求使用 same-origin 调用 API，
+无需 Nginx。容器运行时通过环境变量配置数据库、Web Origin 和 OTLP 地址。
+
+完整容器栈（PostgreSQL、Collector、应用）使用 Compose profile 启动：
+
+```bash
+just stack-up
+just stack-status
+just stack-logs
+just stack-down
+```
+
+生产形态统一从 `http://localhost:3000` 访问；开发形态仍使用 Vite `5173` 和 API `3000`。
 
 | 服务 | 地址 |
 | --- | --- |
