@@ -1,0 +1,5 @@
+[
+  { "type": "file", "name": "index", "label": "Reference 概览" },
+  { "type": "file", "name": "http-api", "label": "HTTP API" },
+  { "type": "dir", "name": "typescript", "label": "TypeScript API" }
+]

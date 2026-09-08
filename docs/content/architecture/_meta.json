@@ -1,0 +1,7 @@
+[
+  { "type": "file", "name": "index", "label": "架构概览" },
+  "application",
+  "request-lifecycle",
+  "observability",
+  "deployment"
+]

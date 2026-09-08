@@ -1,0 +1,6 @@
+[
+  { "text": "指南", "link": "/guide/" },
+  { "text": "架构", "link": "/architecture/" },
+  { "text": "模块", "link": "/modules/" },
+  { "text": "Reference", "link": "/reference/" }
+]

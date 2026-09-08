@@ -1,0 +1,24 @@
+---
+title: 请求生命周期
+description: 追踪浏览器请求经过 Hono 中间件、功能路由、service、repository 到数据库的完整路径。
+---
+
+# 请求生命周期
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant A as Hono API
+  participant S as TodoService
+  participant R as Repository
+  participant D as PostgreSQL
+  B->>A: PATCH /api/todos/:id
+  A->>A: requestId, CORS, headers, timeout
+  A->>S: updateTodo(input)
+  S->>R: updateCompleted(input)
+  R->>D: UPDATE todos
+  D-->>R: row or empty
+  R-->>S: Todo | undefined
+  S-->>A: response
+  A-->>B: JSON / 404
+```

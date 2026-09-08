@@ -1,0 +1,6 @@
+[
+  { "type": "file", "name": "index", "label": "指南概览" },
+  "getting-started",
+  "configuration",
+  "testing"
+]

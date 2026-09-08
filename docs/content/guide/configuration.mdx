@@ -1,0 +1,10 @@
+---
+title: 配置与运行环境
+description: 了解 API、Web、数据库、日志和 OpenTelemetry 的环境变量及默认运行边界。
+---
+
+# 配置与运行环境
+
+配置由 Zod schema 校验，API 组合根负责注入数据库检查、日志、Todo service 和 Web 静态资源目录。
+
+生产环境使用单个 Node/Hono 进程同时提供 API 与 Web 静态资源。

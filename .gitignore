@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 .env
+# Rspress generated documentation
+docs/doc_build/
+docs/content/reference/typescript/**/*.md
+docs/content/reference/typescript/**/*.json
+docs/public/generated/openapi.json
