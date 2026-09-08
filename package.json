@@ -2,6 +2,7 @@
   "name": "full-stack-example",
   "private": true,
   "packageManager": "pnpm@11.24.0",
+  "description": "TypeScript modular monolith with a React web app, Hono API, PostgreSQL persistence, structured logging, and OpenTelemetry.",
   "engines": {
     "node": ">=22"
   },

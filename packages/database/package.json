@@ -2,6 +2,7 @@
   "name": "@full-stack-example/database",
   "version": "0.1.0",
   "private": true,
+  "description": "Drizzle and PostgreSQL client, schema, migrations, and database health probe.",
   "type": "module",
   "files": [
     "dist",

@@ -2,16 +2,43 @@
 title: Full Stack Example
 description: 全栈示例项目的开发指南、系统架构、模块职责与自动生成 API Reference。
 pageType: home
+hero:
+  name: Full Stack Example
+  text: TypeScript 模块化单体
+  tagline: React、Hono、Drizzle、LogTape 与 OpenTelemetry 的可运行全栈参考实现。
+  actions:
+    - theme: brand
+      text: 快速开始
+      link: /guide/getting-started/
+    - theme: alt
+      text: 浏览 API Reference
+      link: /reference/http-api/
+features:
+  - title: 明确的模块边界
+    details: 通过 setupXxxApp 和依赖注入组合 API，同时保持 Hono RPC 类型精确推导。
+    link: /architecture/application/
+  - title: 可验证的 HTTP 契约
+    details: OpenAPI 3.1 从真实路由元数据生成，并在构建和测试阶段校验。
+    link: /reference/http-api/
+  - title: 可观测的运行时
+    details: LogTape 结构化日志和 OpenTelemetry 数据流覆盖本地开发与容器部署。
+    link: /architecture/observability/
 ---
 
-# Full Stack Example
+# 开始使用
 
-一个以 TypeScript 为核心的模块化单体示例，包含 React/Vite Web、Hono API、Drizzle/PostgreSQL、LogTape 与 OpenTelemetry。
+这是一个可以直接运行、测试和构建的 monorepo 示例。根 README 适合 GitHub 快速浏览，完整项目说明同步到[项目概览](/guide/project-overview/)，模块正文来自各自 workspace README。
 
-## 从这里开始
+## 推荐路径
 
 - [快速开始](/guide/getting-started/)
 - [系统架构](/architecture/)
 - [模块说明](/modules/)
 - [HTTP API Reference](/reference/http-api/)
 - [TypeScript API Reference](/reference/)
+
+## 仓库入口
+
+- [根 README（GitHub）](https://github.com/ShawnDen-coder/full-stack-example)
+- [完整项目概览](/guide/project-overview/)
+- [GitHub Actions 与 Pages 部署](/architecture/deployment/)

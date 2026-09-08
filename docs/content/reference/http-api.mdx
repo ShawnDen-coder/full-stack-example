@@ -8,7 +8,19 @@ import { OpenApiReference } from "../../components/OpenApiReference";
 
 # HTTP API Reference
 
-OpenAPI 原始规范：<a href="/generated/openapi.json">openapi.json</a>
+OpenAPI 原始规范：<a href="/generated/openapi.json">openapi.json</a>。规范从 API 组合根中的真实 Hono 路由元数据生成，并在构建时通过 OpenAPI 3.1 校验。
+
+## 公开端点
+
+| Method | Path | 成功响应 | 主要错误 |
+| --- | --- | --- | --- |
+| `GET` | `/health` | `200` 健康、`503` degraded | `500` 内部错误 |
+| `GET` | `/api/todos` | `200` Todo 列表 | `500` 内部错误 |
+| `POST` | `/api/todos` | `201` 创建 Todo | `400` 验证失败、`500` 内部错误 |
+| `PATCH` | `/api/todos/:id` | `200` 更新 Todo | `400` 验证失败、`404` 不存在、`500` 内部错误 |
+| `DELETE` | `/api/todos/:id` | `204` 删除成功 | `400` 验证失败、`404` 不存在、`500` 内部错误 |
+
+Todo 标题会去除首尾空白，并限制为 1–200 个字符。验证失败返回 `400`，不存在的 Todo 返回 `{ "error": "Todo not found" }`。文档站不配置线上 API 地址，Scalar 的交互客户端按钮保持关闭。
 
 <ClientOnly fallback={<p>正在加载交互式 API Reference…</p>}>
   <OpenApiReference />
