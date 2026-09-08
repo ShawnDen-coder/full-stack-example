@@ -11,6 +11,25 @@
 
 The package imports the API contract only for types; it does not start a server or make network requests during import.
 
+## Quick start
+
+Create one client at the browser boundary and use Hono's inferred route tree:
+
+```ts
+import { createApiClient, parseResponse } from "@full-stack-example/api-client";
+
+const api = createApiClient("http://localhost:3000");
+const response = await api.api.todos.$get();
+const todos = await parseResponse(response);
+```
+
+For a mutation, pass the same path parameters and JSON body that the API route declares:
+
+```ts
+const response = await api.api.todos.$post({ json: { title: "Write docs" } });
+const todo = await parseResponse(response);
+```
+
 ## Development
 
 ```bash

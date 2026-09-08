@@ -10,6 +10,26 @@
 
 The package does not persist logs in a database, add a cache, or provide an audit store. The development stream is process-local and is lost on restart.
 
+## Quick start
+
+Configure logging once during bootstrap and create child loggers in each module:
+
+```ts
+import { configureLogging, getAppLogger } from "@full-stack-example/logging";
+
+await configureLogging({
+  service: "example-api",
+  environment: "development",
+  level: "info",
+  pretty: true,
+});
+
+const logger = getAppLogger("todos");
+logger.info("Todo service ready", { event: "todos.ready" });
+```
+
+Call `shutdownLogging()` from the process shutdown path so file sinks and telemetry are flushed.
+
 ## Development
 
 ```bash
