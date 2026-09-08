@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "pnpm generate && rspress dev",
     "build": "pnpm generate && rspress build",
-    "preview": "rspress preview",
+    "preview": "tsx scripts/preview.ts",
     "generate": "tsx scripts/sync-readmes.ts && tsx --tsconfig ../tsconfig.base.json scripts/generate-openapi.ts"
   },
   "dependencies": {
