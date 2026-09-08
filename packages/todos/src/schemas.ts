@@ -16,6 +16,8 @@ export const updateTodoSchema = z.object({ completed: z.boolean() });
 
 export const todoIdSchema = z.object({ id: z.coerce.number().int().positive() });
 
+export const todoNotFoundSchema = z.object({ error: z.literal("Todo not found") });
+
 export type Todo = z.infer<typeof todoSchema>;
 export type CreateTodoInput = z.infer<typeof createTodoSchema>;
 export type UpdateTodoInput = z.infer<typeof updateTodoSchema>;

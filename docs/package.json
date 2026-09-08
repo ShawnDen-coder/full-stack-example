@@ -7,24 +7,25 @@
     "dev": "pnpm generate && rspress dev",
     "build": "pnpm generate && rspress build",
     "preview": "rspress preview",
-    "generate": "tsx scripts/generate-openapi.ts"
+    "generate": "tsx scripts/sync-readmes.ts && tsx --tsconfig ../tsconfig.base.json scripts/generate-openapi.ts"
   },
   "dependencies": {
-    "@scalar/api-reference-react": "^0.7.0",
-    "@rspress/core": "^2.0.0",
-    "@rspress/plugin-llms": "^2.0.0",
-    "@rspress/plugin-sitemap": "^2.0.0",
-    "@rspress/plugin-typedoc": "^2.0.0",
     "@full-stack-example/api": "workspace:*",
     "@full-stack-example/logging": "workspace:*",
     "@full-stack-example/system": "workspace:*",
     "@full-stack-example/todos": "workspace:*",
+    "@rspress/core": "^2.0.0",
+    "@rspress/plugin-llms": "^2.0.0",
+    "@rspress/plugin-sitemap": "^2.0.0",
+    "@rspress/plugin-typedoc": "^2.0.0",
+    "@scalar/api-reference-react": "^0.7.0",
     "hono": "catalog:",
     "micromark": "^4.0.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   },
   "devDependencies": {
+    "@scalar/openapi-parser": "0.22.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "tsx": "^4.20.6",

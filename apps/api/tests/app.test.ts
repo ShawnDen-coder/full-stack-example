@@ -32,6 +32,48 @@ describe("API", () => {
     });
   });
 
+  it("serves an OpenAPI 3.1 document from the composed routes", async () => {
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      todoService,
+      webOrigin: "http://localhost:5173",
+    });
+    const response = await app.request("http://localhost/openapi.json");
+    expect(response.status).toBe(200);
+    const document = await response.json();
+    expect(document).toMatchObject({
+      openapi: "3.1.0",
+      paths: {
+        "/health": { get: { operationId: "getHealth" } },
+        "/api/todos": {
+          get: { operationId: "listTodos" },
+          post: { operationId: "createTodo" },
+        },
+        "/api/todos/{id}": {
+          patch: { operationId: "updateTodo" },
+          delete: { operationId: "deleteTodo" },
+        },
+      },
+    });
+  });
+
+  it("documents and enforces Todo input validation", async () => {
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      todoService,
+      webOrigin: "http://localhost:5173",
+    });
+    const response = await app.request("http://localhost/api/todos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "" }),
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ success: false });
+  });
+
   it("returns a degradation without revealing the database error", async () => {
     const app = createApp({
       checkDatabase: async () => {

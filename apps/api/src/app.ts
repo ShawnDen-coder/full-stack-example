@@ -10,10 +10,10 @@ import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 import { timeout } from "hono/timeout";
+import { openAPIRouteHandler } from "hono-openapi";
 import { appFactory } from "./factory.js";
 import { setupLogStreamApp } from "./log-stream.js";
 import { setupWebApp } from "./web-app.js";
-import { createOpenApiDocument } from "./openapi.js";
 
 export function createApp(options: {
   readonly checkDatabase: () => Promise<void>;
@@ -57,11 +57,26 @@ export function createApp(options: {
     .use("*", cors({ origin: options.webOrigin, credentials: true }))
     .use("*", secureHeaders())
     .use("*", bodyLimit({ maxSize: 1_048_576 }))
-    .use("*", timeout(10_000))
-    .get("/openapi.json", (context) => context.json(createOpenApiDocument()))
+    .use("*", timeout(10_000));
+  const withOpenApi = app.get(
+    "/openapi.json",
+    openAPIRouteHandler(app, {
+      documentation: {
+        openapi: "3.1.0",
+        info: {
+          title: "Full Stack Example API",
+          version: "0.1.0",
+          description: "HTTP API for health checks and todo management.",
+        },
+        servers: [{ url: "http://localhost:3000", description: "Local development" }],
+      },
+      exclude: [/^\/api\/logs\/stream$/, /^\/openapi\.json$/],
+    }),
+  );
+  const withErrors = withOpenApi
     .notFound((context) => context.json({ error: "Not found" }, 404))
     .onError((_error, context) => context.json({ error: "Internal server error" }, 500));
-  const withSystem = setupSystemApp(app, {
+  const withSystem = setupSystemApp(withErrors, {
     checkDatabase: options.checkDatabase,
     logger: options.logger.getChild("system"),
   });
