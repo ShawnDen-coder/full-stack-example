@@ -2,6 +2,7 @@
   "name": "@full-stack-example/api-client",
   "version": "0.1.0",
   "private": true,
+  "description": "Type-safe browser RPC client built from the API Hono AppType contract.",
   "type": "module",
   "exports": {
     ".": {

@@ -2,6 +2,7 @@
   "name": "@full-stack-example/logging",
   "version": "0.1.0",
   "private": true,
+  "description": "LogTape configuration, redaction, child loggers, and the development log stream.",
   "type": "module",
   "files": [
     "dist"

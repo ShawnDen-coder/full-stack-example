@@ -2,6 +2,8 @@
 
 轻量化 TypeScript 模块化单体：React/Vite 前端、Hono RPC API、Drizzle/PostgreSQL、LogTape 与 OpenTelemetry Collector。
 
+完整的开发指南、架构说明、模块文档和自动生成的 API Reference 位于 [Rspress 文档站](https://shawnden-coder.github.io/full-stack-example/)。本 README 是仓库快速入口；每个 workspace 的 README 是该模块的唯一文档来源。
+
 ## 模块结构
 
 ```text
@@ -23,6 +25,16 @@
 ├── package.json                  # pnpm workspace 根依赖与工具版本
 └── pnpm-workspace.yaml           # workspace 包发现范围与共享依赖 catalog
 ```
+
+各 workspace 的模块说明维护在对应 README，并会在文档构建时同步到 Rspress：
+
+- [API 应用](https://github.com/ShawnDen-coder/full-stack-example/blob/master/apps/api/README.md)
+- [Web 应用](https://github.com/ShawnDen-coder/full-stack-example/blob/master/apps/web/README.md)
+- [API Client](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/api-client/README.md)
+- [Database](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/database/README.md)
+- [Logging](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/logging/README.md)
+- [System](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/system/README.md)
+- [Todos](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/todos/README.md)
 
 `apps/api/src/app.ts` 是唯一的 HTTP 组合根。功能包通过 `setupXxxApp(app, options)` 注册路由并返回 Hono app，因而导出的 `AppType` 会传递到 `packages/api-client` 和 Web，避免前后端重复维护接口类型。
 
@@ -122,7 +134,7 @@ just stack-down
 | OTLP HTTP | http://localhost:4318 |
 | Collector health | http://localhost:13133 |
 
-Health 端点为 `GET /health`，响应带 `Cache-Control: no-store`。浏览器端通过 Hono 的 `hc` 客户端和 TanStack Query 调用该端点，不生成 OpenAPI 或 Orval 客户端。
+Health 端点为 `GET /health`，响应带 `Cache-Control: no-store`。浏览器端通过 Hono 的 `hc` 客户端和 TanStack Query 调用该端点。公开 HTTP API 的 OpenAPI 3.1 规范可从 `GET /openapi.json` 获取，文档站的 HTTP Reference 使用同一份规范；不生成 Orval 客户端。
 
 ## Todo 示例
 
@@ -158,6 +170,6 @@ curl -N http://localhost:3000/api/logs/stream
 
 当前已完成：React/Vite 与 Hono API workspace、`setupXxxApp(app, options)` 依赖倒置组合、LogTape 脱敏日志、OpenTelemetry Collector、开发期 SSE 日志流、Hono 单进程托管生产 Web、单镜像 Dockerfile/Compose profile，以及根级 Biome、统一 Vitest 和 `check`/`verify` 验证链路。
 
-当前明确不包含 Loki、OpenObserve、Tempo、Prometheus、Redis、缓存、日志持久化或 OpenAPI/Orval。SSE 是单进程、易失、非审计的实时诊断流，生产环境在管理员认证完成前禁止启用。HonoX 调研结论是暂不引入 SSR、SSG、文件路由或 islands，仅借鉴其构建边界和测试思路。
+当前明确不包含 Loki、OpenObserve、Tempo、Prometheus、Redis、缓存或日志持久化。SSE 是单进程、易失、非审计的实时诊断流，生产环境在管理员认证完成前禁止启用。OpenAPI 仅描述公开 HTTP API，不生成 Orval 客户端。HonoX 调研结论是暂不引入 SSR、SSG、文件路由或 islands，仅借鉴其构建边界和测试思路。
 
 后续可按需求增加管理员认证与日志页面、多实例日志聚合或持久化后端，并保持现有 SSE 事件协议兼容。

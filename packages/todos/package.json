@@ -2,6 +2,7 @@
   "name": "@full-stack-example/todos",
   "version": "0.1.0",
   "private": true,
+  "description": "Todo schemas, service and repository boundaries, and Hono CRUD routes.",
   "files": [
     "dist"
   ],
@@ -19,9 +20,9 @@
   "type": "module",
   "dependencies": {
     "@full-stack-example/database": "workspace:*",
-    "@hono/zod-validator": "catalog:",
     "drizzle-orm": "^0.44.7",
     "hono": "catalog:",
+    "hono-openapi": "^1.3.2",
     "zod": "catalog:"
   }
 }

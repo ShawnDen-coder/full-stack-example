@@ -29,3 +29,11 @@ docs/doc_build/
 docs/content/reference/typescript/**/*.md
 docs/content/reference/typescript/**/*.json
 docs/public/generated/openapi.json
+docs/content/modules/api.mdx
+docs/content/modules/web.mdx
+docs/content/modules/api-client.mdx
+docs/content/modules/database.mdx
+docs/content/modules/logging.mdx
+docs/content/modules/system.mdx
+docs/content/modules/todos.mdx
+docs/content/guide/project-overview.mdx
