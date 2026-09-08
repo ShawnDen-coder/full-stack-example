@@ -20,6 +20,7 @@
     "@full-stack-example/system": "workspace:*",
     "@full-stack-example/todos": "workspace:*",
     "hono": "catalog:",
+    "micromark": "^4.0.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "rspress-plugin-mermaid": "^1.0.0"
