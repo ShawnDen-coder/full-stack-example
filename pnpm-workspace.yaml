@@ -10,4 +10,3 @@ allowBuilds:
   esbuild: true
   protobufjs: false
   vue-demi: false
-  vue-demi: set this to true or false
