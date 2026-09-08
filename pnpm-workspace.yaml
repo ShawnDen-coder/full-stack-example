@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "docs"
 catalog:
   hono: ^4.13.7
   "@hono/zod-validator": ^0.7.5
@@ -8,3 +9,4 @@ catalog:
 allowBuilds:
   esbuild: true
   protobufjs: false
+  vue-demi: set this to true or false

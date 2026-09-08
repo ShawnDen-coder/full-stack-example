@@ -1,0 +1,20 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
+  },
+  "include": [
+    "content",
+    "components",
+    "scripts",
+    "rspress.config.ts",
+    "../packages/api-client/src/**/*.ts",
+    "../packages/database/src/**/*.ts",
+    "../packages/logging/src/**/*.ts",
+    "../packages/system/src/**/*.ts",
+    "../packages/todos/src/**/*.ts"
+  ]
+}

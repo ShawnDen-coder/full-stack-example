@@ -1,0 +1,8 @@
+---
+title: 应用组合与 workspace 边界
+description: 说明 API 组合根、Web 应用和共享 workspace 包之间的依赖方向与扩展方式。
+---
+
+# 应用组合与 workspace 边界
+
+`apps/api/src/app.ts` 负责跨切面 HTTP policy 和功能模块组合；`packages/todos`、`packages/system` 等包只接收宿主 app 与显式依赖。

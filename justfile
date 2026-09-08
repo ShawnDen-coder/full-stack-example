@@ -59,6 +59,7 @@ check:
 verify:
     just check
     just build
+    pnpm docs:build
 
 container-build:
     podman build --file container/Dockerfile --ignorefile container/Dockerfile.dockerignore --tag full-stack-example:local .

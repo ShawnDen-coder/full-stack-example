@@ -5,6 +5,12 @@
   "engines": {
     "node": ">=22"
   },
+  "scripts": {
+    "docs:generate": "pnpm --dir docs generate",
+    "docs:dev": "pnpm --dir docs dev",
+    "docs:build": "pnpm --dir docs build",
+    "docs:preview": "pnpm --dir docs preview"
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.4.5",
     "@types/node": "^24.0.0",

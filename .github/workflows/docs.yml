@@ -1,0 +1,65 @@
+name: Documentation
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "apps/api/src/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+  push:
+    branches: [master]
+    paths:
+      - "docs/**"
+      - "apps/api/src/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/configure-pages@v5
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm docs:build
+        env:
+          DOCS_BASE: /full-stack-example/
+          DOCS_SITE_ORIGIN: https://shawnden-coder.github.io
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/doc_build
+
+  deploy:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

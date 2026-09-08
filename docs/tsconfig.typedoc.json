@@ -1,0 +1,21 @@
+{
+  "extends": "../tsconfig.base.json",
+  "files": [
+    "../packages/api-client/src/index.ts",
+    "../packages/database/src/index.ts",
+    "../packages/logging/src/index.ts",
+    "../packages/system/src/index.ts",
+    "../packages/todos/src/index.ts"
+  ],
+  "include": [
+    "../packages/api-client/src/**/*.ts",
+    "../packages/database/src/**/*.ts",
+    "../packages/logging/src/**/*.ts",
+    "../packages/system/src/**/*.ts",
+    "../packages/todos/src/**/*.ts"
+  ],
+  "exclude": [
+    "../packages/**/tests/**",
+    "../packages/database/migrations/**"
+  ]
+}

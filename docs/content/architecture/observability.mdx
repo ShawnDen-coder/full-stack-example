@@ -1,0 +1,8 @@
+---
+title: 日志与可观测性
+description: 说明 LogTape、OpenTelemetry 和开发期 SSE 日志流如何协同工作并保持生产边界。
+---
+
+# 日志与可观测性
+
+HTTP 请求经过 LogTape 结构化记录并关联 request ID 与 trace/span ID。OpenTelemetry 将 traces 和 metrics 导出到 Collector；开发期 SSE 日志流是单进程、易失的诊断能力，不作为审计存储。

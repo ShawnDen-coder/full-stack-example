@@ -1,0 +1,15 @@
+---
+title: 快速开始
+description: 使用 pnpm 安装依赖并启动 API 与 Web，完成全栈示例项目的第一次本地运行。
+---
+
+# 快速开始
+
+项目要求 Node.js 22 或更高版本，并使用 pnpm 11.24.0。
+
+```bash
+pnpm install
+just dev
+```
+
+API 和 Web 会分别启动开发服务器。需要数据库和 OpenTelemetry 时，先执行 `just infra-up`。

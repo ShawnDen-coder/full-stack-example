@@ -1,0 +1,33 @@
+{
+  "name": "@full-stack-example/docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm generate && rspress dev",
+    "build": "pnpm generate && rspress build",
+    "preview": "rspress preview",
+    "generate": "tsx scripts/generate-openapi.ts"
+  },
+  "dependencies": {
+    "@scalar/api-reference-react": "^0.7.0",
+    "@rspress/core": "^2.0.0",
+    "@rspress/plugin-llms": "^2.0.0",
+    "@rspress/plugin-sitemap": "^2.0.0",
+    "@rspress/plugin-typedoc": "^2.0.0",
+    "@full-stack-example/api": "workspace:*",
+    "@full-stack-example/logging": "workspace:*",
+    "@full-stack-example/system": "workspace:*",
+    "@full-stack-example/todos": "workspace:*",
+    "hono": "catalog:",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "rspress-plugin-mermaid": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "tsx": "^4.20.6",
+    "typescript": "~5.9.3"
+  }
+}

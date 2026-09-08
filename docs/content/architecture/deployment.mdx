@@ -1,0 +1,17 @@
+---
+title: 部署流程
+description: 介绍基础设施启动、数据库迁移、单镜像构建以及文档站 GitHub Pages 发布流程。
+---
+
+# 部署流程
+
+```mermaid
+flowchart TD
+  Commit[Push master] --> CI[GitHub Actions]
+  CI --> Install[pnpm install --frozen-lockfile]
+  Install --> Build[Build API, Web and Docs]
+  Build --> Artifact[Upload Pages Artifact]
+  Artifact --> Pages[GitHub Pages]
+```
+
+应用镜像由 `container/Dockerfile` 构建；文档站由 Rspress 输出静态资源并通过 Pages Artifact 发布。
