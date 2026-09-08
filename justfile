@@ -26,6 +26,18 @@ dev-web:
 dev-api:
     pnpm --filter @full-stack-example/api dev
 
+docs-generate:
+    pnpm docs:generate
+
+docs-dev:
+    pnpm docs:dev
+
+docs-build:
+    pnpm docs:build
+
+docs-preview:
+    pnpm docs:preview
+
 build:
     pnpm -r run build
 
