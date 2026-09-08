@@ -38,6 +38,27 @@
 
 `apps/api/src/app.ts` 是唯一的 HTTP 组合根。功能包通过 `setupXxxApp(app, options)` 注册路由并返回 Hono app，因而导出的 `AppType` 会传递到 `packages/api-client` 和 Web，避免前后端重复维护接口类型。
 
+## 扩充模块的结构
+
+新增业务模块时，优先把可复用的领域能力放在 `packages/<module>/`，把运行时装配放在 `apps/api`，把页面交互放在 `apps/web`。一个完整模块通常按下面的边界组织：
+
+```text
+packages/<module>/
+├── src/
+│   ├── schemas.ts       # Zod 输入、输出和业务约束
+│   ├── service.ts       # 领域用例与依赖接口
+│   ├── repository.ts    # 可选：数据库持久化适配器
+│   ├── routes.ts        # 可选：describeRoute + Hono 路由注册
+│   └── index.ts         # 稳定的公开 exports
+├── tests/               # 从调用者角度验证行为
+├── package.json         # description、exports、typecheck/build
+└── README.md            # 模块唯一说明来源，含快速开始与扩展约束
+```
+
+扩充时遵循这条依赖方向：`routes -> service -> repository -> database`。路由只做协议适配，service 只依赖接口，repository 负责 Drizzle 查询；不要让 Web 直接访问数据库，也不要在功能包里创建第二个 Hono 宿主。需要对外提供 HTTP 能力时，在 `apps/api/src/app.ts` 中调用 `setup<Module>App(app, options)`，同时补齐 OpenAPI 元数据、Zod schema、行为测试和模块 README。需要浏览器调用时，依赖 `AppType` 的 `api-client`，不要手写一套重复的路径或响应类型。
+
+新模块的最小落地顺序是：先定义 schema 和 service 接口，再实现 repository 或外部适配器；随后增加 routes 并在组合根注册；最后导出公共符号、补测试、更新 README 和 `docs/content/modules/_meta.json`。README 会在文档构建时自动同步为模块主页，因此不要在 `docs/content/modules/` 维护第二份模块正文。
+
 ## 开始使用
 
 ```bash

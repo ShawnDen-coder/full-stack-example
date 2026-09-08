@@ -10,6 +10,26 @@
 
 The package receives the database probe and logger through options; it does not create infrastructure clients itself.
 
+## Quick start
+
+Register the health route on the host app and inject the existing database probe and child logger:
+
+```ts
+import { getAppLogger } from "@full-stack-example/logging";
+import { setupSystemApp } from "@full-stack-example/system";
+import { Hono } from "hono";
+
+const app = new Hono();
+setupSystemApp(app, {
+  checkDatabase: async () => {},
+  logger: getAppLogger("system"),
+});
+
+const response = await app.request("/health");
+```
+
+The route returns `200` when the probe resolves and `503` when it rejects; callers can safely use `healthResponseSchema` to validate either payload.
+
 ## Development
 
 ```bash

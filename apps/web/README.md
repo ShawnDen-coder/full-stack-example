@@ -10,6 +10,22 @@
 
 The Web app does not duplicate API schemas or call PostgreSQL directly.
 
+## Quick start
+
+Run the API and Web watch processes together from the repository root:
+
+```bash
+just init
+Copy-Item .env.example .env
+just launch
+```
+
+Open [http://localhost:5173/](http://localhost:5173/). The Todo screen uses the typed client and talks to the API at [http://localhost:3000/](http://localhost:3000/). To run only the Vite app after the API is already available:
+
+```bash
+pnpm --filter @full-stack-example/web dev
+```
+
 ## Development
 
 ```bash

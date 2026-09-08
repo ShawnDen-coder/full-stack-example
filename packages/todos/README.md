@@ -11,6 +11,27 @@
 
 The repository is injected into the service. Routes never access Drizzle directly.
 
+## Quick start
+
+Wire a repository-backed service and mount the routes on the API composition root:
+
+```ts
+import { createTodoRepository, createTodoService, setupTodosApp } from "@full-stack-example/todos";
+
+const repository = createTodoRepository(database.db);
+const service = createTodoService(repository);
+setupTodosApp(app, { service });
+```
+
+You can call the mounted route with the same contract used by the Web app:
+
+```bash
+curl http://localhost:3000/api/todos
+curl -X POST http://localhost:3000/api/todos \
+  -H 'content-type: application/json' \
+  -d '{"title":"Write docs"}'
+```
+
 ## HTTP behavior
 
 `GET` lists newest Todos first; `POST` creates a trimmed title from 1 to 200 characters; `PATCH` changes completion; `DELETE` permanently removes a Todo. Invalid input is a documented `400`, missing records are `404`, and successful deletion is `204`.

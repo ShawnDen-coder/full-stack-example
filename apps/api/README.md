@@ -17,6 +17,29 @@ The API does not own database schema or Todo business rules. Those are injected 
 - `AppType` is the RPC contract consumed by `@full-stack-example/api-client`.
 - `src/server.ts` starts the Node process; `src/bootstrap.ts` creates runtime dependencies.
 
+## Quick start
+
+Start the complete local stack from the repository root:
+
+```bash
+just init
+Copy-Item .env.example .env
+just launch
+```
+
+To exercise the composed app without a listener, provide deterministic dependencies and call it directly:
+
+```ts
+const app = createApp({
+  checkDatabase: async () => {},
+  logger,
+  webOrigin: "http://localhost:5173",
+  todoService,
+});
+
+const response = await app.request("/health");
+```
+
 ## Development
 
 ```bash

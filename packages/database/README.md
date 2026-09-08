@@ -9,6 +9,24 @@
 - Migration helpers run the checked-in SQL migrations.
 - The health probe verifies database connectivity without exposing credentials.
 
+## Quick start
+
+Create the database context at the application bootstrap boundary, then inject its `db` and `close` functions into services:
+
+```ts
+import { createDatabase, checkDatabase } from "@full-stack-example/database";
+
+const database = createDatabase({ databaseUrl: process.env.DATABASE_URL! });
+await checkDatabase(database.db);
+// pass database.db to repositories; call database.close() during shutdown
+```
+
+For a local PostgreSQL instance, run migrations before starting the API:
+
+```bash
+pnpm --filter @full-stack-example/database db:migrate
+```
+
 ## Development
 
 ```bash
