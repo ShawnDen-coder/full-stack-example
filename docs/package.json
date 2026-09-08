@@ -22,8 +22,7 @@
     "hono": "catalog:",
     "micromark": "^4.0.2",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "rspress-plugin-mermaid": "^1.0.0"
+    "react-dom": "^19.2.3"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",

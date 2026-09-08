@@ -3,7 +3,6 @@ import { defineConfig } from "@rspress/core";
 import { pluginLlms } from "@rspress/plugin-llms";
 import { pluginSitemap } from "@rspress/plugin-sitemap";
 import { pluginTypeDoc } from "@rspress/plugin-typedoc";
-import mermaid from "rspress-plugin-mermaid";
 
 const repository = "https://github.com/ShawnDen-coder/full-stack-example";
 const base = process.env.DOCS_BASE ?? "/";
@@ -22,7 +21,6 @@ export default defineConfig({
     footer: { message: "Built with Rspress" },
   },
   plugins: [
-    mermaid(),
     pluginLlms(),
     pluginSitemap({ siteUrl: `${siteOrigin}${base}` }),
     pluginTypeDoc({
