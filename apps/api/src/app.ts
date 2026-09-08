@@ -13,6 +13,7 @@ import { timeout } from "hono/timeout";
 import { appFactory } from "./factory.js";
 import { setupLogStreamApp } from "./log-stream.js";
 import { setupWebApp } from "./web-app.js";
+import { createOpenApiDocument } from "./openapi.js";
 
 export function createApp(options: {
   readonly checkDatabase: () => Promise<void>;
@@ -57,6 +58,7 @@ export function createApp(options: {
     .use("*", secureHeaders())
     .use("*", bodyLimit({ maxSize: 1_048_576 }))
     .use("*", timeout(10_000))
+    .get("/openapi.json", (context) => context.json(createOpenApiDocument()))
     .notFound((context) => context.json({ error: "Not found" }, 404))
     .onError((_error, context) => context.json({ error: "Internal server error" }, 500));
   const withSystem = setupSystemApp(app, {
