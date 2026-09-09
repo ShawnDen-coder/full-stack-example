@@ -4,7 +4,7 @@ import { member, organization as organizationTable } from "@full-stack-example/d
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins/admin";
-import { adminAc } from "better-auth/plugins/admin/access";
+import { adminAc, userAc } from "better-auth/plugins/admin/access";
 import { organization } from "better-auth/plugins/organization";
 import { and, eq } from "drizzle-orm";
 import type {
@@ -54,7 +54,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
     plugins: [
       admin({
         adminRoles: ["platform-admin"],
-        roles: { "platform-admin": adminAc },
+        roles: { "platform-admin": adminAc, user: userAc },
       }),
       organization({
         allowUserToCreateOrganization: false,

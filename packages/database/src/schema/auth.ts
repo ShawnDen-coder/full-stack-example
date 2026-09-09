@@ -7,6 +7,10 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  role: text("role").default("user"),
+  banned: boolean("banned").default(false),
+  banReason: text("ban_reason"),
+  banExpires: timestamp("ban_expires"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
 });
@@ -22,6 +26,7 @@ export const session = pgTable("session", {
     .notNull()
     .references(() => user.id),
   activeOrganizationId: text("active_organization_id"),
+  impersonatedBy: text("impersonated_by"),
 });
 export const account = pgTable("account", {
   id: text("id").primaryKey(),
@@ -55,6 +60,7 @@ export const organization = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
     logo: text("logo"),
+    metadata: text("metadata"),
     createdAt: timestamp("created_at").notNull(),
     status: text("status").notNull().default("active"),
   },
@@ -83,4 +89,5 @@ export const invitation = pgTable("invitation", {
   inviterId: text("inviter_id")
     .notNull()
     .references(() => user.id),
+  createdAt: timestamp("created_at"),
 });
