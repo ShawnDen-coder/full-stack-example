@@ -6,6 +6,7 @@ describe("API configuration", () => {
   it("resolves a relative log file from the workspace root", () => {
     const config = parseConfig({
       DATABASE_URL: "postgres://app:app@localhost:5432/app",
+      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
       LOG_FILE: "logs/api.jsonl",
     });
 
