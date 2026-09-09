@@ -5,3 +5,4 @@ export { todos } from "./schema/index.js";
 export { member, organization } from "./schema/auth.js";
 export { withTenantTransaction, type TenantTransaction } from "./tenant.js";
 export { tenantNotes } from "./schema/tenant-notes.js";
+export { createTenantNotesRepository } from "./tenant-notes.js";
