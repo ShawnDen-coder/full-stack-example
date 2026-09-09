@@ -16,6 +16,7 @@ import type {
   SecurityEventSink,
 } from "./contracts.js";
 import { createPermissionPolicy } from "./permissions.js";
+import { createSessionPrincipal, createTenantPrincipal } from "./middleware.js";
 
 export interface AuthModuleOptions {
   readonly database: Database;
@@ -94,6 +95,13 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
         if (!tenant || tenant.status !== "active") return context.json({ error: "Organization disabled" }, 403);
         context.set("tenantId", tenantId);
         context.set("memberRole", membership.role);
+        context.set("principal", createTenantPrincipal({
+          session: createSessionPrincipal({ userId: value.user.id, sessionId: value.session.id, platformRoles: value.user.role === "platform-admin" ? ["platform-admin"] : ["user"] }),
+          tenantId,
+          memberId: membership.id,
+          organizationRoles: [membership.role as "owner" | "admin" | "member"],
+          requestId: context.get("requestId") ?? "unknown",
+        }));
         await next();
       },
       requirePlatformAdmin: async (context, next) => { const value = await sessionFor(context.req.raw); if (value?.user?.role !== "platform-admin") return context.json({ error: "Forbidden" }, 403); await next(); },
