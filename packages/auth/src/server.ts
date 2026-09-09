@@ -3,8 +3,8 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins/admin";
 import { organization } from "better-auth/plugins/organization";
 import type { Database } from "@full-stack-example/database";
-import { organization as organizationTable } from "@full-stack-example/database";
-import { eq } from "drizzle-orm";
+import { member, organization as organizationTable } from "@full-stack-example/database";
+import { and, eq } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import type {
   AuthGuardPort,
@@ -74,7 +74,21 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
     auth,
     guards: {
       requireSession: async (context, next) => { const value = await sessionFor(context.req.raw); if (!value?.user || !value.session) return context.json({ error: "Unauthorized" }, 401); await next(); },
-      requireTenant: async (context, next) => { const value = await sessionFor(context.req.raw); if (!value?.user || !value.session) return context.json({ error: "Unauthorized" }, 401); if (!value.session.activeOrganizationId) return context.json({ error: "Active organization required" }, 400); await next(); },
+      requireTenant: async (context, next) => {
+        const value = await sessionFor(context.req.raw);
+        const tenantId = value?.session?.activeOrganizationId;
+        if (!value?.user || !value.session) return context.json({ error: "Unauthorized" }, 401);
+        if (!tenantId) return context.json({ error: "Active organization required" }, 400);
+        const [membership, tenant] = await Promise.all([
+          options.database.query.member.findFirst({ where: and(eq(member.organizationId, tenantId), eq(member.userId, value.user.id)) }),
+          options.database.query.organization.findFirst({ where: eq(organizationTable.id, tenantId) }),
+        ]);
+        if (!membership) return context.json({ error: "Forbidden" }, 403);
+        if (!tenant || tenant.status !== "active") return context.json({ error: "Organization disabled" }, 403);
+        context.set("tenantId", tenantId);
+        context.set("memberRole", membership.role);
+        await next();
+      },
       requirePlatformAdmin: async (context, next) => { const value = await sessionFor(context.req.raw); if (value?.user?.role !== "platform-admin") return context.json({ error: "Forbidden" }, 403); await next(); },
       requireFreshSession: async (context, next) => { const value = await sessionFor(context.req.raw); if (!value?.session?.fresh) return context.json({ error: "Fresh session required" }, 403); await next(); },
       requirePermission: (requirement) => async (context, next) => {
