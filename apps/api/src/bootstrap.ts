@@ -64,6 +64,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       database: databaseContext.db,
       baseURL: config.betterAuthUrl,
       webBaseURL: config.webOrigin,
+      requireMailer: config.environment === "production",
       secret: config.betterAuthSecret,
       trustedOrigins: [config.webOrigin],
       policy: createPermissionPolicy({
