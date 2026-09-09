@@ -72,7 +72,8 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
       }),
     ],
     rateLimit: { enabled: true },
-    advanced: { useSecureCookies: options.baseURL.startsWith("https://") },
+    session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
+    advanced: { useSecureCookies: options.baseURL.startsWith("https://"), disableCSRFCheck: false },
   });
 
   const sessionFor = async (request: Request) => (await (auth.api as any).getSession({ headers: request.headers })) as any;
