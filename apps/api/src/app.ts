@@ -21,6 +21,7 @@ export function createApp(options: {
   readonly logger: Logger;
   readonly webOrigin: string;
   readonly todoService: TodoService;
+  readonly todoServiceForRequest?: (context: import("hono").Context) => TodoService;
   readonly auth?: AuthModule;
   readonly logStream?: LogStream;
   readonly logStreamHeartbeatMs?: number;
@@ -83,7 +84,13 @@ export function createApp(options: {
     logger: options.logger.getChild("system"),
   });
   const withAuth = options.auth ? setupAuthApp(withSystem, { auth: options.auth }) : withSystem;
-  const withTodos = setupTodosApp(withAuth, { service: options.todoService });
+  const withTenantTodos = options.auth
+    ? withAuth.use("/api/todos/*", options.auth.guards.requireTenant)
+    : withAuth;
+  const withTodos = setupTodosApp(withTenantTodos, {
+    service: options.todoService,
+    ...(options.todoServiceForRequest ? { serviceForRequest: options.todoServiceForRequest } : {}),
+  });
   const withLogStream = setupLogStreamApp(withTodos, {
     stream: options.logStream,
     heartbeatMs: options.logStreamHeartbeatMs ?? 15_000,

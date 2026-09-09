@@ -1,4 +1,4 @@
-import type { Env, Hono, Schema } from "hono";
+import type { Context, Env, Hono, Schema } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { z } from "zod";
 import {
@@ -16,8 +16,12 @@ const internalErrorSchema = z.object({ error: z.literal("Internal server error")
 
 export function setupTodosApp<E extends Env, S extends Schema, BasePath extends string>(
   app: Hono<E, S, BasePath>,
-  options: { readonly service: TodoService },
+  options: {
+    readonly service: TodoService;
+    readonly serviceForRequest?: (context: Context) => TodoService;
+  },
 ) {
+  const getService = (context: Context) => options.serviceForRequest?.(context) ?? options.service;
   return app
     .get(
       "/api/todos",
@@ -38,7 +42,7 @@ export function setupTodosApp<E extends Env, S extends Schema, BasePath extends 
         },
       }),
       async (context) => {
-        const todos = await options.service.listTodos();
+        const todos = await getService(context).listTodos();
         return context.json({ todos }, 200);
       },
     )
@@ -62,7 +66,7 @@ export function setupTodosApp<E extends Env, S extends Schema, BasePath extends 
       }),
       validator("json", createTodoSchema),
       async (context) => {
-        const todo = await options.service.createTodo(context.req.valid("json"));
+        const todo = await getService(context).createTodo(context.req.valid("json"));
         return context.json(todo, 201);
       },
     )
@@ -92,7 +96,7 @@ export function setupTodosApp<E extends Env, S extends Schema, BasePath extends 
       validator("json", updateTodoSchema),
       async (context) => {
         const { id } = context.req.valid("param");
-        const todo = await options.service.updateTodo({ id, ...context.req.valid("json") });
+        const todo = await getService(context).updateTodo({ id, ...context.req.valid("json") });
         if (!todo) return context.json(todoNotFound, 404);
         return context.json(todo, 200);
       },
@@ -119,7 +123,7 @@ export function setupTodosApp<E extends Env, S extends Schema, BasePath extends 
       validator("param", todoIdSchema),
       async (context) => {
         const { id } = context.req.valid("param");
-        const deleted = await options.service.deleteTodo({ id });
+        const deleted = await getService(context).deleteTodo({ id });
         if (!deleted) return context.json(todoNotFound, 404);
         return context.body(null, 204);
       },
