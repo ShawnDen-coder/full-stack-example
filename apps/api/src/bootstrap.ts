@@ -11,7 +11,7 @@ import {
   getAppLogger,
   shutdownLogging,
 } from "@full-stack-example/logging";
-import { createTodoRepository, createTodoService } from "@full-stack-example/todos";
+import { createTenantTodoService, createTodoRepository, createTodoService } from "@full-stack-example/todos";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { parseConfig } from "./config.js";
@@ -80,6 +80,11 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       webOrigin: config.webOrigin,
       todoService,
       auth,
+      todoServiceForRequest: (context) => {
+        const tenantId = context.get("tenantId");
+        if (!tenantId) throw new Error("Tenant context is required");
+        return createTenantTodoService(databaseContext.db, tenantId);
+      },
       ...(config.webAssetsDirectory ? { webAssetsDirectory: config.webAssetsDirectory } : {}),
       ...(config.logStreamEnabled
         ? { logStream, logStreamHeartbeatMs: config.logStreamHeartbeatMs }

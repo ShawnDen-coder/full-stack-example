@@ -10,4 +10,9 @@ export {
   type UpdateTodoInput,
   updateTodoSchema,
 } from "./schemas.js";
-export { createTodoService, type TodoRepository, type TodoService } from "./service.js";
+export {
+  createTenantTodoService,
+  createTodoService,
+  type TodoRepository,
+  type TodoService,
+} from "./service.js";
