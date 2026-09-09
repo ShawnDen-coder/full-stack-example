@@ -13,7 +13,6 @@
       "@full-stack-example/auth/client": ["./packages/auth/src/client.ts"],
       "@full-stack-example/auth/contracts": ["./packages/auth/src/contracts.ts"],
       "@full-stack-example/auth/server": ["./packages/auth/src/server.ts"],
-      "@full-stack-example/auth/schema": ["./packages/auth/src/schema.generated.ts"],
       "@full-stack-example/api/contract": ["./apps/api/src/contract.ts"]
     },
     "lib": ["ES2022"],
