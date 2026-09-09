@@ -1,7 +1,7 @@
 import { type AuthModule, setupAuthApp } from "@full-stack-example/auth/server";
 import type { Logger, LogStream } from "@full-stack-example/logging";
 import { setupSystemApp } from "@full-stack-example/system";
-import { setupTodosApp, type TodoService } from "@full-stack-example/todos";
+import { setupTodosApp, type TenantTodoService } from "@full-stack-example/todos";
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { honoLogger } from "@logtape/hono";
 import { trace } from "@opentelemetry/api";
@@ -20,8 +20,7 @@ export function createApp(options: {
   readonly checkDatabase: () => Promise<void>;
   readonly logger: Logger;
   readonly webOrigin: string;
-  readonly todoService: TodoService;
-  readonly todoServiceForRequest?: (context: import("hono").Context) => TodoService;
+  readonly todoService: TenantTodoService;
   readonly auth?: AuthModule;
   readonly logStream?: LogStream;
   readonly logStreamHeartbeatMs?: number;
@@ -87,9 +86,21 @@ export function createApp(options: {
   const withTenantTodos = options.auth
     ? withAuth.use("/api/todos*", options.auth.require.requireTenant)
     : withAuth;
+  const allowWithoutAuth = async (_context: import("hono").Context, next: import("hono").Next) =>
+    next();
   const withTodos = setupTodosApp(withTenantTodos, {
     service: options.todoService,
-    ...(options.todoServiceForRequest ? { serviceForRequest: options.todoServiceForRequest } : {}),
+    authorization: {
+      read: options.auth
+        ? options.auth.require.requireTenantPermission({ resource: "todos", action: "read" })
+        : allowWithoutAuth,
+      write: options.auth
+        ? options.auth.require.requireTenantPermission({ resource: "todos", action: "write" })
+        : allowWithoutAuth,
+      delete: options.auth
+        ? options.auth.require.requireTenantPermission({ resource: "todos", action: "delete" })
+        : allowWithoutAuth,
+    },
   });
   const withLogStream = setupLogStreamApp(withTodos, {
     stream: options.logStream,

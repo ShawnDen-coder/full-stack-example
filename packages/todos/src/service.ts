@@ -3,44 +3,33 @@ import { withTenantTransaction } from "@full-stack-example/database";
 import { createTenantTodoRepository } from "./repository.js";
 import type { CreateTodoInput, Todo, UpdateTodoInput } from "./schemas.js";
 
-export interface TodoRepository {
-  readonly list: () => Promise<readonly Todo[]>;
-  readonly create: (input: CreateTodoInput) => Promise<Todo>;
-  readonly updateCompleted: (
+export interface TenantTodoService {
+  readonly listTodos: (tenantId: string) => Promise<readonly Todo[]>;
+  readonly createTodo: (tenantId: string, input: CreateTodoInput) => Promise<Todo>;
+  readonly updateTodo: (
+    tenantId: string,
     input: { readonly id: number } & UpdateTodoInput,
   ) => Promise<Todo | undefined>;
-  readonly delete: (input: { readonly id: number }) => Promise<boolean>;
+  readonly deleteTodo: (tenantId: string, input: { readonly id: number }) => Promise<boolean>;
 }
 
-export function createTodoService(repository: TodoRepository) {
+export function createTodoService(options: { readonly database: Database }): TenantTodoService {
   return {
-    listTodos: (): Promise<readonly Todo[]> => repository.list(),
-    createTodo: (input: CreateTodoInput): Promise<Todo> => repository.create(input),
-    updateTodo: (input: { readonly id: number } & UpdateTodoInput): Promise<Todo | undefined> =>
-      repository.updateCompleted(input),
-    deleteTodo: (input: { readonly id: number }): Promise<boolean> => repository.delete(input),
-  };
-}
-
-export function createTenantTodoService(database: Database, tenantId: string) {
-  return createTodoService({
-    list: () =>
-      withTenantTransaction(database, tenantId, (tx) =>
+    listTodos: (tenantId) =>
+      withTenantTransaction(options.database, tenantId, (tx) =>
         createTenantTodoRepository(tx, tenantId).list(),
       ),
-    create: (input) =>
-      withTenantTransaction(database, tenantId, (tx) =>
+    createTodo: (tenantId, input) =>
+      withTenantTransaction(options.database, tenantId, (tx) =>
         createTenantTodoRepository(tx, tenantId).create(input),
       ),
-    updateCompleted: (input) =>
-      withTenantTransaction(database, tenantId, (tx) =>
+    updateTodo: (tenantId, input) =>
+      withTenantTransaction(options.database, tenantId, (tx) =>
         createTenantTodoRepository(tx, tenantId).updateCompleted(input),
       ),
-    delete: (input) =>
-      withTenantTransaction(database, tenantId, (tx) =>
+    deleteTodo: (tenantId, input) =>
+      withTenantTransaction(options.database, tenantId, (tx) =>
         createTenantTodoRepository(tx, tenantId).delete(input),
       ),
-  });
+  };
 }
-
-export type TodoService = ReturnType<typeof createTodoService>;

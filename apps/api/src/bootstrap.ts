@@ -11,11 +11,7 @@ import {
   getAppLogger,
   shutdownLogging,
 } from "@full-stack-example/logging";
-import {
-  createTenantTodoService,
-  createTodoRepository,
-  createTodoService,
-} from "@full-stack-example/todos";
+import { createTodoService } from "@full-stack-example/todos";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { parseConfig } from "./config.js";
@@ -59,10 +55,10 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       metricExportIntervalMillis: config.otelMetricExportInterval,
     });
     await migrateDatabase({
-      databaseUrl: config.databaseUrl,
+      databaseUrl: config.databaseMigratorUrl,
       migrationsFolder: defaultMigrationsFolder,
     });
-    const databaseContext = createDatabase({ databaseUrl: config.databaseUrl });
+    const databaseContext = createDatabase({ databaseUrl: config.databaseRuntimeUrl });
     database = databaseContext;
     const auth = createAuthModule({
       database: databaseContext.db,
@@ -78,18 +74,13 @@ export async function bootstrap(): Promise<() => Promise<void>> {
         },
       }),
     });
-    const todoService = createTodoService(createTodoRepository(databaseContext.db));
+    const todoService = createTodoService({ database: databaseContext.db });
     const app = createApp({
       checkDatabase: () => checkDatabase(databaseContext.db),
       logger,
       webOrigin: config.webOrigin,
       todoService,
       auth,
-      todoServiceForRequest: (context) => {
-        const tenantId = context.get("tenantId");
-        if (!tenantId) throw new Error("Tenant context is required");
-        return createTenantTodoService(databaseContext.db, tenantId);
-      },
       ...(config.webAssetsDirectory ? { webAssetsDirectory: config.webAssetsDirectory } : {}),
       ...(config.logStreamEnabled
         ? { logStream, logStreamHeartbeatMs: config.logStreamHeartbeatMs }
