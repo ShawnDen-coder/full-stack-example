@@ -2,6 +2,16 @@
 
 `@full-stack-example/auth` 是认证与租户鉴权的独立模块，封装 Better Auth 的邮箱密码、Session、Admin 和 Organization 能力。
 
+## Responsibilities
+
+负责登录会话、组织成员关系、平台管理员操作和租户资源授权；不持有数据库 schema，不实现业务 Todo 逻辑。
+
+## Public API
+
+- `@full-stack-example/auth/contracts`：Principal、权限要求、Mailer、安全事件和 Hono 变量类型。
+- `@full-stack-example/auth/server`：`createAuthModule`、`setupAuthApp` 和平台管理服务。
+- `@full-stack-example/auth/client`：浏览器端 Better Auth client 与 Organization client plugin。
+
 ## 三种身份
 
 | 身份 | 含义 | 数据来源 |
@@ -91,3 +101,14 @@ pnpm vitest packages/auth/tests --run
 - `POST /api/platform/users/:id/password-reset`
 
 这些接口统一要求登录、`platform-admin` 和 fresh session；不要直接调用 Better Auth Admin mutation endpoint。
+
+## Development
+
+```bash
+pnpm --filter @full-stack-example/auth typecheck
+pnpm vitest packages/auth/tests --run
+```
+
+## Extension rules
+
+新增业务资源时，在 API 组合根定义该资源的 read/write/delete 策略；不要在 Auth 包中写业务表查询，也不要让 Web 导入 `server`。
