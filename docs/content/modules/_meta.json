@@ -3,6 +3,7 @@
   "api",
   "web",
   "todos",
+  "auth",
   "system",
   "database",
   "api-client",

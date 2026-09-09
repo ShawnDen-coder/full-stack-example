@@ -2,13 +2,36 @@
 
 `@full-stack-example/database` 负责 PostgreSQL 连接、Drizzle schema、migration、健康检查，以及 Better Auth 持久化表。Auth 模块通过 Drizzle adapter 使用这些表。
 
-## Responsibilities
+## 职责边界
 
 统一持有所有数据库 schema、迁移和连接工厂；不负责 HTTP 鉴权决策。运行时连接由 API、Auth 和 Repository 共用，迁移连接只用于 DDL。
 
-## Public API
+## 对外接口
 
 `createDatabase` 创建连接池，`migrateDatabase` 执行迁移，`withTenantTransaction` 设置事务级租户上下文；schema 表从包根导出供 Repository 使用。
+
+## 依赖关系
+
+Database 是底层基础设施包，不依赖 Auth、Todos 或任何 App。Auth 使用认证表，业务 Repository 使用业务表和 `TenantTransaction`。
+
+## 启动流程
+
+```ts
+await migrateDatabase({
+  databaseUrl: process.env.DATABASE_MIGRATOR_URL!,
+  migrationsFolder: defaultMigrationsFolder,
+});
+
+const database = createDatabase({
+  databaseUrl: process.env.DATABASE_RUNTIME_URL!,
+});
+
+// 把 database.db 注入 Auth、Service 和健康检查。
+// 进程退出时：
+await database.close();
+```
+
+迁移连接只在启动阶段短暂使用；应用监听端口后只保留 runtime 连接。
 
 ## 表和字段语义
 
@@ -21,6 +44,7 @@
 | `organization` | `id`, `name`, `slug`, `status` | 一个租户；status 只能是 active/disabled |
 | `member` | `organization_id`, `user_id`, `role` | 用户加入组织的关系；role 为 owner/admin/member |
 | `invitation` | `organization_id`, `email`, `role`, `status`, `expires_at` | 尚未入组的邀请；接受后才产生 member |
+| `todos` | `id`, `tenant_id`, `title`, `completed` | 租户业务数据；`tenant_id` 决定归属，`title` 是任务标题，`completed` 表示是否完成 |
 
 ## 关系图
 
@@ -29,6 +53,7 @@ user 1 ─── N session
 user 1 ─── N account
 user 1 ─── N member N ─── 1 organization
 organization 1 ─── N invitation
+organization 1 ─── N todos
 session.active_organization_id ─── organization.id
 ```
 
@@ -52,7 +77,7 @@ session.active_organization_id ─── organization.id
 租户上下文只在事务内设置：
 
 ```ts
-await withTenantTransaction(database, tenantId, async (tx) => {
+await withTenantTransaction(databaseContext.db, tenantId, async (tx) => {
   const repository = createTenantTodoRepository(tx, tenantId);
   return repository.list();
 });
@@ -75,24 +100,33 @@ pnpm --filter @full-stack-example/database db:migrate
 
 迁移位于 `packages/database/migrations`，包含 Better Auth 表、Organization 状态约束、租户业务表、数据库角色和 RLS 策略。修改 schema 时必须同步审查 migration。
 
-## 开发与测试
+新增或修改业务表时按以下顺序操作：
 
-```bash
-pnpm --filter @full-stack-example/database typecheck
-pnpm --filter @full-stack-example/database db:studio
-just db-test-integration
-```
+1. 修改 `src/schema`。
+2. 执行 `db:generate` 并人工审查 SQL。
+3. 确认遗留数据如何获得 `tenant_id`，禁止猜测性回填。
+4. 添加 runtime DML、序列权限和强制 RLS。
+5. 使用 migrator 执行迁移，再使用 runtime 账号跑隔离测试。
 
-真实 PostgreSQL 测试覆盖租户 A/B 串租、写入策略、连接池隔离和 Todo RLS。不要在 Web 或 HTTP handler 中直接访问数据库，应把 `TenantTransaction` 注入业务 Repository。
+## 错误与边界行为
 
-## Development
+- `withTenantTransaction` 收到空 `tenantId` 会立即失败。
+- 未设置 `app.tenant_id` 时，业务表 RLS 默认拒绝访问。
+- runtime 账号不得执行 DDL、关闭 RLS、`SET ROLE` 为 migrator 或绕过 RLS。
+- Better Auth 表属于控制面，不启用 RLS，但 runtime 账号只获得所需 CRUD 权限。
+
+## 开发与验证
 
 ```bash
 pnpm --filter @full-stack-example/database typecheck
 pnpm --filter @full-stack-example/database db:generate
 pnpm --filter @full-stack-example/database db:migrate
+pnpm --filter @full-stack-example/database db:studio
+just db-test-integration
 ```
 
-## Extension rules
+真实 PostgreSQL 测试覆盖租户 A/B 串租、写入策略、连接池隔离和 Todo RLS。不要在 Web 或 HTTP handler 中直接访问数据库。
+
+## 扩展规则
 
 新增业务表必须有非空 `tenant_id`、组织外键、显式租户条件和强制 RLS；不得把运行时连接升级为 DDL、SUPERUSER 或 BYPASSRLS 角色。
