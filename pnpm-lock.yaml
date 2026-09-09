@@ -45,6 +45,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@full-stack-example/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@full-stack-example/database':
         specifier: workspace:*
         version: link:../../packages/database

@@ -11,6 +11,7 @@ import {
   shutdownLogging,
 } from "@full-stack-example/logging";
 import { createTodoRepository, createTodoService } from "@full-stack-example/todos";
+import { createAuthModule } from "@full-stack-example/auth/server";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { parseConfig } from "./config.js";
@@ -59,12 +60,19 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     });
     const databaseContext = createDatabase({ databaseUrl: config.databaseUrl });
     database = databaseContext;
+    const auth = createAuthModule({
+      database: databaseContext.db,
+      baseURL: config.betterAuthUrl,
+      secret: config.betterAuthSecret,
+      trustedOrigins: [config.webOrigin],
+    });
     const todoService = createTodoService(createTodoRepository(databaseContext.db));
     const app = createApp({
       checkDatabase: () => checkDatabase(databaseContext.db),
       logger,
       webOrigin: config.webOrigin,
       todoService,
+      auth,
       ...(config.webAssetsDirectory ? { webAssetsDirectory: config.webAssetsDirectory } : {}),
       ...(config.logStreamEnabled
         ? { logStream, logStreamHeartbeatMs: config.logStreamHeartbeatMs }

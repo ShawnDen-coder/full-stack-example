@@ -1,4 +1,5 @@
 import type { Logger, LogStream } from "@full-stack-example/logging";
+import { setupAuthApp, type AuthModule } from "@full-stack-example/auth";
 import { setupSystemApp } from "@full-stack-example/system";
 import { setupTodosApp, type TodoService } from "@full-stack-example/todos";
 import { httpInstrumentationMiddleware } from "@hono/otel";
@@ -20,6 +21,7 @@ export function createApp(options: {
   readonly logger: Logger;
   readonly webOrigin: string;
   readonly todoService: TodoService;
+  readonly auth?: AuthModule;
   readonly logStream?: LogStream;
   readonly logStreamHeartbeatMs?: number;
   readonly webAssetsDirectory?: string;
@@ -80,7 +82,8 @@ export function createApp(options: {
     checkDatabase: options.checkDatabase,
     logger: options.logger.getChild("system"),
   });
-  const withTodos = setupTodosApp(withSystem, { service: options.todoService });
+  const withAuth = options.auth ? setupAuthApp(withSystem, { auth: options.auth }) : withSystem;
+  const withTodos = setupTodosApp(withAuth, { service: options.todoService });
   const withLogStream = setupLogStreamApp(withTodos, {
     stream: options.logStream,
     heartbeatMs: options.logStreamHeartbeatMs ?? 15_000,
