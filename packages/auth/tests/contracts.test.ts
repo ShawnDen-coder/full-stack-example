@@ -4,7 +4,6 @@ import { createPermissionPolicy } from "../src/permissions.js";
 describe("auth module contracts", () => {
   it("creates the three fixed organization roles", () => {
     const policy = createPermissionPolicy({
-      statements: { project: ["read", "update"] },
       roles: { member: { project: ["read"] } },
     });
 

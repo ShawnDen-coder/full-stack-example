@@ -35,9 +35,11 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@hono/zod-validator": "catalog:",
     "@full-stack-example/database": "workspace:*",
     "better-auth": "^1.7.3",
-    "hono": "catalog:"
+    "hono": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "drizzle-orm": "^0.44.7"

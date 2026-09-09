@@ -85,7 +85,7 @@ export function createApp(options: {
   });
   const withAuth = options.auth ? setupAuthApp(withSystem, { auth: options.auth }) : withSystem;
   const withTenantTodos = options.auth
-    ? withAuth.use("/api/todos*", options.auth.guards.requireTenant)
+    ? withAuth.use("/api/todos*", options.auth.require.requireTenant)
     : withAuth;
   const withTodos = setupTodosApp(withTenantTodos, {
     service: options.todoService,

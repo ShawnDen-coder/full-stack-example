@@ -12,7 +12,7 @@ describe("auth guards", () => {
     });
     (module.auth as any).api.getSession = async () => null;
     const app = new Hono();
-    app.use("/private", module.guards.requireSession);
+    app.use("/private", module.require.requireSession);
     app.get("/private", (context) => context.text("ok"));
     const response = await app.request("http://localhost/private");
     expect(response.status).toBe(401);

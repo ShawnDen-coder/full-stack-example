@@ -2,6 +2,7 @@ export type {
   AuthGuardPort,
   AuthHandler,
   AuthMiddleware,
+  AuthVariables,
   Mailer,
   OrganizationRole,
   PermissionPolicy,

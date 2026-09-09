@@ -8,12 +8,12 @@ import type {
 export function createSessionPrincipal(input: {
   userId: string;
   sessionId: string;
-  platformRoles?: readonly PlatformRole[];
+  platformRole?: PlatformRole;
 }): SessionPrincipal {
   return {
     userId: input.userId,
     sessionId: input.sessionId,
-    platformRoles: input.platformRoles ?? [],
+    platformRole: input.platformRole ?? "user",
   };
 }
 
@@ -21,14 +21,12 @@ export function createTenantPrincipal(input: {
   session: SessionPrincipal;
   tenantId: string;
   memberId: string;
-  organizationRoles: readonly OrganizationRole[];
-  requestId: string;
+  organizationRole: OrganizationRole;
 }): TenantPrincipal {
   return {
     ...input.session,
     tenantId: input.tenantId,
     memberId: input.memberId,
-    organizationRoles: input.organizationRoles,
-    requestId: input.requestId,
+    organizationRole: input.organizationRole,
   };
 }
