@@ -67,6 +67,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     const auth = createAuthModule({
       database: databaseContext.db,
       baseURL: config.betterAuthUrl,
+      webBaseURL: config.webOrigin,
       secret: config.betterAuthSecret,
       trustedOrigins: [config.webOrigin],
       policy: createPermissionPolicy({

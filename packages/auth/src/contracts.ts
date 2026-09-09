@@ -6,14 +6,19 @@ export type OrganizationRole = "owner" | "admin" | "member";
 export interface SessionPrincipal {
   readonly userId: string;
   readonly sessionId: string;
-  readonly platformRoles: readonly PlatformRole[];
+  readonly platformRole: PlatformRole;
 }
 
 export interface TenantPrincipal extends SessionPrincipal {
   readonly tenantId: string;
   readonly memberId: string;
-  readonly organizationRoles: readonly OrganizationRole[];
-  readonly requestId: string;
+  readonly organizationRole: OrganizationRole;
+}
+
+export interface AuthVariables {
+  readonly authSession?: unknown;
+  readonly sessionPrincipal?: SessionPrincipal;
+  readonly tenantPrincipal?: TenantPrincipal;
 }
 
 export interface PermissionRequirement {
@@ -45,7 +50,6 @@ export interface Mailer {
 export type AuthMiddleware = MiddlewareHandler;
 
 export interface PermissionPolicy {
-  readonly statements: Record<string, readonly string[]>;
   readonly roles: Record<OrganizationRole, Record<string, readonly string[]>>;
 }
 
@@ -55,6 +59,7 @@ export interface AuthGuardPort {
   readonly requirePlatformAdmin: AuthMiddleware;
   readonly requireFreshSession: AuthMiddleware;
   requirePermission(requirement: PermissionRequirement): AuthMiddleware;
+  requireTenantPermission(requirement: PermissionRequirement): AuthMiddleware;
 }
 
 export interface AuthHandler {
@@ -62,18 +67,30 @@ export interface AuthHandler {
 }
 
 export interface PlatformAuthService {
-  createUser(input: {
-    readonly email: string;
-    readonly name: string;
-  }): Promise<{ readonly id: string }>;
-  createOrganization(input: {
-    readonly name: string;
-    readonly slug: string;
-    readonly ownerUserId: string;
-  }): Promise<{ readonly id: string }>;
-  setOrganizationStatus(input: {
-    readonly organizationId: string;
-    readonly status: "active" | "disabled";
-  }): Promise<void>;
-  requestPasswordReset(input: { readonly email: string }): Promise<void>;
+  readonly createUser: (
+    actor: SessionPrincipal,
+    input: {
+      readonly email: string;
+      readonly name: string;
+    },
+  ) => Promise<{ readonly id: string }>;
+  readonly createOrganization: (
+    actor: SessionPrincipal,
+    input: {
+      readonly name: string;
+      readonly slug: string;
+      readonly ownerUserId: string;
+    },
+  ) => Promise<{ readonly id: string }>;
+  readonly setOrganizationStatus: (
+    actor: SessionPrincipal,
+    input: {
+      readonly organizationId: string;
+      readonly status: "active" | "disabled";
+    },
+  ) => Promise<void>;
+  readonly requestPasswordReset: (
+    actor: SessionPrincipal,
+    input: { readonly userId: string },
+  ) => Promise<void>;
 }

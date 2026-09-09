@@ -6,21 +6,19 @@ describe("auth principals", () => {
     const session = createSessionPrincipal({
       userId: "u1",
       sessionId: "s1",
-      platformRoles: ["user"],
+      platformRole: "user",
     });
     const tenant = createTenantPrincipal({
       session,
       tenantId: "t1",
       memberId: "m1",
-      organizationRoles: ["member"],
-      requestId: "r1",
+      organizationRole: "member",
     });
     expect(tenant).toMatchObject({
       userId: "u1",
       sessionId: "s1",
       tenantId: "t1",
       memberId: "m1",
-      requestId: "r1",
     });
   });
 });

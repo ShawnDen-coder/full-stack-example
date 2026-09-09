@@ -9,6 +9,7 @@ import {
 } from "@full-stack-example/database";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { createSessionPrincipal } from "../src/middleware.js";
 import { createAuthModule } from "../src/server.js";
 
 describe.skipIf(!process.env.DATABASE_URL)("Better Auth PostgreSQL integration", () => {
@@ -26,9 +27,14 @@ describe.skipIf(!process.env.DATABASE_URL)("Better Auth PostgreSQL integration",
     let userId: string | undefined;
     let organizationId: string | undefined;
     try {
-      const created = await auth.platform.createUser({ email, name: "Owner" });
+      const actor = createSessionPrincipal({
+        userId: "platform-actor",
+        sessionId: "session",
+        platformRole: "platform-admin",
+      });
+      const created = await auth.platform.createUser(actor, { email, name: "Owner" });
       userId = created.id;
-      const createdOrganization = await auth.platform.createOrganization({
+      const createdOrganization = await auth.platform.createOrganization(actor, {
         name: "Test Org",
         slug,
         ownerUserId: userId,
