@@ -4,10 +4,6 @@ CREATE TABLE "tenant_notes" (
 	"body" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_runtime') THEN CREATE ROLE app_runtime NOLOGIN; END IF;
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_migrator') THEN CREATE ROLE app_migrator NOLOGIN; END IF;
-END $$;
 ALTER TABLE "tenant_notes" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "tenant_notes" FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_notes_isolation ON "tenant_notes";
