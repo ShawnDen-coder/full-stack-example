@@ -1,29 +1,31 @@
-# Todos package
+# Todos 包
 
-`@full-stack-example/todos` owns Todo validation, service and repository boundaries, and the Hono CRUD routes mounted by the API host.
+`@full-stack-example/todos` 是首个真实租户业务模块，封装 Todo 校验、租户事务、Repository、Service 和 Hono CRUD 路由。
+
+## Responsibilities
+
+负责 Todo 领域规则和租户数据访问；不解析 Session、不调用 Better Auth，租户身份和权限由 Auth 模块在组合根注入。
 
 ## Public API
 
-- `todoSchema`, `todoListSchema`, `createTodoSchema`, `updateTodoSchema`, and `todoIdSchema` define runtime validation.
-- `TodoService` describes the application operations required by routes.
-- `createTodoService(repository)` wires persistence to business operations.
-- `setupTodosApp(app, options)` registers `/api/todos` routes without creating a second host app.
+- `todoSchema`、`todoListSchema`、`createTodoSchema`、`updateTodoSchema`、`todoIdSchema` 定义运行时校验。
+- `TenantTodoService` 描述路由所需的租户业务操作。
+- `createTodoService({ database })` 创建一次可复用的租户 Service。
+- `setupTodosApp(app, options)` 把 `/api/todos` 路由挂载到现有 Hono 应用。
 
-The repository is injected into the service. Routes never access Drizzle directly.
+Repository 由 Service 内部按请求创建，路由永远不直接访问 Drizzle。
 
-## Quick start
+## 用法
 
-Wire a repository-backed service and mount the routes on the API composition root:
+在 API 组合根创建一次 Service，并显式注入读写删除权限：
 
 ```ts
-import { createTodoRepository, createTodoService, setupTodosApp } from "@full-stack-example/todos";
-
-const repository = createTodoRepository(database.db);
-const service = createTodoService(repository);
-setupTodosApp(app, { service });
+import { createTodoService, setupTodosApp } from "@full-stack-example/todos";
+const service = createTodoService({ database: runtimeDatabase });
+setupTodosApp(app, { service, authorization });
 ```
 
-You can call the mounted route with the same contract used by the Web app:
+Web 或 API Client 可以直接调用同一合同：
 
 ```bash
 curl http://localhost:3000/api/todos
@@ -34,7 +36,7 @@ curl -X POST http://localhost:3000/api/todos \
 
 ## HTTP behavior
 
-`GET` lists newest Todos first; `POST` creates a trimmed title from 1 to 200 characters; `PATCH` changes completion; `DELETE` permanently removes a Todo. Invalid input is a documented `400`, missing records are `404`, and successful deletion is `204`.
+`GET` 按最新优先列出当前租户 Todo；`POST` 创建 1–200 字符标题；`PATCH` 修改完成状态；`DELETE` 删除 Todo。输入错误为 `400`，跨租户或不存在资源为 `404`，member 删除为 `403`。
 
 ## Development
 
@@ -45,6 +47,6 @@ pnpm --filter @full-stack-example/todos build
 
 ## Extension rules
 
-Update the Zod schema, service behavior, OpenAPI metadata, API tests, and module README together. Preserve the `setupTodosApp(app, options)` return type so Hono RPC inference remains exact.
+新增字段时同步更新 Zod schema、Service、Repository、OpenAPI、API 测试和 README；所有查询必须携带租户条件，不能把 RLS 当作唯一防线。
 
 See the [Todos module guide](/modules/todos/) and [HTTP API Reference](/reference/http-api/).
