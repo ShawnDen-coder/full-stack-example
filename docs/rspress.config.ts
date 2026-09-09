@@ -33,10 +33,7 @@ export default defineConfig({
       ],
       outDir: "reference/typescript",
       setup: (application) => {
-        application.options.setValue(
-          "tsconfig",
-          "tsconfig.typedoc.json",
-        );
+        application.options.setValue("tsconfig", "tsconfig.typedoc.json");
       },
     }),
   ],

@@ -4,7 +4,9 @@
   "private": true,
   "description": "Better Auth organization module and tenant authorization contracts.",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
