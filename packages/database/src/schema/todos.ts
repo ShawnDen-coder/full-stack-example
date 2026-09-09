@@ -5,5 +5,7 @@ export const todos = pgTable("todos", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   completed: boolean("completed").notNull().default(false),
-  tenantId: text("tenant_id").references(() => organization.id),
+  tenantId: text("tenant_id")
+    .notNull()
+    .references(() => organization.id),
 });
