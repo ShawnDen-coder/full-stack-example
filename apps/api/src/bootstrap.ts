@@ -11,7 +11,11 @@ import {
   getAppLogger,
   shutdownLogging,
 } from "@full-stack-example/logging";
-import { createTenantTodoService, createTodoRepository, createTodoService } from "@full-stack-example/todos";
+import {
+  createTenantTodoService,
+  createTodoRepository,
+  createTodoService,
+} from "@full-stack-example/todos";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { parseConfig } from "./config.js";
