@@ -44,6 +44,10 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
       disableSignUp: true,
       requireEmailVerification: false,
       revokeSessionsOnPasswordReset: true,
+      async sendResetPassword(data) {
+        if (!options.mailer) return;
+        await options.mailer.sendPasswordReset({ email: data.user.email, url: data.url });
+      },
     },
     plugins: [
       admin({
@@ -114,6 +118,10 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
       async setOrganizationStatus(input) {
         await options.database.update(organizationTable).set({ status: input.status }).where(eq(organizationTable.id, input.organizationId));
         await options.securityEvents?.emit({ event: "auth.organization.status_changed", organizationId: input.organizationId, metadata: { status: input.status } });
+      },
+      async requestPasswordReset(input) {
+        await (auth.api as any).requestPasswordReset({ body: { email: input.email, redirectTo: `${options.baseURL}/reset-password` } });
+        await options.securityEvents?.emit({ event: "auth.password_reset.requested", metadata: { email: input.email } });
       },
     },
   };

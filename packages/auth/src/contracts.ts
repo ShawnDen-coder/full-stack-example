@@ -72,4 +72,5 @@ export interface PlatformAuthService {
     readonly organizationId: string;
     readonly status: "active" | "disabled";
   }): Promise<void>;
+  requestPasswordReset(input: { readonly email: string }): Promise<void>;
 }
