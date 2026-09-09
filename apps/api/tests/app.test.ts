@@ -77,7 +77,7 @@ describe("API", () => {
   it("requires a tenant before serving Todo routes", async () => {
     const auth = {
       guards: {
-        requireTenant: async (context: any, next: any) => context.json({ error: "Unauthorized" }, 401),
+        requireTenant: async (context: any, _next: any) => context.json({ error: "Unauthorized" }, 401),
       },
       auth: { handler: async () => new Response("handled") },
     } as any;
