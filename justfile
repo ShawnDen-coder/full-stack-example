@@ -94,6 +94,9 @@ db-generate:
 db-migrate:
     pnpm --filter @full-stack-example/database db:migrate
 
+db-test-integration:
+    pnpm vitest packages/database/tests/postgres.integration.test.ts --run
+
 db-studio:
     pnpm --filter @full-stack-example/database db:studio
 
