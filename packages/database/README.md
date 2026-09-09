@@ -31,7 +31,7 @@ pnpm --filter @full-stack-example/database db:migrate
 
 The Auth schema adds `user`, `session`, `account`, `verification`, `organization`, `member`, and `invitation` tables. `organization.status` is constrained to `active` or `disabled`; Better Auth tables are deliberately outside RLS.
 
-The `tenant_notes` sample table demonstrates the business-side isolation contract: every row has a non-null `tenant_id` referencing `organization.id`, and its migration enables and forces RLS. The `app_runtime` role receives only table/sequence DML privileges, while `app_migrator` is reserved for schema migration ownership.
+The `tenant_notes` sample table and the Todos feature demonstrate the business-side isolation contract. Both carry a `tenant_id` reference to `organization.id`; their migrations enable and force RLS. New Todos should be written through `createTenantTodoRepository` inside `withTenantTransaction`. The `app_runtime` role receives only table/sequence DML privileges, while `app_migrator` is reserved for schema migration ownership.
 
 Use `withTenantTransaction(database, tenantId, work)` to set transaction-local `app.tenant_id`, and pass the resulting `TenantTransaction` to tenant-scoped repositories. This prevents tenant context leaking across pooled connections.
 
