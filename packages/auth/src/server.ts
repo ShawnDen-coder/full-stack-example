@@ -201,8 +201,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
       requirePlatformAdmin: async (context, next) => {
         const value = await sessionFor(context);
         if (!value?.user || !value.session) return context.json({ error: "Unauthorized" }, 401);
-        if (value.user.role !== "platform-admin")
-          return context.json({ error: "Forbidden" }, 403);
+        if (value.user.role !== "platform-admin") return context.json({ error: "Forbidden" }, 403);
         await next();
       },
       requireFreshSession: async (context, next) => {
