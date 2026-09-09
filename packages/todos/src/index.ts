@@ -1,4 +1,4 @@
-export { createTodoRepository } from "./repository.js";
+export { createTenantTodoRepository, createTodoRepository } from "./repository.js";
 export { setupTodosApp } from "./routes.js";
 export {
   type CreateTodoInput,
