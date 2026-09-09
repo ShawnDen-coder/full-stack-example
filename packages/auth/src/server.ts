@@ -192,3 +192,4 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
 }
 
 export { createPermissionPolicy } from "./permissions.js";
+export { setupAuthApp } from "./setup-app.js";

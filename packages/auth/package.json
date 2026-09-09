@@ -23,11 +23,6 @@
       "import": "./dist/server.js",
       "default": "./dist/server.js"
     },
-    "./schema": {
-      "types": "./dist/packages/auth/src/schema.generated.d.ts",
-      "import": "./dist/packages/auth/src/schema.generated.js",
-      "default": "./dist/packages/auth/src/schema.generated.js"
-    },
     "./client": {
       "types": "./dist/client.d.ts",
       "import": "./dist/client.js",
