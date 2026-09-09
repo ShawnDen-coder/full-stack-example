@@ -1,6 +1,12 @@
 import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createDatabase, organization, tenantNotes, todos, withTenantTransaction } from "../src/index.js";
+import {
+  createDatabase,
+  organization,
+  tenantNotes,
+  todos,
+  withTenantTransaction,
+} from "../src/index.js";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 
