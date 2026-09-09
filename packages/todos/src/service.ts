@@ -24,10 +24,10 @@ export function createTodoService(repository: TodoRepository) {
 
 export function createTenantTodoService(database: Database, tenantId: string) {
   return createTodoService({
-    list: () => withTenantTransaction(database, tenantId, (tx) => createTenantTodoRepository(tx).list()),
-    create: (input) => withTenantTransaction(database, tenantId, (tx) => createTenantTodoRepository(tx).create(input)),
-    updateCompleted: (input) => withTenantTransaction(database, tenantId, (tx) => createTenantTodoRepository(tx).updateCompleted(input)),
-    delete: (input) => withTenantTransaction(database, tenantId, (tx) => createTenantTodoRepository(tx).delete(input)),
+    list: () => withTenantTransaction(database, tenantId, (tx) => createTenantTodoRepository(tx, tenantId).list()),
+    create: (input) => withTenantTransaction(database, tenantId, (tx) => createTenantTodoRepository(tx, tenantId).create(input)),
+    updateCompleted: (input) => withTenantTransaction(database, tenantId, (tx) => createTenantTodoRepository(tx, tenantId).updateCompleted(input)),
+    delete: (input) => withTenantTransaction(database, tenantId, (tx) => createTenantTodoRepository(tx, tenantId).delete(input)),
   });
 }
 
