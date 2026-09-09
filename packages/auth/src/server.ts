@@ -3,6 +3,9 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins/admin";
 import { organization } from "better-auth/plugins/organization";
 import type { Database } from "@full-stack-example/database";
+import { organization as organizationTable } from "@full-stack-example/database";
+import { eq } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
 import type {
   AuthGuardPort,
   AuthHandler,
@@ -30,7 +33,7 @@ export interface AuthModule {
 }
 
 export function createAuthModule(options: AuthModuleOptions): AuthModule {
-  options.policy ?? createPermissionPolicy();
+  const policy = options.policy ?? createPermissionPolicy();
   const auth = betterAuth({
     database: drizzleAdapter(options.database, { provider: "pg" }),
     baseURL: options.baseURL,
@@ -74,17 +77,29 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
       requireTenant: async (context, next) => { const value = await sessionFor(context.req.raw); if (!value?.user || !value.session) return context.json({ error: "Unauthorized" }, 401); if (!value.session.activeOrganizationId) return context.json({ error: "Active organization required" }, 400); await next(); },
       requirePlatformAdmin: async (context, next) => { const value = await sessionFor(context.req.raw); if (value?.user?.role !== "platform-admin") return context.json({ error: "Forbidden" }, 403); await next(); },
       requireFreshSession: async (context, next) => { const value = await sessionFor(context.req.raw); if (!value?.session?.fresh) return context.json({ error: "Fresh session required" }, 403); await next(); },
-      requirePermission: () => async (_context, next) => next(),
+      requirePermission: (requirement) => async (context, next) => {
+        const value = await sessionFor(context.req.raw);
+        const role = value?.user?.role === "platform-admin" ? "owner" : "member";
+        const allowed = policy.roles[role]?.[requirement.resource]?.includes(requirement.action) ?? false;
+        if (!allowed) return context.json({ error: "Forbidden" }, 403);
+        await next();
+      },
     },
     platform: {
-      async createUser() {
-        throw new Error("Platform user provisioning is not implemented yet");
+      async createUser(input) {
+        const password = randomBytes(24).toString("base64url");
+        const result = await (auth.api as any).createUser({ body: { email: input.email, name: input.name, password, role: "user" } });
+        await options.securityEvents?.emit({ event: "auth.user.created", metadata: { email: input.email } });
+        return { id: result.user.id };
       },
-      async createOrganization() {
-        throw new Error("Platform organization provisioning is not implemented yet");
+      async createOrganization(input) {
+        const result = await (auth.api as any).createOrganization({ body: { name: input.name, slug: input.slug, userId: input.ownerUserId } });
+        await options.securityEvents?.emit({ event: "auth.organization.created", organizationId: result.id, actorUserId: input.ownerUserId });
+        return { id: result.id };
       },
-      async setOrganizationStatus() {
-        throw new Error("Organization status management is not implemented yet");
+      async setOrganizationStatus(input) {
+        await options.database.update(organizationTable).set({ status: input.status }).where(eq(organizationTable.id, input.organizationId));
+        await options.securityEvents?.emit({ event: "auth.organization.status_changed", organizationId: input.organizationId, metadata: { status: input.status } });
       },
     },
   };
