@@ -43,6 +43,13 @@
       "when": 1788960000000,
       "tag": "0005_tenant_todos",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788960100000,
+      "tag": "0006_runtime_grants",
+      "breakpoints": true
     }
   ]
 }
