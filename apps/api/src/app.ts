@@ -1,4 +1,4 @@
-import { type AuthModule, setupAuthApp } from "@full-stack-example/auth";
+import { type AuthModule, setupAuthApp } from "@full-stack-example/auth/server";
 import type { Logger, LogStream } from "@full-stack-example/logging";
 import { setupSystemApp } from "@full-stack-example/system";
 import { setupTodosApp, type TodoService } from "@full-stack-example/todos";
