@@ -22,9 +22,9 @@
       "default": "./dist/server.js"
     },
     "./schema": {
-      "types": "./dist/schema.generated.d.ts",
-      "import": "./dist/schema.generated.js",
-      "default": "./dist/schema.generated.js"
+      "types": "./dist/packages/auth/src/schema.generated.d.ts",
+      "import": "./dist/packages/auth/src/schema.generated.js",
+      "default": "./dist/packages/auth/src/schema.generated.js"
     },
     "./client": {
       "types": "./dist/client.d.ts",
