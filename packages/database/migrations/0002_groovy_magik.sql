@@ -16,5 +16,6 @@ CREATE POLICY tenant_notes_isolation ON "tenant_notes"
   WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
 REVOKE ALL ON "tenant_notes" FROM PUBLIC;
 GRANT SELECT, INSERT, UPDATE, DELETE ON "tenant_notes" TO app_runtime;
+GRANT USAGE, SELECT ON SEQUENCE "tenant_notes_id_seq" TO app_runtime;
 --> statement-breakpoint
 ALTER TABLE "tenant_notes" ADD CONSTRAINT "tenant_notes_tenant_id_organization_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;
