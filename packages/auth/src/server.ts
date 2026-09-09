@@ -93,7 +93,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
       requireFreshSession: async (context, next) => { const value = await sessionFor(context.req.raw); if (!value?.session?.fresh) return context.json({ error: "Fresh session required" }, 403); await next(); },
       requirePermission: (requirement) => async (context, next) => {
         const value = await sessionFor(context.req.raw);
-        const role = value?.user?.role === "platform-admin" ? "owner" : "member";
+        const role = value?.user?.role === "platform-admin" ? "owner" : (context.get("memberRole") as "owner" | "admin" | "member" | undefined) ?? "member";
         const allowed = policy.roles[role]?.[requirement.resource]?.includes(requirement.action) ?? false;
         if (!allowed) return context.json({ error: "Forbidden" }, 403);
         await next();
