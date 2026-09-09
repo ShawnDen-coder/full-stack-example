@@ -24,6 +24,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@full-stack-example/auth": "workspace:*",
     "@full-stack-example/database": "workspace:*",
     "@full-stack-example/logging": "workspace:*",
     "@full-stack-example/system": "workspace:*",
