@@ -10,6 +10,7 @@ DO $$ BEGIN
 END $$;
 ALTER TABLE "tenant_notes" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "tenant_notes" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_notes_isolation ON "tenant_notes";
 CREATE POLICY tenant_notes_isolation ON "tenant_notes"
   USING (tenant_id = current_setting('app.tenant_id', true))
   WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
