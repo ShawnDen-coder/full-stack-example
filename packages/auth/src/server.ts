@@ -66,13 +66,14 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
     advanced: { useSecureCookies: options.baseURL.startsWith("https://") },
   });
 
+  const sessionFor = async (request: Request) => (await (auth.api as any).getSession({ headers: request.headers })) as any;
   return {
     auth,
     guards: {
-      requireSession: async (_context, next) => next(),
-      requireTenant: async (_context, next) => next(),
-      requirePlatformAdmin: async (_context, next) => next(),
-      requireFreshSession: async (_context, next) => next(),
+      requireSession: async (context, next) => { const value = await sessionFor(context.req.raw); if (!value?.user || !value.session) return context.json({ error: "Unauthorized" }, 401); await next(); },
+      requireTenant: async (context, next) => { const value = await sessionFor(context.req.raw); if (!value?.user || !value.session) return context.json({ error: "Unauthorized" }, 401); if (!value.session.activeOrganizationId) return context.json({ error: "Active organization required" }, 400); await next(); },
+      requirePlatformAdmin: async (context, next) => { const value = await sessionFor(context.req.raw); if (value?.user?.role !== "platform-admin") return context.json({ error: "Forbidden" }, 403); await next(); },
+      requireFreshSession: async (context, next) => { const value = await sessionFor(context.req.raw); if (!value?.session?.fresh) return context.json({ error: "Fresh session required" }, 403); await next(); },
       requirePermission: () => async (_context, next) => next(),
     },
     platform: {
