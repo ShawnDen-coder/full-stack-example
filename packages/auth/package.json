@@ -1,0 +1,43 @@
+{
+  "name": "@full-stack-example/auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Better Auth organization module and tenant authorization contracts.",
+  "type": "module",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js",
+      "default": "./dist/contracts.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js",
+      "default": "./dist/server.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js",
+      "default": "./dist/client.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@full-stack-example/database": "workspace:*",
+    "better-auth": "^1.7.3",
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "drizzle-orm": "^0.44.7"
+  }
+}

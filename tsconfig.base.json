@@ -9,6 +9,10 @@
       "@full-stack-example/system": ["./packages/system/src/index.ts"],
       "@full-stack-example/todos": ["./packages/todos/src/index.ts"],
       "@full-stack-example/api-client": ["./packages/api-client/src/index.ts"],
+      "@full-stack-example/auth": ["./packages/auth/src/index.ts"],
+      "@full-stack-example/auth/client": ["./packages/auth/src/client.ts"],
+      "@full-stack-example/auth/contracts": ["./packages/auth/src/contracts.ts"],
+      "@full-stack-example/auth/server": ["./packages/auth/src/server.ts"],
       "@full-stack-example/api/contract": ["./apps/api/src/contract.ts"]
     },
     "lib": ["ES2022"],
