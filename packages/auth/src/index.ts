@@ -13,6 +13,6 @@ export type {
   SessionPrincipal,
   TenantPrincipal,
 } from "./contracts.js";
-export { createAuthModule, createPermissionPolicy, type AuthModule } from "./server.js";
-export { setupAuthApp } from "./setup-app.js";
 export { createSessionPrincipal, createTenantPrincipal } from "./middleware.js";
+export { type AuthModule, createAuthModule, createPermissionPolicy } from "./server.js";
+export { setupAuthApp } from "./setup-app.js";

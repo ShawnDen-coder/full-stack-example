@@ -1,3 +1,4 @@
+import { createAuthModule, createPermissionPolicy } from "@full-stack-example/auth/server";
 import {
   checkDatabase,
   createDatabase,
@@ -11,7 +12,6 @@ import {
   shutdownLogging,
 } from "@full-stack-example/logging";
 import { createTodoRepository, createTodoService } from "@full-stack-example/todos";
-import { createAuthModule, createPermissionPolicy } from "@full-stack-example/auth/server";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { parseConfig } from "./config.js";

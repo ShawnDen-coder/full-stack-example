@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { Hono } from "hono";
+import { describe, expect, it } from "vitest";
 import { createAuthModule } from "../src/server.js";
 
 describe("auth guards", () => {

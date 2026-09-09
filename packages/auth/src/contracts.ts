@@ -62,7 +62,10 @@ export interface AuthHandler {
 }
 
 export interface PlatformAuthService {
-  createUser(input: { readonly email: string; readonly name: string }): Promise<{ readonly id: string }>;
+  createUser(input: {
+    readonly email: string;
+    readonly name: string;
+  }): Promise<{ readonly id: string }>;
   createOrganization(input: {
     readonly name: string;
     readonly slug: string;
