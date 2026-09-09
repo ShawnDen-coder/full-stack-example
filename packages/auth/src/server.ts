@@ -29,6 +29,7 @@ export interface AuthModuleOptions {
   readonly secret: string;
   readonly trustedOrigins: readonly string[];
   readonly mailer?: Mailer;
+  readonly requireMailer?: boolean;
   readonly securityEvents?: SecurityEventSink;
   readonly policy?: PermissionPolicy;
 }
@@ -40,6 +41,8 @@ export interface AuthModule {
 }
 
 export function createAuthModule(options: AuthModuleOptions): AuthModule {
+  if (options.requireMailer && !options.mailer)
+    throw new Error("A mailer is required for production Auth flows");
   const policy = options.policy ?? createPermissionPolicy();
   const webBaseURL = options.webBaseURL ?? options.baseURL;
   const auth = betterAuth({
@@ -80,6 +83,30 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
     ],
     rateLimit: { enabled: true },
     session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
+    databaseHooks: {
+      session: {
+        create: {
+          after: async ({ data }) => {
+            const session = data as { readonly userId: string; readonly id: string };
+            await options.securityEvents?.emit({
+              event: "auth.session.created",
+              actorUserId: session.userId,
+              metadata: { sessionId: session.id },
+            });
+          },
+        },
+        delete: {
+          after: async ({ data }) => {
+            const session = data as { readonly userId: string; readonly id: string };
+            await options.securityEvents?.emit({
+              event: "auth.session.revoked",
+              actorUserId: session.userId,
+              metadata: { sessionId: session.id },
+            });
+          },
+        },
+      },
+    },
     advanced: { useSecureCookies: options.baseURL.startsWith("https://"), disableCSRFCheck: false },
   });
 
@@ -113,7 +140,8 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
     if (!value?.user || !value.session) return undefined;
     const existing = context.get("sessionPrincipal");
     if (existing) return existing as ReturnType<typeof createSessionPrincipal>;
-    const platformRole = value.user.role === "platform-admin" ? "platform-admin" : "user";
+    if (value.user.role !== "platform-admin" && value.user.role !== "user") return undefined;
+    const platformRole = value.user.role;
     const principal = createSessionPrincipal({
       userId: value.user.id,
       sessionId: value.session.id,
@@ -172,7 +200,8 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
       },
       requirePlatformAdmin: async (context, next) => {
         const value = await sessionFor(context);
-        if (value?.user?.role !== "platform-admin")
+        if (!value?.user || !value.session) return context.json({ error: "Unauthorized" }, 401);
+        if (value.user.role !== "platform-admin")
           return context.json({ error: "Forbidden" }, 403);
         await next();
       },
