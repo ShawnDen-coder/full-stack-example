@@ -9,5 +9,7 @@ describe("auth app setup", () => {
     const response = await app.request("http://localhost/api/auth/ok");
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true });
+    const adminResponse = await app.request("http://localhost/api/auth/admin/create-user", { method: "POST" });
+    expect(adminResponse.status).toBe(404);
   });
 });
