@@ -3,12 +3,12 @@ import path from "node:path";
 import { validate } from "@scalar/openapi-parser";
 import { createApp } from "../../apps/api/src/app.js";
 import { configureLogging, getAppLogger } from "../../packages/logging/src/logger.js";
-import type { TodoService } from "../../packages/todos/src/service.js";
+import type { TenantTodoService } from "../../packages/todos/src/service.js";
 
-const todoService: TodoService = {
+const todoService: TenantTodoService = {
   listTodos: async () => [],
-  createTodo: async (input) => ({ id: 1, title: input.title, completed: false }),
-  updateTodo: async ({ id, completed }) => ({ id, title: "Example", completed }),
+  createTodo: async (_tenantId, input) => ({ id: 1, title: input.title, completed: false }),
+  updateTodo: async (_tenantId, { id, completed }) => ({ id, title: "Example", completed }),
   deleteTodo: async () => true,
 };
 
