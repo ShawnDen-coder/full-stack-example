@@ -11,6 +11,4 @@ export {
   verification,
 } from "./schema/auth.js";
 export { todos } from "./schema/index.js";
-export { tenantNotes } from "./schema/tenant-notes.js";
 export { type TenantTransaction, withTenantTransaction } from "./tenant.js";
-export { createTenantNotesRepository } from "./tenant-notes.js";
