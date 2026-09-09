@@ -33,4 +33,26 @@ describe.skipIf(!process.env.DATABASE_URL)("Better Auth PostgreSQL integration",
       await database.close();
     }
   });
+
+  it("supports password sign-in and session lookup", async () => {
+    const database = createDatabase({ databaseUrl: process.env.DATABASE_URL as string });
+    const email = `login-${Date.now()}@example.test`;
+    const password = "correct-horse-battery-staple";
+    const auth = createAuthModule({ database: database.db, baseURL: "http://localhost:3000", secret: "test-secret-that-is-at-least-32-characters-long", trustedOrigins: ["http://localhost:5173"] });
+    let userId: string | undefined;
+    try {
+      const created = await (auth.auth as any).api.createUser({ body: { email, name: "Login User", password, role: "user" } });
+      userId = created.user.id;
+      const signIn = await (auth.auth as any).api.signInEmail({ body: { email, password }, headers: new Headers() });
+      expect(signIn.user.id).toBe(userId);
+      expect(signIn.token).toBeTruthy();
+    } finally {
+      if (userId) {
+        await database.db.delete(session).where(eq(session.userId, userId));
+        await database.db.delete(account).where(eq(account.userId, userId));
+        await database.db.delete(user).where(eq(user.id, userId));
+      }
+      await database.close();
+    }
+  });
 });
