@@ -6,6 +6,8 @@
       "!!**/dist",
       "!!**/coverage",
       "!!**/node_modules",
+      "!!docs/doc_build",
+      "!!docs/content/reference/typescript",
       "!!packages/database/migrations",
       "!!.vscode"
     ]

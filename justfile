@@ -52,16 +52,16 @@ test-watch:
     pnpm exec vitest --config vitest.config.ts
 
 lint:
-    pnpm exec biome check --config-path biome.json --write .
+    node node_modules/@biomejs/biome/bin/biome check --config-path biome.json --write .
 
 lint-check:
-    pnpm exec biome check --config-path biome.json .
+    node node_modules/@biomejs/biome/bin/biome check --config-path biome.json .
 
 format:
-    pnpm exec biome format --config-path biome.json --write .
+    node node_modules/@biomejs/biome/bin/biome format --config-path biome.json --write .
 
 format-check:
-    pnpm exec biome format --config-path biome.json .
+    node node_modules/@biomejs/biome/bin/biome format --config-path biome.json .
 
 check:
     just lint-check
