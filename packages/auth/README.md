@@ -15,11 +15,12 @@
 ## 服务端接入
 
 ```ts
-import { createAuthModule, setupAuthApp } from "@full-stack-example/auth";
+import { createAuthModule, setupAuthApp } from "@full-stack-example/auth/server";
 
 const auth = createAuthModule({
   database: database.db,
   baseURL: process.env.BETTER_AUTH_URL!,
+  webBaseURL: process.env.WEB_ORIGIN!,
   secret: process.env.BETTER_AUTH_SECRET!,
   trustedOrigins: [process.env.WEB_ORIGIN!],
 });
@@ -37,15 +38,30 @@ const authClient = createAppAuthClient({ baseURL: "http://localhost:3000" });
 
 客户端 Organization plugin 负责切换当前组织；服务端以 Session 的 `activeOrganizationId` 为唯一租户选择来源。客户端检查不能代替服务端鉴权。
 
-## 请求鉴权顺序
+## 请求鉴权与业务模块接入
 
 1. `requireSession`：无有效 Session 返回 `401`。
-2. `requireTenant`：重新查询 Session、membership 和 organization。
+2. `requireTenantPermission`：一次完成 Session、active organization、membership、organization 状态和权限检查。
 3. 组织不存在、用户不是成员或组织 `status=disabled` 时拒绝访问。
-4. `requirePermission`：按 owner/admin/member 和业务策略判断操作权限。
+4. 按 owner/admin/member 和业务策略判断操作权限。
 5. Repository 必须在 `withTenantTransaction` 中执行，数据库 RLS 做最终隔离。
 
-常用守卫：`requirePlatformAdmin`（平台后台）、`requireFreshSession`（敏感操作）、`requirePermission(resource, action)`（资源权限）。
+常用守卫：`requirePlatformAdmin`（平台后台）、`requireFreshSession`（敏感操作）、`requireTenantPermission({ resource, action })`（租户资源权限）。推荐在 API 组合根一次性传入业务路由的 read/write/delete 授权 middleware：
+
+```ts
+const auth = createAuthModule(authOptions);
+const todos = createTodoService({ database: runtimeDatabase });
+setupTodosApp(app, {
+  service: todos,
+  authorization: {
+    read: auth.require.requireTenantPermission({ resource: "todos", action: "read" }),
+    write: auth.require.requireTenantPermission({ resource: "todos", action: "write" }),
+    delete: auth.require.requireTenantPermission({ resource: "todos", action: "delete" }),
+  },
+});
+```
+
+Todo Service 只创建一次；每个请求从 `tenantPrincipal` 取得租户，不需要 request-scoped service，也不需要调用 Better Auth 内部 API。
 
 ## 安全策略
 
@@ -57,7 +73,7 @@ const authClient = createAppAuthClient({ baseURL: "http://localhost:3000" });
 
 ## 环境变量
 
-`BETTER_AUTH_URL`（API 地址）、`BETTER_AUTH_SECRET`（至少 32 字符）、`WEB_ORIGIN`（前端来源）和 `DATABASE_URL`（PostgreSQL 连接串）。
+`BETTER_AUTH_URL`（API/Auth 地址）、`WEB_ORIGIN`（浏览器跳转地址）、`BETTER_AUTH_SECRET`（至少 32 字符）、`DATABASE_RUNTIME_URL`（运行时连接）和 `DATABASE_MIGRATOR_URL`（迁移连接）。本地可用 `DATABASE_URL` 兼容回退，生产必须配置双连接串。
 
 ## 测试
 
@@ -67,3 +83,11 @@ pnpm vitest packages/auth/tests --run
 ```
 
 设置 `DATABASE_URL` 后会执行真实 PostgreSQL 的用户、组织、登录和 Session 测试。
+平台管理 API 已由模块提供：
+
+- `POST /api/platform/users`
+- `POST /api/platform/organizations`
+- `PATCH /api/platform/organizations/:id/status`
+- `POST /api/platform/users/:id/password-reset`
+
+这些接口统一要求登录、`platform-admin` 和 fresh session；不要直接调用 Better Auth Admin mutation endpoint。

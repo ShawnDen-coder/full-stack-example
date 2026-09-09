@@ -1,4 +1,10 @@
 ALTER TABLE "todos" ADD COLUMN IF NOT EXISTS "tenant_id" text REFERENCES "organization"("id");
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM "todos" WHERE "tenant_id" IS NULL) THEN
+    RAISE EXCEPTION 'Cannot enable tenant isolation: todos contains rows without tenant_id. Backfill each row explicitly before rerunning migration.';
+  END IF;
+END $$;
 ALTER TABLE "todos" ALTER COLUMN "tenant_id" SET NOT NULL;
 
 ALTER TABLE "todos" ENABLE ROW LEVEL SECURITY;

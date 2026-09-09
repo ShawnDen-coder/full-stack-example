@@ -31,14 +31,13 @@ session.active_organization_id ─── organization.id
 业务表必须包含非空 `tenant_id`，并外键引用 `organization.id`。当前示例：
 
 - `todos.tenant_id`：Todo 所属组织，不能为空。
-- `tenant_notes.tenant_id`：租户笔记所属组织，不能为空。
 
 租户内唯一约束必须包含 `tenant_id`；跨租户关系应使用复合关系，避免错误连接不同组织的数据。
 
 ## RLS 和数据库角色
 
 - Better Auth 表不启用 RLS，它们属于认证控制面。
-- `todos`、`tenant_notes` 等业务表启用并强制 RLS。
+- `todos` 等业务表启用并强制 RLS。
 - `app_runtime` 只有业务表 DML 和序列权限，不能绕过 RLS。
 - `app_migrator` 专用于 schema/migration 管理。
 
@@ -53,7 +52,13 @@ await withTenantTransaction(database, tenantId, async (tx) => {
 
 `set_config(..., true)` 只在当前事务有效，连接池复用不会泄漏租户；没有租户上下文时 RLS 默认拒绝访问。
 
-## Migration
+## 连接串与 Migration
+
+运行时和迁移必须使用不同数据库账号：
+
+- `DATABASE_RUNTIME_URL`：API、Better Auth、业务 Repository 使用，只能执行允许的 DML，并受业务表 RLS 保护。
+- `DATABASE_MIGRATOR_URL`：只由 migration 使用，拥有 DDL/schema 权限。
+- `DATABASE_URL`：仅作为本地开发兼容回退，不应在生产使用超级用户连接。
 
 ```bash
 pnpm --filter @full-stack-example/database db:generate
