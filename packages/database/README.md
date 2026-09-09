@@ -2,6 +2,14 @@
 
 `@full-stack-example/database` 负责 PostgreSQL 连接、Drizzle schema、migration、健康检查，以及 Better Auth 持久化表。Auth 模块通过 Drizzle adapter 使用这些表。
 
+## Responsibilities
+
+统一持有所有数据库 schema、迁移和连接工厂；不负责 HTTP 鉴权决策。运行时连接由 API、Auth 和 Repository 共用，迁移连接只用于 DDL。
+
+## Public API
+
+`createDatabase` 创建连接池，`migrateDatabase` 执行迁移，`withTenantTransaction` 设置事务级租户上下文；schema 表从包根导出供 Repository 使用。
+
 ## 表和字段语义
 
 | 表 | 关键字段 | 语义 |
@@ -76,3 +84,15 @@ just db-test-integration
 ```
 
 真实 PostgreSQL 测试覆盖租户 A/B 串租、写入策略、连接池隔离和 Todo RLS。不要在 Web 或 HTTP handler 中直接访问数据库，应把 `TenantTransaction` 注入业务 Repository。
+
+## Development
+
+```bash
+pnpm --filter @full-stack-example/database typecheck
+pnpm --filter @full-stack-example/database db:generate
+pnpm --filter @full-stack-example/database db:migrate
+```
+
+## Extension rules
+
+新增业务表必须有非空 `tenant_id`、组织外键、显式租户条件和强制 RLS；不得把运行时连接升级为 DDL、SUPERUSER 或 BYPASSRLS 角色。
