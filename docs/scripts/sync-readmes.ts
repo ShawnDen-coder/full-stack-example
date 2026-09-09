@@ -21,6 +21,12 @@ const modules: readonly Module[] = [
     source: "packages/api-client/README.md",
   },
   {
+    directory: "packages/auth",
+    route: "auth",
+    title: "Auth 包",
+    source: "packages/auth/README.md",
+  },
+  {
     directory: "packages/database",
     route: "database",
     title: "Database 包",
@@ -63,12 +69,12 @@ async function readModule(module: Module) {
   if (!packageJson.description) throw new Error(`Missing package description: ${module.directory}`);
   const sourcePath = path.join(rootDirectory, module.source);
   const markdown = await readFile(sourcePath, "utf8");
-  const requiredSections = ["## Development", "## Extension rules"];
+  const requiredSections = ["## 开发与验证", "## 扩展规则"];
   for (const section of requiredSections) {
     if (!markdown.includes(section)) throw new Error(`${module.source} is missing ${section}`);
   }
-  if (!markdown.includes("## Responsibilities") && !markdown.includes("## Public API")) {
-    throw new Error(`${module.source} is missing ## Responsibilities or ## Public API`);
+  if (!markdown.includes("## 职责边界") && !markdown.includes("## 对外接口")) {
+    throw new Error(`${module.source} is missing ## 职责边界 or ## 对外接口`);
   }
   return `---\ntitle: ${module.title}\ndescription: ${packageJson.description}\n---\n\n> 内容来源：[${module.source}](${sourceLink(module.source)})。\n\n${stripHeading(markdown)}\n`;
 }

@@ -1,4 +1,9 @@
-# Auth 模块（企业内部多租户认证）
+---
+title: Auth 包
+description: Better Auth organization module and tenant authorization contracts.
+---
+
+> 内容来源：[packages/auth/README.md](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/auth/README.md)。
 
 `@full-stack-example/auth` 是认证与租户鉴权的独立模块，封装 Better Auth 的邮箱密码、Session、Admin 和 Organization 能力。
 
@@ -138,3 +143,4 @@ pnpm vitest packages/auth/tests --run
 ## 扩展规则
 
 新增业务资源时，在 API 组合根定义该资源的 read/write/delete 策略；不要在 Auth 包中写业务表查询，也不要让 Web 导入 `server`。
+

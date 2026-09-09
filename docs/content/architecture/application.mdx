@@ -6,3 +6,35 @@ description: 说明 API 组合根、Web 应用和共享 workspace 包之间的�
 # 应用组合与 workspace 边界
 
 `apps/api/src/app.ts` 负责跨切面 HTTP policy 和功能模块组合；`packages/todos`、`packages/system` 等包只接收宿主 app 与显式依赖。
+
+## 依赖方向
+
+```text
+Web
+├── API Client ──→ API contract（仅类型）
+└── Auth Client ─→ Better Auth endpoint
+
+API（唯一组合根）
+├── Auth Server ─→ Database
+├── Todos ───────→ Database + Auth contracts
+├── System ──────→ Logging
+└── Logging + Database
+```
+
+依赖只从应用层指向能力包和基础设施包。Database 与 Logging 不反向依赖业务；Web 不导入 Auth Server、Database 或 Drizzle。
+
+## 标准组合流程
+
+1. 使用 migrator 连接执行数据库迁移。
+2. 创建 runtime Database，并注入 Auth、Todo Service 和健康检查。
+3. 创建 Auth Module，在 API 宿主挂载认证和平台管理路由。
+4. 在组合根声明业务权限，将授权 middleware 注入 Todos。
+5. 使用每个 `setupXxxApp` 的返回值继续组合，保留 Hono 的精确 `AppType`。
+6. Web 通过 API Client 和 Auth Client 访问服务端，不复制 API schema。
+
+## 边界原则
+
+- Auth 负责身份、成员关系和权限，不实现业务查询。
+- Service 负责用例和租户事务，Repository 负责显式租户条件。
+- PostgreSQL RLS 是最后防线，不替代应用层授权或 Repository 条件。
+- API 是唯一组合根；不使用通用模块注册器，也不让功能包创建第二个宿主 Hono app。
