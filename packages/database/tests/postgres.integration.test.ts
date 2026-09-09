@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createDatabase, withTenantTransaction } from "../src/index.js";
+import { createDatabase, organization, tenantNotes, withTenantTransaction } from "../src/index.js";
+import { eq } from "drizzle-orm";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 
@@ -16,6 +17,34 @@ describe.skipIf(!hasDatabase)("PostgreSQL tenant isolation", () => {
       });
       expect(result).toBe("tenant-a");
     } finally {
+      await database.close();
+    }
+  });
+
+  it("prevents app_runtime from reading another tenant", async () => {
+    const database = createDatabase({ databaseUrl: process.env.DATABASE_URL as string });
+    const tenantA = `rls-a-${Date.now()}`;
+    const tenantB = `rls-b-${Date.now()}`;
+    try {
+      await database.db.insert(organization).values([
+        { id: tenantA, name: tenantA, slug: tenantA, createdAt: new Date() },
+        { id: tenantB, name: tenantB, slug: tenantB, createdAt: new Date() },
+      ]);
+      await database.db.insert(tenantNotes).values([
+        { tenantId: tenantA, body: "a" },
+        { tenantId: tenantB, body: "b" },
+      ]);
+      const rows = await withTenantTransaction(database.db, tenantA, async (tx) => {
+        await tx.execute(sql`set local role app_runtime`);
+        return tx.select().from(tenantNotes);
+      });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.tenantId).toBe(tenantA);
+    } finally {
+      await database.db.delete(tenantNotes).where(eq(tenantNotes.tenantId, tenantA));
+      await database.db.delete(tenantNotes).where(eq(tenantNotes.tenantId, tenantB));
+      await database.db.delete(organization).where(eq(organization.id, tenantA));
+      await database.db.delete(organization).where(eq(organization.id, tenantB));
       await database.close();
     }
   });
