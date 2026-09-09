@@ -1,13 +1,21 @@
 import { configureLogging, getAppLogger } from "@full-stack-example/logging";
-import type { TodoService } from "@full-stack-example/todos";
+import type { TenantTodoService } from "@full-stack-example/todos";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 
 let logger = getAppLogger("test");
-const todoService: TodoService = {
+const todoService: TenantTodoService = {
   listTodos: async () => [],
-  createTodo: async (input) => ({ id: 1, title: input.title, completed: false }),
-  updateTodo: async ({ id, completed }) => ({ id, title: "Todo", completed }),
+  createTodo: async (_tenantId: string, input: { title: string }) => ({
+    id: 1,
+    title: input.title,
+    completed: false,
+  }),
+  updateTodo: async (_tenantId: string, { id, completed }: { id: number; completed: boolean }) => ({
+    id,
+    title: "Todo",
+    completed,
+  }),
   deleteTodo: async () => true,
 };
 
@@ -76,9 +84,14 @@ describe("API", () => {
 
   it("requires a tenant before serving Todo routes", async () => {
     const auth = {
-      guards: {
+      require: {
         requireTenant: async (context: any, _next: any) =>
           context.json({ error: "Unauthorized" }, 401),
+        requireTenantPermission: () => async (context: any) =>
+          context.json({ error: "Unauthorized" }, 401),
+        requireSession: async (_context: any, next: any) => next(),
+        requirePlatformAdmin: async (_context: any, next: any) => next(),
+        requireFreshSession: async (_context: any, next: any) => next(),
       },
       auth: { handler: async () => new Response("handled") },
     } as any;

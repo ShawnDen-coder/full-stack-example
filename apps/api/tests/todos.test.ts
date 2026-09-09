@@ -1,37 +1,59 @@
 import { configureLogging, getAppLogger } from "@full-stack-example/logging";
-import { createTodoService, type TodoRepository } from "@full-stack-example/todos";
+import type { TenantTodoService } from "@full-stack-example/todos";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 
 let logger = getAppLogger("test");
 
-function createRepository(): TodoRepository {
+function createService(): TenantTodoService {
   let nextId = 1;
   const records = new Map<number, { id: number; title: string; completed: boolean }>();
   return {
-    list: async () => [...records.values()].sort((left, right) => right.id - left.id),
-    create: async ({ title }) => {
+    listTodos: async () => [...records.values()].sort((left, right) => right.id - left.id),
+    createTodo: async (_tenantId, { title }) => {
       const todo = { id: nextId, title, completed: false };
       nextId += 1;
       records.set(todo.id, todo);
       return todo;
     },
-    updateCompleted: async ({ id, completed }) => {
+    updateTodo: async (_tenantId, { id, completed }) => {
       const todo = records.get(id);
       if (!todo) return undefined;
       const updated = { ...todo, completed };
       records.set(id, updated);
       return updated;
     },
-    delete: async ({ id }) => records.delete(id),
+    deleteTodo: async (_tenantId, { id }) => records.delete(id),
   };
 }
 
 function createTestApp() {
+  const requireTenant = async (context: any, next: any) => {
+    context.set("tenantPrincipal", { tenantId: "tenant-test" });
+    await next();
+  };
+  const pass = async (_context: any, next: any) => next();
   return createApp({
     checkDatabase: async () => undefined,
     logger,
-    todoService: createTodoService(createRepository()),
+    todoService: createService(),
+    auth: {
+      require: {
+        requireTenant,
+        requireTenantPermission: () => requireTenant,
+        requireSession: pass,
+        requirePlatformAdmin: pass,
+        requireFreshSession: pass,
+        requirePermission: () => requireTenant,
+      },
+      auth: { handler: async () => new Response("handled") },
+      platform: {
+        createUser: async () => ({ id: "user" }),
+        createOrganization: async () => ({ id: "org" }),
+        setOrganizationStatus: async () => undefined,
+        requestPasswordReset: async () => undefined,
+      },
+    } as any,
     webOrigin: "http://localhost:5173",
   });
 }

@@ -1,3 +1,4 @@
+import type { TenantPrincipal } from "@full-stack-example/auth/contracts";
 import type { Context, Env, Hono, Schema } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { z } from "zod";
@@ -9,7 +10,13 @@ import {
   todoSchema,
   updateTodoSchema,
 } from "./schemas.js";
-import type { TodoService } from "./service.js";
+import type { TenantTodoService } from "./service.js";
+
+export interface TodoAuthorization {
+  readonly read: import("hono").MiddlewareHandler;
+  readonly write: import("hono").MiddlewareHandler;
+  readonly delete: import("hono").MiddlewareHandler;
+}
 
 const todoNotFound = { error: "Todo not found" } as const;
 const internalErrorSchema = z.object({ error: z.literal("Internal server error") });
@@ -17,11 +24,17 @@ const internalErrorSchema = z.object({ error: z.literal("Internal server error")
 export function setupTodosApp<E extends Env, S extends Schema, BasePath extends string>(
   app: Hono<E, S, BasePath>,
   options: {
-    readonly service: TodoService;
-    readonly serviceForRequest?: (context: Context) => TodoService;
+    readonly service: TenantTodoService;
+    readonly authorization: TodoAuthorization;
   },
 ) {
-  const getService = (context: Context) => options.serviceForRequest?.(context) ?? options.service;
+  const tenantFor = (context: Context): string => {
+    const principal = (
+      context as unknown as Context<{ Variables: { tenantPrincipal: TenantPrincipal } }>
+    ).get("tenantPrincipal");
+    if (!principal) throw new Error("Tenant context is required");
+    return principal.tenantId;
+  };
   return app
     .get(
       "/api/todos",
@@ -41,8 +54,9 @@ export function setupTodosApp<E extends Env, S extends Schema, BasePath extends 
           },
         },
       }),
+      options.authorization.read,
       async (context) => {
-        const todos = await getService(context).listTodos();
+        const todos = await options.service.listTodos(tenantFor(context));
         return context.json({ todos }, 200);
       },
     )
@@ -64,9 +78,13 @@ export function setupTodosApp<E extends Env, S extends Schema, BasePath extends 
           },
         },
       }),
+      options.authorization.write,
       validator("json", createTodoSchema),
       async (context) => {
-        const todo = await getService(context).createTodo(context.req.valid("json"));
+        const todo = await options.service.createTodo(
+          tenantFor(context),
+          context.req.valid("json"),
+        );
         return context.json(todo, 201);
       },
     )
@@ -92,11 +110,15 @@ export function setupTodosApp<E extends Env, S extends Schema, BasePath extends 
           },
         },
       }),
+      options.authorization.write,
       validator("param", todoIdSchema),
       validator("json", updateTodoSchema),
       async (context) => {
         const { id } = context.req.valid("param");
-        const todo = await getService(context).updateTodo({ id, ...context.req.valid("json") });
+        const todo = await options.service.updateTodo(tenantFor(context), {
+          id,
+          ...context.req.valid("json"),
+        });
         if (!todo) return context.json(todoNotFound, 404);
         return context.json(todo, 200);
       },
@@ -120,10 +142,11 @@ export function setupTodosApp<E extends Env, S extends Schema, BasePath extends 
           },
         },
       }),
+      options.authorization.delete,
       validator("param", todoIdSchema),
       async (context) => {
         const { id } = context.req.valid("param");
-        const deleted = await getService(context).deleteTodo({ id });
+        const deleted = await options.service.deleteTodo(tenantFor(context), { id });
         if (!deleted) return context.json(todoNotFound, 404);
         return context.body(null, 204);
       },
