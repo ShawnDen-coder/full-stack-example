@@ -74,6 +74,24 @@ describe("API", () => {
     expect(await response.json()).toMatchObject({ success: false });
   });
 
+  it("requires a tenant before serving Todo routes", async () => {
+    const auth = {
+      guards: {
+        requireTenant: async (context: any, next: any) => context.json({ error: "Unauthorized" }, 401),
+      },
+      auth: { handler: async () => new Response("handled") },
+    } as any;
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      todoService,
+      auth,
+      webOrigin: "http://localhost:5173",
+    });
+    const response = await app.request("http://localhost/api/todos");
+    expect(response.status).toBe(401);
+  });
+
   it("returns a degradation without revealing the database error", async () => {
     const app = createApp({
       checkDatabase: async () => {
