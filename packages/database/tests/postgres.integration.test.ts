@@ -48,4 +48,16 @@ describe.skipIf(!hasDatabase)("PostgreSQL tenant isolation", () => {
       await database.close();
     }
   });
+
+  it("does not leak tenant context between pooled transactions", async () => {
+    const database = createDatabase({ databaseUrl: process.env.DATABASE_URL as string });
+    try {
+      const first = await withTenantTransaction(database.db, "tenant-a", async (tx) => tx.execute(sql`select current_setting('app.tenant_id', true) as value`));
+      const second = await withTenantTransaction(database.db, "tenant-b", async (tx) => tx.execute(sql`select current_setting('app.tenant_id', true) as value`));
+      expect((first as any)[0].value).toBe("tenant-a");
+      expect((second as any)[0].value).toBe("tenant-b");
+    } finally {
+      await database.close();
+    }
+  });
 });
