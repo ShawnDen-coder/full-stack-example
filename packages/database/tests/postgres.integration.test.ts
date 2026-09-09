@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createDatabase, organization, tenantNotes, withTenantTransaction } from "../src/index.js";
+import { createDatabase, organization, tenantNotes, todos, withTenantTransaction } from "../src/index.js";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 
@@ -33,13 +33,25 @@ describe.skipIf(!hasDatabase)("PostgreSQL tenant isolation", () => {
         { tenantId: tenantA, body: "a" },
         { tenantId: tenantB, body: "b" },
       ]);
+      await database.db.insert(todos).values([
+        { title: "a", tenantId: tenantA },
+        { title: "b", tenantId: tenantB },
+      ]);
       const rows = await withTenantTransaction(database.db, tenantA, async (tx) => {
         await tx.execute(sql`set local role app_runtime`);
         return tx.select().from(tenantNotes);
       });
       expect(rows).toHaveLength(1);
       expect(rows[0]?.tenantId).toBe(tenantA);
+      const todoRows = await withTenantTransaction(database.db, tenantA, async (tx) => {
+        await tx.execute(sql`set local role app_runtime`);
+        return tx.select().from(todos);
+      });
+      expect(todoRows).toHaveLength(1);
+      expect(todoRows[0]?.tenantId).toBe(tenantA);
     } finally {
+      await database.db.delete(todos).where(eq(todos.tenantId, tenantA));
+      await database.db.delete(todos).where(eq(todos.tenantId, tenantB));
       await database.db.delete(tenantNotes).where(eq(tenantNotes.tenantId, tenantA));
       await database.db.delete(tenantNotes).where(eq(tenantNotes.tenantId, tenantB));
       await database.db.delete(organization).where(eq(organization.id, tenantA));
