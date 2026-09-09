@@ -51,7 +51,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
     },
     plugins: [
       admin({
-        adminRoles: ["platform-admin"],
+        adminRoles: ["admin"],
       }),
       organization({
         allowUserToCreateOrganization: false,
