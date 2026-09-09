@@ -11,7 +11,7 @@ import {
   shutdownLogging,
 } from "@full-stack-example/logging";
 import { createTodoRepository, createTodoService } from "@full-stack-example/todos";
-import { createAuthModule } from "@full-stack-example/auth/server";
+import { createAuthModule, createPermissionPolicy } from "@full-stack-example/auth/server";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { parseConfig } from "./config.js";
@@ -65,6 +65,13 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       baseURL: config.betterAuthUrl,
       secret: config.betterAuthSecret,
       trustedOrigins: [config.webOrigin],
+      policy: createPermissionPolicy({
+        roles: {
+          owner: { todos: ["read", "write", "delete"] },
+          admin: { todos: ["read", "write", "delete"] },
+          member: { todos: ["read", "write"] },
+        },
+      }),
     });
     const todoService = createTodoService(createTodoRepository(databaseContext.db));
     const app = createApp({
