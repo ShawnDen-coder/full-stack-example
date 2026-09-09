@@ -7,5 +7,7 @@ describe("tenant RLS migration", () => {
     expect(migration).toContain('ALTER TABLE "tenant_notes" FORCE ROW LEVEL SECURITY');
     expect(migration).toContain("current_setting('app.tenant_id', true)");
     expect(migration).toContain("REVOKE ALL ON \"tenant_notes\" FROM PUBLIC");
+    expect(migration).not.toContain('ALTER TABLE "user" ENABLE ROW LEVEL SECURITY');
+    expect(migration).not.toContain('ALTER TABLE "organization" ENABLE ROW LEVEL SECURITY');
   });
 });
