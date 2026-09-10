@@ -13,11 +13,12 @@
 │   └── web/                      # React/Vite 单页应用：页面、路由、TanStack Query 数据访问
 ├── packages/                     # 可复用的领域与基础设施模块
 │   ├── api-client/               # 基于 Hono AppType 的浏览器安全 RPC 客户端与错误处理
+│   ├── auth/                     # Better Auth Session、Organization、平台管理与租户鉴权
 │   ├── database/                 # Drizzle schema、迁移和 PostgreSQL 连接
-│   ├── logging/                  # LogTape 配置、脱敏日志与开发期 SSE 日志流
+│   ├── logging/                  # LogTape 配置、脱敏日志与进程内 SSE 数据源
 │   ├── system/                   # 系统健康检查的 schema、service 和 HTTP 路由
 │   └── todos/                    # Todo schema、Drizzle repository、service 和 HTTP 路由
-├── container/                    # 单镜像 Dockerfile、Compose 和 OpenTelemetry Collector 配置
+├── container/                    # 单镜像 Dockerfile、Compose 和 PostgreSQL 初始化
 ├── docs/                         # 架构决策、设计说明和实施计划
 ├── scripts/                      # 本地基础设施、迁移与开发子进程编排
 ├── biome.json                    # 全仓唯一的 lint 与格式化配置
@@ -31,6 +32,7 @@
 - [API 应用](https://github.com/ShawnDen-coder/full-stack-example/blob/master/apps/api/README.md)
 - [Web 应用](https://github.com/ShawnDen-coder/full-stack-example/blob/master/apps/web/README.md)
 - [API Client](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/api-client/README.md)
+- [Auth](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/auth/README.md)
 - [Database](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/database/README.md)
 - [Logging](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/logging/README.md)
 - [System](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/system/README.md)
@@ -45,19 +47,22 @@
 ```text
 packages/<module>/
 ├── src/
+│   ├── types.ts         # 模块配置和路由 Context Variables
 │   ├── schemas.ts       # Zod 输入、输出和业务约束
-│   ├── service.ts       # 领域用例与依赖接口
-│   ├── repository.ts    # 可选：数据库持久化适配器
-│   ├── routes.ts        # 可选：describeRoute + Hono 路由注册
+│   ├── service.ts       # 不依赖 Hono 的领域用例
+│   ├── repository.ts    # 可选：数据库持久化实现
+│   ├── route.desc.ts    # 可选：纯 OpenAPI 描述配置
+│   ├── route.handler.ts # 可选：createHandlers 组合校验、授权和 handler
+│   ├── route.ts         # 可选：相对路径子应用和 setupXxxApp
 │   └── index.ts         # 稳定的公开 exports
 ├── tests/               # 从调用者角度验证行为
 ├── package.json         # description、exports、typecheck/build
 └── README.md            # 模块唯一说明来源，含快速开始与扩展约束
 ```
 
-扩充时遵循这条依赖方向：`routes -> service -> repository -> database`。路由只做协议适配，service 只依赖接口，repository 负责 Drizzle 查询；不要让 Web 直接访问数据库，也不要在功能包里创建第二个 Hono 宿主。需要对外提供 HTTP 能力时，在 `apps/api/src/app.ts` 中调用 `setup<Module>App(app, options)`，同时补齐 OpenAPI 元数据、Zod schema、行为测试和模块 README。需要浏览器调用时，依赖 `AppType` 的 `api-client`，不要手写一套重复的路径或响应类型。
+扩充时遵循 `route -> service -> repository -> database` 的依赖方向，schema 可由各层共享。复杂 HTTP 模块使用自己的 `createFactory().createHandlers()` 保留 validator 和 Context 类型，再由 `setupXxxApp()` 通过 `app.route()` 挂载；单端点模块保持紧凑。路由只做协议适配，service 不依赖 Hono，repository 负责 Drizzle 查询；不要让 Web 直接访问数据库，也不要创建第二个 Hono 宿主。
 
-新模块的最小落地顺序是：先定义 schema 和 service 接口，再实现 repository 或外部适配器；随后增加 routes 并在组合根注册；最后导出公共符号、补测试、更新 README 和 `docs/content/modules/_meta.json`。README 会在文档构建时自动同步为模块主页，因此不要在 `docs/content/modules/` 维护第二份模块正文。
+新模块的最小落地顺序是：先定义 schema 和 service 接口，再实现 repository 或外部适配器；随后增加 route 层并在组合根注册；最后导出公共符号、补测试、更新 README 和 `docs/content/modules/_meta.json`。README 会在文档构建时自动同步为模块主页，因此不要在 `docs/content/modules/` 维护第二份模块正文。
 
 ## 开始使用
 
@@ -69,6 +74,8 @@ just launch
 ```
 
 `just launch` 会启动 PostgreSQL 与 OpenTelemetry Collector、执行迁移，并运行 API（`http://localhost:3000`）与 Web（`http://localhost:5173`）。默认退出时保留基础设施；`just launch-clean` 会停止容器但不会删除数据卷。
+
+`.env.example` 提供初始化运维账号 `admin@example.com` / `Admin123!`。API 在迁移后幂等创建该账号或将同邮箱账号提升为 `platform-admin`；现有账号密码不会被覆盖。真实部署必须替换示例密码。
 
 ## 开发流程与热更新
 
@@ -181,18 +188,18 @@ pnpm --filter @full-stack-example/database db:migrate
 
 LogTape 在开发环境输出可读日志，生产输出脱敏 JSON Lines。设置 `LOG_FILE` 后，API 会追加经过同样脱敏处理的 JSON Lines 文件；开发默认写入 `logs/api.jsonl`，生产 Compose 写入命名卷挂载的 `/app/logs/api.jsonl`。Trace 和 metrics 经 OTLP 发往本地 Collector；当前不包含 Loki、OpenObserve、Tempo、Prometheus、Redis 或缓存。
 
-实时日志 SSE 默认关闭。仅开发环境可在 `.env` 设置 `LOG_STREAM_ENABLED=true` 后访问 `GET /api/logs/stream`：
+实时日志 SSE 默认关闭。设置 `LOG_STREAM_ENABLED=true` 后注册 `GET /api/logs/stream`；该路由要求有效 Session、`platform-admin` 和 fresh session：
 
 ```bash
-curl -N http://localhost:3000/api/logs/stream
+curl -N --cookie "<Better Auth session cookie>" http://localhost:3000/api/logs/stream
 ```
 
-该流只保留当前 API 进程的有限内存记录，重启即丢失；它不是审计或长期日志存储。生产环境必须先提供管理员认证。
+该流只保留当前 API 进程的有限内存记录，重启即丢失；它不是审计或长期日志存储。生产环境默认关闭，可显式开启，鉴权规则不变。Swagger 的 Try it out 会保持长连接。
 
 ## 计划状态与边界
 
-当前已完成：React/Vite 与 Hono API workspace、`setupXxxApp(app, options)` 依赖倒置组合、LogTape 脱敏日志、OpenTelemetry Collector、开发期 SSE 日志流、Hono 单进程托管生产 Web、单镜像 Dockerfile/Compose profile，以及根级 Biome、统一 Vitest 和 `check`/`verify` 验证链路。
+当前已完成：React/Vite 与 Hono API workspace、TanStack Router 文件路由、Better Auth Session/Organization、`setupXxxApp(app, options)` 与 `createHandlers()` 路由组合、LogTape 脱敏日志、OpenTelemetry Collector、管理员保护的可选 SSE 日志流、Hono 单进程托管生产 Web、单镜像 Dockerfile/Compose profile，以及根级 Biome、统一 Vitest 和 `check`/`verify` 验证链路。
 
-当前明确不包含 Loki、OpenObserve、Tempo、Prometheus、Redis、缓存或日志持久化。SSE 是单进程、易失、非审计的实时诊断流，生产环境在管理员认证完成前禁止启用。OpenAPI 描述公开 Health、选定的认证/工作区接口和 Todo 鉴权合同，不生成 Orval 客户端。HonoX 调研结论是暂不引入 SSR、SSG、文件路由或 islands，仅借鉴其构建边界和测试思路。
+当前明确不包含 Loki、OpenObserve、Tempo、Prometheus、Redis、缓存或日志持久化。SSE 是单进程、易失、非审计的实时诊断流。OpenAPI 描述公开 Health，并收录认证、工作区、平台管理、Todo 和启用后的日志流合同；受保护操作使用 Session Cookie，不生成 Orval 客户端。HonoX 调研结论是暂不引入 SSR、SSG 或 islands。
 
-后续可按需求增加管理员认证与日志页面、多实例日志聚合或持久化后端，并保持现有 SSE 事件协议兼容。
+后续可按需求增加管理员日志页面、多实例日志聚合或持久化后端，并保持现有 SSE 事件协议兼容。

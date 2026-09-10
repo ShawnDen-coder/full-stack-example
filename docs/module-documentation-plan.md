@@ -34,13 +34,12 @@
 - 所有 README 均能被 `docs/scripts/sync-readmes.ts` 同步。
 - `pnpm --filter @full-stack-example/docs build`、workspace typecheck 和测试通过。
 
-## 文档整理后识别的代码跟进项
+## 代码跟进项状态
 
-这些问题不在本次纯文档整理中修改，应单独提交并配套测试：
+已经完成：Todo 路由移除重复租户守卫、Repository 不再从根入口导出、Todo 与平台管理 OpenAPI 补齐鉴权响应、API 提供类型专用的 `./contract` 子入口，以及 Auth/Todos 复杂路由采用 `createHandlers()` 和相对子应用。
+
+仍可在后续独立评估：
 
 - 让生产 `createApp` 强制接收 Auth，移除无 Auth 时放行 Todo 的兼容路径。
-- 删除 Todo 路由外层重复的 `requireTenant`，每个操作只使用完整的 `tenantPermission`。
-- 从 Todos 根入口移除 `createTenantTodoRepository`，避免调用方绕过 Service。
 - 将 `auth.require.requireXxx` 收敛为 `auth.require.xxx`，降低调用和记忆成本。
-- 为 Todo 和平台管理 OpenAPI 补充 `401/400/403` 响应合同。
-- 评估把 API 的类型合同提取为轻量包，避免 API Client 的安装依赖指向整个服务端应用包。
+- 若出现第二个真实消费者，再评估把 `AppType` 从 API 私有包提取为独立合同包。

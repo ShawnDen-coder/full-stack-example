@@ -16,8 +16,8 @@ Web
 
 API（唯一组合根）
 ├── Auth Server ─→ Database
-├── Todos ───────→ Database + Auth contracts
-├── System ──────→ Logging
+├── Todos ───────→ Database
+├── System ──────→ 注入的数据库探针与失败回调
 └── Logging + Database
 ```
 
@@ -26,11 +26,12 @@ API（唯一组合根）
 ## 标准组合流程
 
 1. 使用 migrator 连接执行数据库迁移。
-2. 创建 runtime Database，并注入 Auth、Todo Service 和健康检查。
-3. 创建 Auth Module，在 API 宿主挂载认证和平台管理路由。
+2. 创建 runtime Database 和 Auth Module；若配置 `PLATFORM_ADMIN_*`，幂等准备初始运维管理员。
+3. 创建 Todo Service 和健康检查依赖，在 API 宿主挂载认证与平台管理路由。
 4. 在组合根声明业务权限，将授权 middleware 注入 Todos。
-5. 使用每个 `setupXxxApp` 的返回值继续组合，保留 Hono 的精确 `AppType`。
-6. Web 通过 API Client 和 Auth Client 访问服务端，不复制 API schema。
+5. 复杂模块内部用 `createHandlers()` 组合描述、校验、授权和 handler，再由 `setupXxxApp()` 使用 `app.route()` 挂载相对路径子应用。
+6. 使用每个 setup 函数的返回值继续组合，保留 Hono 的精确 `AppType`。
+7. Web 通过 API Client 和 Auth Client 访问服务端，不复制 API schema。
 
 ## 边界原则
 

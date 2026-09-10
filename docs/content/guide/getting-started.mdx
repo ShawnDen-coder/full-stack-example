@@ -9,7 +9,11 @@ description: 使用 pnpm 安装依赖并启动 API 与 Web，完成全栈示例�
 
 ```bash
 pnpm install
-just dev
+Copy-Item .env.example .env
+just launch-doctor
+just launch
 ```
 
-API 和 Web 会分别启动开发服务器。需要数据库和 OpenTelemetry 时，先执行 `just infra-up`。
+`just launch` 会启动 PostgreSQL 和使用官方镜像的 OpenTelemetry Collector，等待基础设施就绪，再启动 API 与 Web 开发服务器。API 在迁移完成后根据 `PLATFORM_ADMIN_*` 幂等创建初始运维账号；示例账号是 `admin@example.com` / `Admin123!`，真实环境必须修改密码。
+
+基础设施已经运行时，可以使用 `just dev` 只启动 API 与 Web。Swagger UI 位于 `http://localhost:3000/docs`，Web 位于 `http://localhost:5173`。
