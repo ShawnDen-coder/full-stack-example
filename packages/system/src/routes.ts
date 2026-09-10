@@ -19,6 +19,7 @@ export function setupSystemApp<E extends Env, S extends Schema, BasePath extends
       tags: ["system"],
       summary: "Get service health",
       description: "Check whether the API can reach its PostgreSQL dependency.",
+      security: [],
       responses: {
         200: {
           description: "The service is healthy.",
