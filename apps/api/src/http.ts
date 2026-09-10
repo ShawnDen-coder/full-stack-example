@@ -23,13 +23,19 @@ export function createHttpApp(options: HttpOptions) {
       "*",
       honoLogger({
         category: ["full-stack-example", "api", "http"],
-        format: (context, responseTime) => ({
-          event: "http.request.completed",
-          method: context.req.method,
-          path: context.req.path,
-          statusCode: context.res.status,
-          durationMs: Math.round(responseTime),
-        }),
+        format: (context, responseTime) => {
+          const durationMs = Math.round(responseTime);
+          return {
+            event: "http.request.completed",
+            method: context.req.method,
+            url: context.req.url,
+            path: context.req.path,
+            status: context.res.status,
+            responseTime: durationMs,
+            statusCode: context.res.status,
+            durationMs,
+          };
+        },
         skip: (context) => context.req.path === "/health" && context.res.status < 400,
         context: {
           requestId: false,
