@@ -2,7 +2,7 @@
 
 import { matchRoutes } from "react-router";
 import { describe, expect, it } from "vitest";
-import { routes } from "../src/app/router.js";
+import { routes } from "../../src/app/router.js";
 
 describe("application routes", () => {
   it("matches the home, authentication, workspace, and Todo routes", () => {

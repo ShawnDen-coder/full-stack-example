@@ -1,7 +1,5 @@
-// @vitest-environment jsdom
-
 import { describe, expect, it } from "vitest";
-import { safeReturnTo } from "../src/auth.js";
+import { safeReturnTo } from "../../../src/features/auth/navigation.js";
 
 describe("safeReturnTo", () => {
   it("accepts only local absolute paths", () => {

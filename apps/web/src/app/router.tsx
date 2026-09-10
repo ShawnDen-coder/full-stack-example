@@ -1,20 +1,20 @@
 import { createBrowserRouter, type RouteObject, RouterProvider } from "react-router";
-import { Home } from "../routes/home.js";
-import { Login } from "../routes/login.js";
-import { Register } from "../routes/register.js";
-import { RequireSession, RequireWorkspace } from "../routes/require-session.js";
-import { Todos } from "../routes/todos.js";
-import { Workspaces } from "../routes/workspaces.js";
+import { RequireSession, RequireWorkspace } from "../components/auth/session-guard.js";
+import { HomePage } from "../pages/home-page.js";
+import { LoginPage } from "../pages/login-page.js";
+import { RegisterPage } from "../pages/register-page.js";
+import { TodosPage } from "../pages/todos-page.js";
+import { WorkspacesPage } from "../pages/workspaces-page.js";
 
 export const routes = [
-  { path: "/", element: <Home /> },
-  { path: "/login", element: <Login /> },
-  { path: "/register", element: <Register /> },
+  { path: "/", element: <HomePage /> },
+  { path: "/login", element: <LoginPage /> },
+  { path: "/register", element: <RegisterPage /> },
   {
     path: "/workspaces",
     element: (
       <RequireSession>
-        <Workspaces />
+        <WorkspacesPage />
       </RequireSession>
     ),
   },
@@ -23,7 +23,7 @@ export const routes = [
     element: (
       <RequireSession>
         <RequireWorkspace>
-          <Todos />
+          <TodosPage />
         </RequireWorkspace>
       </RequireSession>
     ),

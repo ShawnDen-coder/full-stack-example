@@ -1,8 +1,8 @@
 import { throwApiError } from "@full-stack-example/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
-import { api } from "../api.js";
-import { authClient } from "../auth.js";
+import { authClient } from "../features/auth/client.js";
+import { api } from "../lib/api.js";
 
 async function getHealth() {
   const response = await api.health.$get();
@@ -10,12 +10,22 @@ async function getHealth() {
   return throwApiError(response);
 }
 
-export function Home() {
+export function HomePage() {
   const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
   const session = authClient.useSession();
+  const primaryAction = session.data ? (
+    <Link className="btn btn-primary" to="/todos">
+      打开 Todo
+    </Link>
+  ) : (
+    <Link className="btn btn-primary" to="/register">
+      注册
+    </Link>
+  );
+
   return (
     <main className="min-h-screen bg-base-200 p-6 text-base-content sm:p-12">
-      <section className="card mx-auto max-w-xl bg-base-100 shadow-xl">
+      <section className="card card-border mx-auto max-w-xl bg-base-100">
         <div className="card-body gap-5">
           <h1 className="card-title text-3xl">Full Stack Example</h1>
           {health.isLoading ? (
@@ -26,34 +36,29 @@ export function Home() {
             />
           ) : null}
           {health.isError ? (
-            <div className="alert alert-error">无法连接 API，请稍后重试。</div>
+            <div className="alert alert-error" role="alert">
+              无法连接 API，请稍后重试。
+            </div>
           ) : null}
           {health.data ? (
             <div
               className={health.data.status === "ok" ? "alert alert-success" : "alert alert-error"}
+              role="alert"
             >
               <span>API：{health.data.status}</span>
               <span>PostgreSQL：{health.data.services.database.status}</span>
             </div>
           ) : null}
           <div className="card-actions justify-end">
-            {session.data ? (
-              <Link className="btn btn-ghost" to="/todos">
-                打开 Todo
+            {!session.data ? (
+              <Link className="btn btn-ghost" to="/login">
+                登录
               </Link>
-            ) : (
-              <>
-                <Link className="btn btn-ghost" to="/login">
-                  登录
-                </Link>
-                <Link className="btn btn-primary" to="/register">
-                  注册
-                </Link>
-              </>
-            )}
-            <button className="btn btn-primary" type="button" onClick={() => void health.refetch()}>
+            ) : null}
+            <button className="btn btn-ghost" type="button" onClick={() => void health.refetch()}>
               重新检查
             </button>
+            {primaryAction}
           </div>
         </div>
       </section>

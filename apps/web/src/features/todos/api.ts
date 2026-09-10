@@ -1,6 +1,6 @@
 import { throwApiError } from "@full-stack-example/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../api.js";
+import { api } from "../../lib/api.js";
 
 const todosQueryKey = ["todos"] as const;
 

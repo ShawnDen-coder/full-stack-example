@@ -4,7 +4,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Todos } from "../src/routes/todos.js";
+import { TodosPage } from "../../src/pages/todos-page.js";
+
+vi.mock("../../src/features/auth/client.js", () => ({
+  authClient: {
+    signOut: vi.fn(),
+    useActiveMemberRole: () => ({ data: { role: "owner" } }),
+    useActiveOrganization: () => ({ data: { name: "Example workspace" } }),
+    useSession: () => ({ data: { user: { email: "user@example.test" } } }),
+  },
+}));
 
 interface TodoRecord {
   readonly id: number;
@@ -17,7 +26,7 @@ function renderTodos() {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <Todos />
+        <TodosPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -43,11 +52,14 @@ function installTodoFetch(records: TodoRecord[]) {
         const body = init?.body;
         if (typeof body !== "string") return jsonResponse({ error: "Invalid request" }, 400);
         const parsed: unknown = JSON.parse(body);
-        if (typeof parsed !== "object" || parsed === null || !("title" in parsed))
+        if (
+          !parsed ||
+          typeof parsed !== "object" ||
+          !("title" in parsed) ||
+          typeof parsed.title !== "string"
+        )
           return jsonResponse({ error: "Invalid request" }, 400);
-        const title = parsed.title;
-        if (typeof title !== "string") return jsonResponse({ error: "Invalid request" }, 400);
-        const todo = { id: records.length + 1, title, completed: false };
+        const todo = { id: records.length + 1, title: parsed.title, completed: false };
         records.unshift(todo);
         return jsonResponse(todo, 201);
       }
@@ -57,14 +69,15 @@ function installTodoFetch(records: TodoRecord[]) {
         const body = init?.body;
         if (typeof body !== "string") return jsonResponse({ error: "Invalid request" }, 400);
         const parsed: unknown = JSON.parse(body);
-        if (typeof parsed !== "object" || parsed === null || !("completed" in parsed))
+        if (
+          !parsed ||
+          typeof parsed !== "object" ||
+          !("completed" in parsed) ||
+          typeof parsed.completed !== "boolean"
+        )
           return jsonResponse({ error: "Invalid request" }, 400);
-        if (typeof parsed.completed !== "boolean")
-          return jsonResponse({ error: "Invalid request" }, 400);
-        const updated = { ...todo, completed: parsed.completed };
-        const index = records.indexOf(todo);
-        records.splice(index, 1, updated);
-        return jsonResponse(updated);
+        records.splice(records.indexOf(todo), 1, { ...todo, completed: parsed.completed });
+        return jsonResponse({ ...todo, completed: parsed.completed });
       }
       if (method === "DELETE") {
         const index = records.findIndex((record) => record.id === id);
@@ -79,32 +92,26 @@ function installTodoFetch(records: TodoRecord[]) {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("Todos page", () => {
+describe("TodosPage", () => {
   it("shows the empty state and creates a todo", async () => {
-    const records: TodoRecord[] = [];
-    installTodoFetch(records);
+    installTodoFetch([]);
     renderTodos();
-
     expect(await screen.findByText("还没有待办事项。")).toBeTruthy();
     fireEvent.change(screen.getByPlaceholderText("添加一个待办事项"), {
       target: { value: "Write tests" },
     });
     fireEvent.click(screen.getByRole("button", { name: "添加" }));
-
     expect(await screen.findByText("Write tests")).toBeTruthy();
   });
 
   it("updates completion and deletes a todo", async () => {
-    const records: TodoRecord[] = [{ id: 1, title: "Finish task", completed: false }];
-    installTodoFetch(records);
+    installTodoFetch([{ id: 1, title: "Finish task", completed: false }]);
     renderTodos();
-
     const checkbox = await screen.findByRole("checkbox", { name: "完成 Finish task" });
     fireEvent.click(checkbox);
     await waitFor(() =>
       expect(checkbox instanceof HTMLInputElement && checkbox.checked).toBe(true),
     );
-
     fireEvent.click(screen.getByRole("button", { name: "删除 Finish task" }));
     expect(await screen.findByText("还没有待办事项。")).toBeTruthy();
   });
@@ -115,7 +122,6 @@ describe("Todos page", () => {
       vi.fn(async (): Promise<Response> => jsonResponse({ error: "Failed" }, 500)),
     );
     renderTodos();
-
     expect(await screen.findByText("无法加载待办事项。")).toBeTruthy();
   });
 });

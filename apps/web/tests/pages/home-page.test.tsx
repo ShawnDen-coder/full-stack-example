@@ -4,12 +4,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Home } from "../src/routes/home.js";
+import { HomePage } from "../../src/pages/home-page.js";
+
+vi.mock("../../src/features/auth/client.js", () => ({
+  authClient: { useSession: () => ({ data: { user: { email: "user@example.test" } } }) },
+}));
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("Home page", () => {
-  it("links to the Todo page", async () => {
+describe("HomePage", () => {
+  it("links signed-in users to the Todo page", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -28,7 +32,7 @@ describe("Home page", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
-          <Home />
+          <HomePage />
         </MemoryRouter>
       </QueryClientProvider>,
     );
