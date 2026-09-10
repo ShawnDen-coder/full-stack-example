@@ -31,6 +31,7 @@
     "@full-stack-example/todos": "workspace:*",
     "@hono/node-server": "^1.19.6",
     "@hono/otel": "^1.1.2",
+    "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-validator": "catalog:",
     "@logtape/hono": "^2.3.3",
     "@opentelemetry/api": "^1.9.1",

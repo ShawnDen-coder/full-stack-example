@@ -14,10 +14,11 @@ const todoService: TenantTodoService = {
 
 await configureLogging({ service: "docs", environment: "test", level: "silent", pretty: false });
 const app = createApp({
-  checkDatabase: async () => undefined,
   logger: getAppLogger("docs.openapi"),
-  todoService,
-  webOrigin: "http://localhost:5173",
+  http: { webOrigin: "http://localhost:5173" },
+  documentation: { enabled: true },
+  modules: { system: { checkDatabase: async () => undefined }, todos: { service: todoService } },
+  web: {},
 });
 const response = await app.request("http://localhost/openapi.json");
 if (response.status !== 200) throw new Error(`OpenAPI endpoint returned ${response.status}`);

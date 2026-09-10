@@ -3,7 +3,7 @@ import type { Env, Hono, Schema } from "hono";
 
 export function setupWebApp<E extends Env, S extends Schema, BasePath extends string>(
   app: Hono<E, S, BasePath>,
-  options: { readonly assetsDirectory: string | undefined },
+  options: { readonly assetsDirectory?: string },
 ) {
   if (!options.assetsDirectory) return app;
 
