@@ -12,6 +12,9 @@ services:
       WEB_ORIGIN: http://localhost:3000
       WEB_ASSETS_DIR: ./public
       NODE_ENV: production
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:?PLATFORM_ADMIN_EMAIL is required}
+      PLATFORM_ADMIN_NAME: ${PLATFORM_ADMIN_NAME:?PLATFORM_ADMIN_NAME is required}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:?PLATFORM_ADMIN_PASSWORD is required}
       LOG_LEVEL: info
       LOG_PRETTY: "false"
       LOG_FILE: /app/logs/api.jsonl
