@@ -1,30 +1,33 @@
-import type { FormEvent } from "react";
-
+import { useForm } from "react-hook-form";
 export function TodoComposer({
   disabled,
   onSubmit,
-  onTitleChange,
-  title,
 }: {
   readonly disabled: boolean;
-  readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  readonly onTitleChange: (title: string) => void;
-  readonly title: string;
+  readonly onSubmit: (title: string, reset: () => void) => void;
 }) {
+  const form = useForm<{ title: string }>();
   return (
-    <form className="join w-full" onSubmit={onSubmit}>
+    <form
+      className="join w-full"
+      onSubmit={(event) =>
+        void form.handleSubmit(({ title }) => onSubmit(title.trim(), () => form.reset()))(event)
+      }
+    >
       <input
         aria-label="待办事项标题"
         className="input join-item w-full"
         disabled={disabled}
         maxLength={200}
-        onChange={(event) => onTitleChange(event.target.value)}
         placeholder="添加一个待办事项"
-        value={title}
+        {...form.register("title", {
+          required: true,
+          validate: (value) => value.trim().length > 0,
+        })}
       />
       <button
         className="btn btn-primary join-item"
-        disabled={disabled || title.trim().length === 0}
+        disabled={disabled || form.formState.isSubmitting}
         type="submit"
       >
         添加
