@@ -7,6 +7,7 @@ import {
 } from "@full-stack-example/database";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { openAPI } from "better-auth/plugins";
 import { admin } from "better-auth/plugins/admin";
 import { adminAc, userAc } from "better-auth/plugins/admin/access";
 import { organization } from "better-auth/plugins/organization";
@@ -34,12 +35,15 @@ export interface AuthModuleOptions {
   readonly policy?: PermissionPolicy;
   /** Maximum session age for sensitive platform actions; zero disables the check. */
   readonly freshAgeSeconds?: number;
+  /** Enables Better Auth's schema endpoint for API documentation generation. */
+  readonly openApiEnabled?: boolean;
 }
 
 export interface AuthModule {
   readonly auth: AuthHandler;
   readonly require: AuthGuardPort;
   readonly platform: PlatformAuthService;
+  readonly getOpenApiSchema?: () => Promise<Record<string, unknown>>;
 }
 
 export function createAuthModule(options: AuthModuleOptions): AuthModule {
@@ -57,7 +61,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
     trustedOrigins: [...options.trustedOrigins],
     emailAndPassword: {
       enabled: true,
-      disableSignUp: true,
+      disableSignUp: false,
       requireEmailVerification: false,
       revokeSessionsOnPasswordReset: true,
       async sendResetPassword(data) {
@@ -71,7 +75,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
         roles: { "platform-admin": adminAc, user: userAc },
       }),
       organization({
-        allowUserToCreateOrganization: false,
+        allowUserToCreateOrganization: true,
         creatorRole: "owner",
         disableOrganizationDeletion: true,
         requireEmailVerificationOnInvitation: true,
@@ -85,6 +89,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
           });
         },
       }),
+      ...(options.openApiEnabled ? [openAPI({ disableDefaultReference: true })] : []),
     ],
     rateLimit: { enabled: true },
     session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24, freshAge: freshAgeSeconds },
@@ -132,7 +137,9 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
       readonly body: Record<string, unknown>;
     }): Promise<{ readonly id: string }>;
     requestPasswordReset(input: { readonly body: Record<string, unknown> }): Promise<void>;
+    generateOpenAPISchema?: () => Promise<Record<string, unknown>>;
   };
+  const getOpenApiSchema = options.openApiEnabled ? authApi.generateOpenAPISchema : undefined;
   const sessionFor = async (context: Parameters<AuthGuardPort["requireSession"]>[0]) => {
     const cached = context.get("authSession");
     if (cached !== undefined) return cached as SessionValue;
@@ -294,6 +301,9 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
         });
       },
     },
+    ...(getOpenApiSchema
+      ? { getOpenApiSchema: () => getOpenApiSchema() }
+      : {}),
   };
 }
 

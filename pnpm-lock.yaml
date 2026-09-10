@@ -105,6 +105,9 @@ importers:
       '@full-stack-example/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@full-stack-example/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@tailwindcss/vite':
         specifier: ^4.1.17
         version: 4.3.3(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0))
@@ -233,6 +236,9 @@ importers:
       hono:
         specifier: 'catalog:'
         version: 4.13.7
+      react:
+        specifier: ^19.2.3
+        version: 19.2.8
       zod:
         specifier: 'catalog:'
         version: 4.5.4

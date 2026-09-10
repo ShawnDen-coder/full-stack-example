@@ -22,11 +22,7 @@ export interface CreateAppOptions {
 }
 
 export function createApp(options: CreateAppOptions) {
-  const withDocs = setupApiDocs(
-    createHttpApp({ logger: options.logger, ...options.http }),
-    options.documentation,
-  );
-  const withErrors = withDocs
+  const withErrors = createHttpApp({ logger: options.logger, ...options.http })
     .notFound((context) => context.json({ error: "Not found" }, 404))
     .onError((_error, context) => context.json({ error: "Internal server error" }, 500));
   const withSystem = setupSystemApp(withErrors, {
@@ -40,12 +36,9 @@ export function createApp(options: CreateAppOptions) {
   const withAuth = options.modules.auth
     ? setupAuthApp(withSystem, { auth: options.modules.auth })
     : withSystem;
-  const withTenantTodos = options.modules.auth
-    ? withAuth.use("/api/todos*", options.modules.auth.require.requireTenant)
-    : withAuth;
   const allowWithoutAuth = async (_context: import("hono").Context, next: import("hono").Next) =>
     next();
-  const withTodos = setupTodosApp(withTenantTodos, {
+  const withTodos = setupTodosApp(withAuth, {
     service: options.modules.todos.service,
     authorization: {
       read: options.modules.auth
@@ -74,7 +67,11 @@ export function createApp(options: CreateAppOptions) {
     stream: options.modules.logStream?.stream,
     heartbeatMs: options.modules.logStream?.heartbeatMs ?? 15_000,
   });
-  return setupWebApp(withLogStream, options.web);
+  const withApiDocs = setupApiDocs(withLogStream, {
+    ...options.documentation,
+    ...(options.modules.auth ? { auth: options.modules.auth } : {}),
+  });
+  return setupWebApp(withApiDocs, options.web);
 }
 
 export type AppType = ApplyGlobalResponse<

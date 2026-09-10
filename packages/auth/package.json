@@ -40,5 +40,8 @@
     "drizzle-orm": "^0.44.7",
     "hono": "catalog:",
     "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.2.3"
   }
 }
