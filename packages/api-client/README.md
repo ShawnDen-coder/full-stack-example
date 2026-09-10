@@ -8,17 +8,18 @@
 
 ## 对外接口
 
-- `createApiClient(baseUrl)` 创建带凭据的客户端。
-- `ApiClient` 暴露推导出的客户端类型。
-- `parseResponse(response)` 只解析失败响应，并抛出 `ApiError`。
+- `createApiClient<AppType>(baseUrl, options)` 使用宿主合同和请求选项创建客户端。
+- `ApiClient<AppType>` 暴露推导出的客户端类型。
+- `throwApiError(response)` 只解析失败响应，并抛出 `ApiError`。
 - `ApiError` 包含 HTTP 状态、安全消息和可选请求 ID。
 
-本包只以类型方式导入 API 合同；导入本包不会启动服务器，也不会自动发起请求。
+本包不依赖 API 应用；Web 在自身边界以类型方式绑定 AppType。导入本包不会启动服务器或发起请求。
 
 ## 依赖关系
 
 ```text
-Web → API Client → API contract（仅类型）
+Web → API Client → Hono client
+Web → API contract（仅类型）
 ```
 
 浏览器产物不会包含 API、Database 或 Auth server 的运行时代码。
@@ -28,11 +29,15 @@ Web → API Client → API contract（仅类型）
 在浏览器边界创建一次客户端，直接使用 Hono 推导的路由树：
 
 ```ts
-import { createApiClient, parseResponse } from "@full-stack-example/api-client";
+import { createApiClient, throwApiError } from "@full-stack-example/api-client";
 
-const api = createApiClient("http://localhost:3000");
+import type { AppType } from "@full-stack-example/api/contract";
+
+const api = createApiClient<AppType>("http://localhost:3000", {
+  init: { credentials: "include" },
+});
 const response = await api.api.todos.$get();
-if (!response.ok) return parseResponse(response);
+if (!response.ok) return throwApiError(response);
 const { todos } = await response.json();
 ```
 
@@ -40,7 +45,7 @@ const { todos } = await response.json();
 
 ```ts
 const response = await api.api.todos.$post({ json: { title: "编写文档" } });
-if (response.status !== 201) return parseResponse(response);
+if (response.status !== 201) return throwApiError(response);
 const todo = await response.json();
 ```
 
@@ -48,12 +53,12 @@ const todo = await response.json();
 
 ```ts
 const response = await api.api.todos[":id"].$delete({ param: { id: "1" } });
-if (response.status !== 204) return parseResponse(response);
+if (response.status !== 204) return throwApiError(response);
 ```
 
 ## 错误处理
 
-`parseResponse` 会优先读取服务端的安全 `error` 字段，并保留 `X-Request-ID`。页面可以按 `ApiError.status` 区分 `401`（重新登录）、`400`（需要选择组织）、`403`（权限不足）和 `404`（资源不可见或不存在）。
+`throwApiError` 会优先读取服务端的安全 `error` 字段，并保留 `X-Request-ID`。页面可以按 `ApiError.status` 区分 `401`（重新登录）、`400`（需要选择组织）、`403`（权限不足）和 `404`（资源不可见或不存在）。
 
 ## 开发与验证
 

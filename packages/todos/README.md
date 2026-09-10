@@ -13,13 +13,13 @@
 - `createTodoService({ database })` 创建一次可复用的租户 Service。
 - `setupTodosApp(app, options)` 把 `/api/todos` 路由挂载到现有 Hono 应用。
 
-Repository 由 Service 内部按请求创建，路由永远不直接访问 Drizzle。
+Repository 由 Service 内部按请求创建，路由永远不直接访问 Drizzle。模块固定使用 PostgreSQL，schema 和迁移由 Database 统一维护；不单独拆分适配器包。getTenantId 在授权之后执行，返回已验证的租户 ID。
 
 ## 依赖关系
 
 ```text
 API → Todos → Database
-            → Auth contracts（仅 TenantPrincipal 类型）
+API → Auth（鉴权后通过 getTenantId 提供租户）
 ```
 
 Todos 不导入 Auth server，也不自行解析 Cookie 或 Session。
@@ -34,6 +34,7 @@ import { createTodoService, setupTodosApp } from "@full-stack-example/todos";
 const service = createTodoService({ database: runtimeDatabase });
 const withTodos = setupTodosApp(app, {
   service,
+  getTenantId: (context) => context.get("tenantPrincipal")?.tenantId,
   authorization: {
     read: auth.require.requireTenantPermission({ resource: "todos", action: "read" }),
     write: auth.require.requireTenantPermission({ resource: "todos", action: "write" }),
@@ -51,11 +52,13 @@ const todos = await service.listTodos(tenantPrincipal.tenantId);
 Web 或 API Client 可以直接调用同一合同：
 
 ```ts
-import { createApiClient, parseResponse } from "@full-stack-example/api-client";
+import { createApiClient, throwApiError } from "@full-stack-example/api-client";
 
-const api = createApiClient("http://localhost:3000");
+import type { AppType } from "@full-stack-example/api/contract";
+
+const api = createApiClient<AppType>("http://localhost:3000", { init: { credentials: "include" } });
 const response = await api.api.todos.$get();
-if (!response.ok) return parseResponse(response);
+if (!response.ok) return throwApiError(response);
 const { todos } = await response.json();
 ```
 

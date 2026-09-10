@@ -81,6 +81,7 @@ const auth = createAuthModule(authOptions);
 const todos = createTodoService({ database: runtimeDatabase });
 setupTodosApp(app, {
   service: todos,
+  getTenantId: (context) => context.get("tenantPrincipal")?.tenantId,
   authorization: {
     read: auth.require.requireTenantPermission({ resource: "todos", action: "read" }),
     write: auth.require.requireTenantPermission({ resource: "todos", action: "write" }),

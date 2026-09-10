@@ -12,12 +12,12 @@
 - `setupSystemApp(app, options)` 把健康路由挂载到现有 Hono 应用。
 - 探针成功返回 `200/status=ok`，失败返回 `503/status=degraded`。
 
-数据库探针和 logger 通过 options 注入，本包不自行创建基础设施客户端。
+数据库探针和可选失败回调 通过 options 注入，本包不自行创建基础设施客户端。
 
 ## 依赖关系
 
 ```text
-API → System → Logging（Logger 类型与实例）
+API → System（探针和失败回调）
 API → Database（创建探针）
 ```
 
@@ -36,7 +36,7 @@ import { Hono } from "hono";
 const app = new Hono();
 const withSystem = setupSystemApp(app, {
   checkDatabase: () => checkDatabase(database.db),
-  logger: getAppLogger("system"),
+  onProbeFailure: () => getAppLogger("system").warn("Database health check failed"),
 });
 
 const response = await withSystem.request("/health");
@@ -48,6 +48,7 @@ const response = await withSystem.request("/health");
 
 - 数据库探针成功：`200`，`status: "ok"`。
 - 数据库探针失败：`503`，`status: "degraded"`，并输出不含原始异常的结构化日志。
+- 探针默认 5 秒超时；通过 `timeoutMs` 调整。成功、失败和超时后均清理计时器；超时不取消底层数据库查询。
 - 响应始终设置 `Cache-Control: no-store`。
 - 未捕获异常由 API 组合根统一转换为安全的 `500`。
 
