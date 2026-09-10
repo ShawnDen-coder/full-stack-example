@@ -71,4 +71,40 @@ describe("auth guards", () => {
     const response = await app.request("http://localhost/private");
     expect(response.status).toBe(403);
   });
+
+  it("uses the Better Auth session creation time for fresh-session checks", async () => {
+    const module = createAuthModule({
+      database: {} as any,
+      baseURL: "http://localhost:3000",
+      secret: "test-secret-that-is-at-least-32-characters-long",
+      trustedOrigins: [],
+      freshAgeSeconds: 60,
+    });
+    (module.auth as any).api.getSession = async () => ({
+      user: { id: "u1", role: "platform-admin" },
+      session: { id: "s1", createdAt: new Date().toISOString() },
+    });
+    const app = new Hono();
+    app.use("/private", module.require.requireFreshSession);
+    app.get("/private", (context) => context.text("ok"));
+    expect((await app.request("http://localhost/private")).status).toBe(200);
+  });
+
+  it("rejects a missing or expired session creation time", async () => {
+    const module = createAuthModule({
+      database: {} as any,
+      baseURL: "http://localhost:3000",
+      secret: "test-secret-that-is-at-least-32-characters-long",
+      trustedOrigins: [],
+      freshAgeSeconds: 60,
+    });
+    (module.auth as any).api.getSession = async () => ({
+      user: { id: "u1", role: "platform-admin" },
+      session: { id: "s1", createdAt: new Date(Date.now() - 60_000).toISOString() },
+    });
+    const app = new Hono();
+    app.use("/private", module.require.requireFreshSession);
+    app.get("/private", (context) => context.text("ok"));
+    expect((await app.request("http://localhost/private")).status).toBe(403);
+  });
 });

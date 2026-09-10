@@ -31,17 +31,14 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@hono/zod-validator": "catalog:",
     "@full-stack-example/database": "workspace:*",
     "better-auth": "^1.7.3",
+    "drizzle-orm": "^0.44.7",
     "hono": "catalog:",
     "zod": "catalog:"
-  },
-  "devDependencies": {
-    "drizzle-orm": "^0.44.7"
   }
 }

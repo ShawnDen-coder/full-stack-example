@@ -1,2 +1,2 @@
 export { type ApiClient, createApiClient } from "./client.js";
-export { ApiError, type ApiErrorShape, parseResponse } from "./errors.js";
+export { ApiError, type ApiErrorShape, throwApiError } from "./errors.js";

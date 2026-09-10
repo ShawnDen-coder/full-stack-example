@@ -32,6 +32,8 @@ export interface AuthModuleOptions {
   readonly requireMailer?: boolean;
   readonly securityEvents?: SecurityEventSink;
   readonly policy?: PermissionPolicy;
+  /** Maximum session age for sensitive platform actions; zero disables the check. */
+  readonly freshAgeSeconds?: number;
 }
 
 export interface AuthModule {
@@ -44,6 +46,9 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
   if (options.requireMailer && !options.mailer)
     throw new Error("A mailer is required for production Auth flows");
   const policy = options.policy ?? createPermissionPolicy();
+  const freshAgeSeconds = options.freshAgeSeconds ?? 86_400;
+  if (!Number.isSafeInteger(freshAgeSeconds) || freshAgeSeconds < 0)
+    throw new Error("freshAgeSeconds must be a non-negative integer");
   const webBaseURL = options.webBaseURL ?? options.baseURL;
   const auth = betterAuth({
     database: drizzleAdapter(options.database, { provider: "pg" }),
@@ -82,7 +87,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
       }),
     ],
     rateLimit: { enabled: true },
-    session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
+    session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24, freshAge: freshAgeSeconds },
     databaseHooks: {
       session: {
         create: {
@@ -115,7 +120,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
     readonly session?: {
       readonly id: string;
       readonly activeOrganizationId?: string | null;
-      readonly fresh?: boolean;
+      readonly createdAt?: Date | string;
     };
   } | null;
   const authApi = auth.api as unknown as {
@@ -207,7 +212,11 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
       requireFreshSession: async (context, next) => {
         const value = await sessionFor(context);
         if (!value?.user || !value.session) return context.json({ error: "Unauthorized" }, 401);
-        if (!value.session.fresh) return context.json({ error: "Fresh session required" }, 403);
+        if (freshAgeSeconds !== 0) {
+          const createdAt = new Date(value.session.createdAt ?? Number.NaN).getTime();
+          if (!Number.isFinite(createdAt) || Date.now() - createdAt >= freshAgeSeconds * 1_000)
+            return context.json({ error: "Fresh session required" }, 403);
+        }
         await next();
       },
       requirePermission: (requirement) => async (context, next) => {

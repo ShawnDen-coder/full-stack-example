@@ -1,4 +1,4 @@
-import { parseResponse } from "@full-stack-example/api-client";
+import { throwApiError } from "@full-stack-example/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { api } from "../api.js";
@@ -6,7 +6,7 @@ import { api } from "../api.js";
 async function getHealth() {
   const response = await api.health.$get();
   if (response.status === 200 || response.status === 503) return response.json();
-  return parseResponse(response);
+  return throwApiError(response);
 }
 
 export function Home() {

@@ -1,4 +1,3 @@
-import type { TenantPrincipal } from "@full-stack-example/auth/contracts";
 import type { Context, Env, Hono, Schema } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { z } from "zod";
@@ -18,22 +17,24 @@ export interface TodoAuthorization {
   readonly delete: import("hono").MiddlewareHandler;
 }
 
+export interface SetupTodosAppOptions {
+  readonly service: TenantTodoService;
+  readonly authorization: TodoAuthorization;
+  /** Resolves the tenant identity after the host's authorization middleware has run. */
+  readonly getTenantId: (context: Context) => string | undefined;
+}
+
 const todoNotFound = { error: "Todo not found" } as const;
 const internalErrorSchema = z.object({ error: z.literal("Internal server error") });
 
 export function setupTodosApp<E extends Env, S extends Schema, BasePath extends string>(
   app: Hono<E, S, BasePath>,
-  options: {
-    readonly service: TenantTodoService;
-    readonly authorization: TodoAuthorization;
-  },
+  options: SetupTodosAppOptions,
 ) {
   const tenantFor = (context: Context): string => {
-    const principal = (
-      context as unknown as Context<{ Variables: { tenantPrincipal: TenantPrincipal } }>
-    ).get("tenantPrincipal");
-    if (!principal) throw new Error("Tenant context is required");
-    return principal.tenantId;
+    const tenantId = options.getTenantId(context);
+    if (!tenantId) throw new Error("Tenant context is required");
+    return tenantId;
   };
   return app
     .get(

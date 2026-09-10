@@ -80,8 +80,12 @@ export function createApp(options: {
     .onError((_error, context) => context.json({ error: "Internal server error" }, 500));
   const withSystem = setupSystemApp(withErrors, {
     checkDatabase: options.checkDatabase,
-    logger: options.logger.getChild("system"),
+    onProbeFailure: () =>
+      options.logger
+        .getChild("system")
+        .warn("Database health check failed", { event: "system.health.degraded" }),
   });
+
   const withAuth = options.auth ? setupAuthApp(withSystem, { auth: options.auth }) : withSystem;
   const withTenantTodos = options.auth
     ? withAuth.use("/api/todos*", options.auth.require.requireTenant)
@@ -101,6 +105,8 @@ export function createApp(options: {
         ? options.auth.require.requireTenantPermission({ resource: "todos", action: "delete" })
         : allowWithoutAuth,
     },
+    getTenantId: (context) =>
+      (context.get("tenantPrincipal") as { readonly tenantId?: string } | undefined)?.tenantId,
   });
   const withLogStream = setupLogStreamApp(withTodos, {
     stream: options.logStream,

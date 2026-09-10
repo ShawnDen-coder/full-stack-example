@@ -16,7 +16,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@full-stack-example/api": "workspace:*",
     "hono": "catalog:"
   }
 }

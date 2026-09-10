@@ -16,7 +16,8 @@ export class ApiError extends Error implements ApiErrorShape {
   }
 }
 
-export async function parseResponse(response: Response): Promise<never> {
+/** Throw a normalized error for a non-successful HTTP response. */
+export async function throwApiError(response: Response): Promise<never> {
   let message = `Request failed with status ${response.status}`;
   try {
     const body: unknown = await response.json();
