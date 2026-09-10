@@ -2,9 +2,18 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HomePage } from "../../src/pages/home-page.js";
+import { HomePage } from "../../src/routes/index.js";
+
+vi.mock("@tanstack/react-router", () => ({
+  createFileRoute: () => (config: unknown) => config,
+  Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
+}));
 
 vi.mock("../../src/features/auth/client.js", () => ({
   authClient: { useSession: () => ({ data: { user: { email: "user@example.test" } } }) },
@@ -31,9 +40,7 @@ describe("HomePage", () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
-          <HomePage />
-        </MemoryRouter>
+        <HomePage />
       </QueryClientProvider>,
     );
 

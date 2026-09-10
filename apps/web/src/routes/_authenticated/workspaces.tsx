@@ -1,41 +1,26 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useEffect, useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router";
-import { PageLoading } from "../components/feedback/page-loading.js";
-import { WorkspaceForm } from "../components/workspaces/workspace-form.js";
-import { WorkspaceList } from "../components/workspaces/workspace-list.js";
-import { authClient } from "../features/auth/client.js";
-import { safeReturnTo } from "../features/auth/navigation.js";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
+import { PageLoading } from "../../components/feedback/page-loading.js";
+import { WorkspaceForm } from "../../components/workspaces/workspace-form.js";
+import { WorkspaceList } from "../../components/workspaces/workspace-list.js";
+import { authClient } from "../../features/auth/client.js";
+import { validateReturnToSearch } from "../../features/auth/navigation.js";
 
-function slugify(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 100);
-}
-
+export const Route = createFileRoute("/_authenticated/workspaces")({
+  validateSearch: validateReturnToSearch,
+  component: WorkspacesPage,
+});
 export function WorkspacesPage() {
   const session = authClient.useSession();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
   const organizations = authClient.useListOrganizations();
-  const returnTo = safeReturnTo(new URLSearchParams(location.search).get("returnTo"));
-
-  useEffect(() => {
-    if (!slug || slug === slugify(name)) setSlug(slugify(name));
-  }, [name, slug]);
-
+  const { returnTo } = Route.useSearch();
   if (session.isPending) return <PageLoading label="正在加载工作区" />;
-  if (!session.data)
-    return <Navigate replace to={`/login?returnTo=${encodeURIComponent(returnTo)}`} />;
-
+  if (!session.data) return null;
   async function activate(organizationId: string) {
     setError(undefined);
     setSubmitting(true);
@@ -44,26 +29,32 @@ export function WorkspacesPage() {
     if (result.error) return setError("无法切换工作区，请重试。");
     await session.refetch();
     await queryClient.removeQueries({ queryKey: ["todos"] });
-    navigate(returnTo);
+    await router.invalidate();
+    await router.navigate({ to: returnTo });
   }
-
-  async function create(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!slug) return setError("请填写工作区标识。");
+  async function create(values: { name: string; slug: string }, reset: () => void) {
     setError(undefined);
     setSubmitting(true);
-    const result = await authClient.organization.create({ name: name.trim(), slug });
+    const result = await authClient.organization.create({
+      name: values.name.trim(),
+      slug: values.slug,
+    });
     if (result.error || !result.data) {
       setSubmitting(false);
       return setError("无法创建工作区；名称或标识可能已被使用。");
     }
-    await authClient.organization.setActive({ organizationId: result.data.id });
-    setSubmitting(false);
+    const active = await authClient.organization.setActive({ organizationId: result.data.id });
+    if (active.error) {
+      setSubmitting(false);
+      return setError("无法切换工作区，请重试。");
+    }
     await session.refetch();
     await queryClient.removeQueries({ queryKey: ["todos"] });
-    navigate(returnTo);
+    setSubmitting(false);
+    reset();
+    await router.invalidate();
+    await router.navigate({ to: returnTo });
   }
-
   return (
     <main className="min-h-screen bg-base-200 p-6 text-base-content sm:p-12">
       <section className="card card-border mx-auto max-w-xl bg-base-100">
@@ -88,11 +79,7 @@ export function WorkspacesPage() {
           <WorkspaceForm
             disabled={submitting}
             {...(error ? { error } : {})}
-            name={name}
-            onNameChange={setName}
-            onSlugChange={setSlug}
-            onSubmit={(event) => void create(event)}
-            slug={slug}
+            onSubmit={(values, reset) => void create(values, reset)}
           />
         </div>
       </section>

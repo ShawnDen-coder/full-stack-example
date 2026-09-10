@@ -1,16 +1,23 @@
-import { type FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { TodoComposer } from "../components/todos/todo-composer.js";
-import { TodoList } from "../components/todos/todo-list.js";
-import { authClient } from "../features/auth/client.js";
-import { useCreateTodo, useDeleteTodo, useTodos, useUpdateTodo } from "../features/todos/api.js";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { TodoComposer } from "../../components/todos/todo-composer.js";
+import { TodoList } from "../../components/todos/todo-list.js";
+import { authClient } from "../../features/auth/client.js";
+import { useCreateTodo, useDeleteTodo, useTodos, useUpdateTodo } from "../../features/todos/api.js";
+
+export const Route = createFileRoute("/_authenticated/todos")({
+  beforeLoad: ({ context, location }) => {
+    if (!context.session?.session.activeOrganizationId) {
+      throw redirect({ to: "/workspaces", search: { returnTo: location.href } });
+    }
+  },
+  component: TodosPage,
+});
 
 export function TodosPage() {
   const navigate = useNavigate();
   const session = authClient.useSession();
   const workspace = authClient.useActiveOrganization();
   const memberRole = authClient.useActiveMemberRole();
-  const [title, setTitle] = useState("");
   const todos = useTodos();
   const createTodo = useCreateTodo();
   const updateTodo = useUpdateTodo();
@@ -20,14 +27,11 @@ export function TodosPage() {
 
   async function signOut() {
     await authClient.signOut();
-    navigate("/login");
+    navigate({ to: "/login", search: { returnTo: "/todos" } });
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) return;
-    createTodo.mutate(trimmedTitle, { onSuccess: () => setTitle("") });
+  function handleSubmit(title: string, reset: () => void) {
+    createTodo.mutate(title, { onSuccess: reset });
   }
 
   return (
@@ -45,7 +49,11 @@ export function TodosPage() {
               </div>
             </div>
             <div className="navbar-end w-auto gap-2">
-              <Link className="btn btn-ghost btn-sm" to="/workspaces">
+              <Link
+                className="btn btn-ghost btn-sm"
+                to="/workspaces"
+                search={{ returnTo: "/todos" }}
+              >
                 切换工作区
               </Link>
               <button className="btn btn-ghost btn-sm" onClick={() => void signOut()} type="button">
@@ -53,12 +61,7 @@ export function TodosPage() {
               </button>
             </div>
           </div>
-          <TodoComposer
-            disabled={isMutating}
-            onSubmit={handleSubmit}
-            onTitleChange={setTitle}
-            title={title}
-          />
+          <TodoComposer disabled={isMutating} onSubmit={handleSubmit} />
           {createTodo.isError || updateTodo.isError || deleteTodo.isError ? (
             <div className="alert alert-error" role="alert">
               操作失败，请稍后重试。

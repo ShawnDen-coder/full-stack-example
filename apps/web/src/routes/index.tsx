@@ -1,6 +1,6 @@
 import { throwApiError } from "@full-stack-example/api-client";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { authClient } from "../features/auth/client.js";
 import { api } from "../lib/api.js";
 
@@ -18,7 +18,7 @@ export function HomePage() {
       打开 Todo
     </Link>
   ) : (
-    <Link className="btn btn-primary" to="/register">
+    <Link className="btn btn-primary" to="/register" search={{ returnTo: "/todos" }}>
       注册
     </Link>
   );
@@ -51,7 +51,7 @@ export function HomePage() {
           ) : null}
           <div className="card-actions justify-end">
             {!session.data ? (
-              <Link className="btn btn-ghost" to="/login">
+              <Link className="btn btn-ghost" to="/login" search={{ returnTo: "/todos" }}>
                 登录
               </Link>
             ) : null}
@@ -65,3 +65,5 @@ export function HomePage() {
     </main>
   );
 }
+
+export const Route = createFileRoute("/")({ component: HomePage });

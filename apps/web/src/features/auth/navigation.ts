@@ -1,11 +1,20 @@
+import type { AppSession } from "./client.js";
+
 export function safeReturnTo(value: string | null): string {
-  if (!value?.startsWith("/") || value.startsWith("//")) return "/todos";
+  if (
+    !value?.startsWith("/") ||
+    value.startsWith("//") ||
+    value.startsWith("/login") ||
+    value.startsWith("/register")
+  )
+    return "/todos";
   return value;
 }
 
-export function activeOrganizationId(session: unknown): string | undefined {
-  if (!session || typeof session !== "object" || !("session" in session)) return undefined;
-  const value = (session as { readonly session?: { readonly activeOrganizationId?: unknown } })
-    .session?.activeOrganizationId;
-  return typeof value === "string" ? value : undefined;
+export function validateReturnToSearch(search: Record<string, unknown>) {
+  return { returnTo: safeReturnTo(typeof search.returnTo === "string" ? search.returnTo : null) };
+}
+
+export function activeOrganizationId(session: AppSession | null): string | undefined {
+  return session?.session.activeOrganizationId ?? undefined;
 }
