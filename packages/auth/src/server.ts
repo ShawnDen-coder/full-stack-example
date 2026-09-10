@@ -21,6 +21,7 @@ import type {
   SecurityEventSink,
 } from "./contracts.js";
 import { createSessionPrincipal, createTenantPrincipal } from "./middleware.js";
+import { normalizeAuthOpenApiDocument } from "./openapi.js";
 import { createPermissionPolicy } from "./permissions.js";
 
 export interface AuthModuleOptions {
@@ -43,7 +44,7 @@ export interface AuthModule {
   readonly auth: AuthHandler;
   readonly require: AuthGuardPort;
   readonly platform: PlatformAuthService;
-  readonly getOpenApiSchema?: () => Promise<Record<string, unknown>>;
+  readonly getOpenApiDocument?: () => Promise<Record<string, unknown>>;
 }
 
 export function createAuthModule(options: AuthModuleOptions): AuthModule {
@@ -301,9 +302,13 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
         });
       },
     },
-    ...(getOpenApiSchema ? { getOpenApiSchema: () => getOpenApiSchema() } : {}),
+    ...(getOpenApiSchema
+      ? {
+          getOpenApiDocument: async () => normalizeAuthOpenApiDocument(await getOpenApiSchema()),
+        }
+      : {}),
   };
 }
 
 export { createPermissionPolicy } from "./permissions.js";
-export { setupAuthApp } from "./setup-app.js";
+export { setupAuthApp } from "./route.js";

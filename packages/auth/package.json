@@ -39,6 +39,7 @@
     "better-auth": "^1.7.3",
     "drizzle-orm": "^0.44.7",
     "hono": "catalog:",
+    "hono-openapi": "^1.3.2",
     "zod": "catalog:"
   },
   "peerDependencies": {

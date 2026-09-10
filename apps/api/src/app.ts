@@ -15,9 +15,13 @@ export interface CreateAppOptions {
   readonly modules: {
     readonly system: { readonly checkDatabase: () => Promise<void> };
     readonly todos: { readonly service: TenantTodoService };
-    readonly auth?: AuthModule;
-    readonly logStream?: { readonly stream: LogStream; readonly heartbeatMs?: number };
-  };
+  } & (
+    | { readonly auth?: AuthModule; readonly logStream?: never }
+    | {
+        readonly auth: AuthModule;
+        readonly logStream?: { readonly stream: LogStream; readonly heartbeatMs?: number };
+      }
+  );
   readonly web: { readonly assetsDirectory?: string };
 }
 
@@ -60,13 +64,19 @@ export function createApp(options: CreateAppOptions) {
           })
         : allowWithoutAuth,
     },
-    getTenantId: (context) =>
-      (context.get("tenantPrincipal") as { readonly tenantId?: string } | undefined)?.tenantId,
+    getTenantId: (context) => context.get("tenantPrincipal")?.tenantId,
   });
-  const withLogStream = setupLogStreamApp(withTodos, {
-    stream: options.modules.logStream?.stream,
-    heartbeatMs: options.modules.logStream?.heartbeatMs ?? 15_000,
-  });
+  const withLogStream = options.modules.logStream
+    ? setupLogStreamApp(withTodos, {
+        stream: options.modules.logStream.stream,
+        heartbeatMs: options.modules.logStream.heartbeatMs ?? 15_000,
+        authorization: [
+          options.modules.auth.require.requireSession,
+          options.modules.auth.require.requirePlatformAdmin,
+          options.modules.auth.require.requireFreshSession,
+        ],
+      })
+    : withTodos;
   const withApiDocs = setupApiDocs(withLogStream, {
     ...options.documentation,
     ...(options.modules.auth ? { auth: options.modules.auth } : {}),

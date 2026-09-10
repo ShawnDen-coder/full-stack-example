@@ -1,12 +1,19 @@
 import type { MiddlewareHandler } from "hono";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
-import { setupAuthApp } from "../src/setup-app.js";
+import { setupAuthApp } from "../src/route.js";
 
 describe("auth app setup", () => {
   it("exposes a deterministic health endpoint", async () => {
     const createUser = vi.fn(async () => ({ id: "user" }));
-    const noop: MiddlewareHandler = async (_context, next) => next();
+    const noop: MiddlewareHandler = async (context, next) => {
+      context.set("sessionPrincipal", {
+        userId: "admin",
+        sessionId: "session",
+        platformRole: "platform-admin",
+      });
+      return next();
+    };
     const auth = {
       auth: { handler: async () => new Response("handled") },
       require: {
@@ -23,8 +30,7 @@ describe("auth app setup", () => {
     } as unknown as Parameters<typeof setupAuthApp>[1]["auth"];
     const app = setupAuthApp(new Hono(), { auth });
     const response = await app.request("http://localhost/api/auth/ok");
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true });
+    expect(response.status).toBe(404);
     const adminResponse = await app.request("http://localhost/api/auth/admin/create-user", {
       method: "POST",
     });

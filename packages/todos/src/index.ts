@@ -1,4 +1,4 @@
-export { type SetupTodosAppOptions, setupTodosApp, type TodoAuthorization } from "./routes.js";
+export { setupTodosApp } from "./route.js";
 export {
   type CreateTodoInput,
   createTodoSchema,
@@ -13,3 +13,4 @@ export {
   createTodoService,
   type TenantTodoService,
 } from "./service.js";
+export type { SetupTodosAppOptions, TodoAuthorization } from "./types.js";

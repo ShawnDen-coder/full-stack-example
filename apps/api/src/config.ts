@@ -60,8 +60,6 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
     throw new Error("DATABASE_RUNTIME_URL and DATABASE_MIGRATOR_URL are required in production");
   const defaultLevel: LogLevel =
     parsed.NODE_ENV === "production" ? "info" : parsed.NODE_ENV === "test" ? "silent" : "debug";
-  if (parsed.LOG_STREAM_ENABLED === "true" && parsed.NODE_ENV === "production")
-    throw new Error("LOG_STREAM_ENABLED requires authentication before production use");
   return {
     databaseUrl: parsed.DATABASE_URL,
     databaseRuntimeUrl: parsed.DATABASE_RUNTIME_URL ?? parsed.DATABASE_URL,

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
-import { setupTodosApp } from "../src/routes.js";
+import { setupTodosApp } from "../src/route.js";
 import type { TenantTodoService } from "../src/service.js";
 
 describe("Todo route integration", () => {
