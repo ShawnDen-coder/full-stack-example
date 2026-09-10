@@ -101,7 +101,7 @@ db-studio:
     pnpm --filter @full-stack-example/database db:studio
 
 infra-up:
-    podman compose --env-file .env -f container/compose.yaml up -d
+    podman compose --env-file .env -f container/compose.yaml up -d --build
 
 infra-down:
     podman compose --env-file .env -f container/compose.yaml down
