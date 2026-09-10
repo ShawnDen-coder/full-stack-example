@@ -175,6 +175,12 @@ importers:
       '@full-stack-example/api':
         specifier: workspace:*
         version: link:../apps/api
+      '@full-stack-example/auth':
+        specifier: workspace:*
+        version: link:../packages/auth
+      '@full-stack-example/database':
+        specifier: workspace:*
+        version: link:../packages/database
       '@full-stack-example/logging':
         specifier: workspace:*
         version: link:../packages/logging

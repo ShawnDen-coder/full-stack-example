@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@full-stack-example/api": "workspace:*",
+    "@full-stack-example/auth": "workspace:*",
+    "@full-stack-example/database": "workspace:*",
     "@full-stack-example/logging": "workspace:*",
     "@full-stack-example/system": "workspace:*",
     "@full-stack-example/todos": "workspace:*",
