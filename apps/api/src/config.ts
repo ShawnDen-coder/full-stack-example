@@ -26,6 +26,9 @@ const environmentSchema = z.object({
   LOG_STREAM_BUFFER_SIZE: z.coerce.number().int().min(1).max(10_000).default(1000),
   LOG_STREAM_HEARTBEAT_MS: z.coerce.number().int().min(1000).default(15_000),
   API_DOCS_ENABLED: z.enum(["true", "false"]).optional(),
+  PLATFORM_ADMIN_EMAIL: z.email().optional(),
+  PLATFORM_ADMIN_NAME: z.string().min(1).optional(),
+  PLATFORM_ADMIN_PASSWORD: z.string().min(8).optional(),
 });
 
 export interface ApiConfig {
@@ -49,6 +52,11 @@ export interface ApiConfig {
   readonly logStreamBufferSize: number;
   readonly logStreamHeartbeatMs: number;
   readonly apiDocsEnabled: boolean;
+  readonly platformAdmin?: {
+    readonly email: string;
+    readonly name: string;
+    readonly password: string;
+  };
 }
 
 export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiConfig {
@@ -58,6 +66,18 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
     (!parsed.DATABASE_RUNTIME_URL || !parsed.DATABASE_MIGRATOR_URL)
   )
     throw new Error("DATABASE_RUNTIME_URL and DATABASE_MIGRATOR_URL are required in production");
+  const adminBootstrap = [
+    parsed.PLATFORM_ADMIN_EMAIL,
+    parsed.PLATFORM_ADMIN_NAME,
+    parsed.PLATFORM_ADMIN_PASSWORD,
+  ];
+  if (
+    adminBootstrap.some((value) => value !== undefined) &&
+    adminBootstrap.some((value) => value === undefined)
+  )
+    throw new Error(
+      "PLATFORM_ADMIN_EMAIL, PLATFORM_ADMIN_NAME and PLATFORM_ADMIN_PASSWORD must be configured together",
+    );
   const defaultLevel: LogLevel =
     parsed.NODE_ENV === "production" ? "info" : parsed.NODE_ENV === "test" ? "silent" : "debug";
   return {
@@ -90,5 +110,14 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
       parsed.API_DOCS_ENABLED === undefined
         ? parsed.NODE_ENV !== "production"
         : parsed.API_DOCS_ENABLED === "true",
+    ...(parsed.PLATFORM_ADMIN_EMAIL && parsed.PLATFORM_ADMIN_NAME && parsed.PLATFORM_ADMIN_PASSWORD
+      ? {
+          platformAdmin: {
+            email: parsed.PLATFORM_ADMIN_EMAIL,
+            name: parsed.PLATFORM_ADMIN_NAME,
+            password: parsed.PLATFORM_ADMIN_PASSWORD,
+          },
+        }
+      : {}),
   };
 }
