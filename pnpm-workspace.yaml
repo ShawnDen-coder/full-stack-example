@@ -10,3 +10,9 @@ allowBuilds:
   esbuild: true
   protobufjs: false
   vue-demi: false
+minimumReleaseAgeExclude:
+  - '@tanstack/history@1.162.3'
+  - '@tanstack/router-cli@1.167.35'
+  - '@tanstack/router-core@1.171.29'
+  - '@tanstack/router-generator@1.167.35'
+  - '@tanstack/router-utils@1.162.3'

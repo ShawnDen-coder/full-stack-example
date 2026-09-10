@@ -9,6 +9,7 @@
       "!!docs/doc_build",
       "!!docs/public/generated",
       "!!docs/content/reference/typescript",
+      "!!apps/web/src/routeTree.gen.ts",
       "!!packages/database/migrations",
       "!!.vscode"
     ]

@@ -23,6 +23,9 @@ dev:
 dev-web:
     pnpm --filter @full-stack-example/web dev
 
+routes-generate:
+    pnpm --filter @full-stack-example/web routes:generate
+
 dev-api:
     pnpm --filter @full-stack-example/api dev
 

@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.5",
+    "@tanstack/intent": "^0.4.0",
     "@types/node": "^24.0.0",
     "concurrently": "^9.2.1",
     "tsx": "^4.20.6",
@@ -26,5 +27,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/ShawnDen-coder/full-stack-example.git"
+  },
+  "intent": {
+    "skills": [
+      "@tanstack/router-core"
+    ]
   }
 }
