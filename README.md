@@ -155,7 +155,9 @@ just stack-down
 | OTLP HTTP | http://localhost:4318 |
 | Collector health | http://localhost:13133 |
 
-Health 端点为 `GET /health`，响应带 `Cache-Control: no-store`。浏览器端通过 Hono 的 `hc` 客户端和 TanStack Query 调用该端点。公开 HTTP API 的 OpenAPI 3.1 规范可从 `GET /openapi.json` 获取，文档站的 HTTP Reference 使用同一份规范；不生成 Orval 客户端。
+Health 端点为 `GET /health`，响应带 `Cache-Control: no-store`。浏览器端通过 Hono 的 `hc` 客户端和 TanStack Query 调用该端点。开发环境可从 `GET /docs` 打开 Swagger UI，并由同源的 `GET /openapi.json` 提供 OpenAPI 3.1 规范；文档站的 HTTP Reference 使用同一份规范，不生成 Orval 客户端。
+
+`API_DOCS_ENABLED` 可显式控制这两个端点：开发和测试默认开启，生产默认关闭；在生产环境设置 `API_DOCS_ENABLED=true` 才会公开 API 文档。
 
 ## Todo 示例
 
