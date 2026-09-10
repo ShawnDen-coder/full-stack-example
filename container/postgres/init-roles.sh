@@ -25,5 +25,6 @@ WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'migrator_user')
 
 GRANT CONNECT ON DATABASE :"db_name" TO :"runtime_user";
 GRANT CONNECT ON DATABASE :"db_name" TO :"migrator_user";
+GRANT CREATE ON DATABASE :"db_name" TO :"migrator_user";
 GRANT USAGE, CREATE ON SCHEMA public TO :"migrator_user";
 EOSQL
