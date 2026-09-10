@@ -34,27 +34,31 @@ function createTestApp() {
   };
   const pass = async (_context: any, next: any) => next();
   return createApp({
-    checkDatabase: async () => undefined,
     logger,
-    todoService: createService(),
-    auth: {
-      require: {
-        requireTenant,
-        requireTenantPermission: () => requireTenant,
-        requireSession: pass,
-        requirePlatformAdmin: pass,
-        requireFreshSession: pass,
-        requirePermission: () => requireTenant,
-      },
-      auth: { handler: async () => new Response("handled") },
-      platform: {
-        createUser: async () => ({ id: "user" }),
-        createOrganization: async () => ({ id: "org" }),
-        setOrganizationStatus: async () => undefined,
-        requestPasswordReset: async () => undefined,
+    http: { webOrigin: "http://localhost:5173" },
+    documentation: { enabled: true },
+    modules: {
+      system: { checkDatabase: async () => undefined },
+      todos: { service: createService() },
+      auth: {
+        require: {
+          requireTenant,
+          requireTenantPermission: () => requireTenant,
+          requireSession: pass,
+          requirePlatformAdmin: pass,
+          requireFreshSession: pass,
+          requirePermission: () => requireTenant,
+        },
+        auth: { handler: async () => new Response("handled") },
+        platform: {
+          createUser: async () => ({ id: "user" }),
+          createOrganization: async () => ({ id: "org" }),
+          setOrganizationStatus: async () => undefined,
+          requestPasswordReset: async () => undefined,
+        },
       },
     } as any,
-    webOrigin: "http://localhost:5173",
+    web: {},
   });
 }
 

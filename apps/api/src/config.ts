@@ -25,6 +25,7 @@ const environmentSchema = z.object({
   LOG_STREAM_ENABLED: z.enum(["true", "false"]).default("false"),
   LOG_STREAM_BUFFER_SIZE: z.coerce.number().int().min(1).max(10_000).default(1000),
   LOG_STREAM_HEARTBEAT_MS: z.coerce.number().int().min(1000).default(15_000),
+  API_DOCS_ENABLED: z.enum(["true", "false"]).optional(),
 });
 
 export interface ApiConfig {
@@ -47,6 +48,7 @@ export interface ApiConfig {
   readonly logStreamEnabled: boolean;
   readonly logStreamBufferSize: number;
   readonly logStreamHeartbeatMs: number;
+  readonly apiDocsEnabled: boolean;
 }
 
 export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiConfig {
@@ -86,5 +88,9 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
     logStreamEnabled: parsed.LOG_STREAM_ENABLED === "true",
     logStreamBufferSize: parsed.LOG_STREAM_BUFFER_SIZE,
     logStreamHeartbeatMs: parsed.LOG_STREAM_HEARTBEAT_MS,
+    apiDocsEnabled:
+      parsed.API_DOCS_ENABLED === undefined
+        ? parsed.NODE_ENV !== "production"
+        : parsed.API_DOCS_ENABLED === "true",
   };
 }

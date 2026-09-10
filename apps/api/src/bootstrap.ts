@@ -77,15 +77,18 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     });
     const todoService = createTodoService({ database: databaseContext.db });
     const app = createApp({
-      checkDatabase: () => checkDatabase(databaseContext.db),
       logger,
-      webOrigin: config.webOrigin,
-      todoService,
-      auth,
-      ...(config.webAssetsDirectory ? { webAssetsDirectory: config.webAssetsDirectory } : {}),
-      ...(config.logStreamEnabled
-        ? { logStream, logStreamHeartbeatMs: config.logStreamHeartbeatMs }
-        : {}),
+      http: { webOrigin: config.webOrigin },
+      documentation: { enabled: config.apiDocsEnabled },
+      modules: {
+        system: { checkDatabase: () => checkDatabase(databaseContext.db) },
+        todos: { service: todoService },
+        auth,
+        ...(config.logStreamEnabled
+          ? { logStream: { stream: logStream, heartbeatMs: config.logStreamHeartbeatMs } }
+          : {}),
+      },
+      web: { ...(config.webAssetsDirectory ? { assetsDirectory: config.webAssetsDirectory } : {}) },
     });
     server = serve({ fetch: app.fetch, hostname: config.host, port: config.port });
     logger.info("API server started", {

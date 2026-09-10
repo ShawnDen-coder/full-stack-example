@@ -1,7 +1,7 @@
 import { configureLogging, getAppLogger } from "@full-stack-example/logging";
 import type { TenantTodoService } from "@full-stack-example/todos";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
+import { type CreateAppOptions, createApp as createComposedApp } from "../src/app.js";
 
 let logger = getAppLogger("test");
 const todoService: TenantTodoService = {
@@ -18,6 +18,28 @@ const todoService: TenantTodoService = {
   }),
   deleteTodo: async () => true,
 };
+
+function createApp(options: {
+  readonly checkDatabase: () => Promise<void>;
+  readonly logger: typeof logger;
+  readonly todoService: TenantTodoService;
+  readonly webOrigin: string;
+  readonly auth?: CreateAppOptions["modules"]["auth"];
+  readonly webAssetsDirectory?: string;
+  readonly documentationEnabled?: boolean;
+}) {
+  return createComposedApp({
+    logger: options.logger,
+    http: { webOrigin: options.webOrigin },
+    documentation: { enabled: options.documentationEnabled ?? true },
+    modules: {
+      system: { checkDatabase: options.checkDatabase },
+      todos: { service: options.todoService },
+      ...(options.auth ? { auth: options.auth } : {}),
+    },
+    web: { ...(options.webAssetsDirectory ? { assetsDirectory: options.webAssetsDirectory } : {}) },
+  });
+}
 
 beforeAll(async () => {
   await configureLogging({ service: "test", environment: "test", level: "silent", pretty: false });
@@ -49,7 +71,7 @@ describe("API", () => {
     });
     const response = await app.request("http://localhost/openapi.json");
     expect(response.status).toBe(200);
-    const document = await response.json();
+    const document = (await response.json()) as { readonly paths: Record<string, unknown> };
     expect(document).toMatchObject({
       openapi: "3.1.0",
       paths: {
@@ -64,6 +86,33 @@ describe("API", () => {
         },
       },
     });
+    expect(document.paths).not.toHaveProperty("/docs");
+    expect(document.paths).not.toHaveProperty("/openapi.json");
+  });
+
+  it("serves Swagger UI with the same-origin OpenAPI document", async () => {
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      todoService,
+      webOrigin: "http://localhost:5173",
+    });
+    const response = await app.request("http://localhost/docs");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toContain("text/html");
+    await expect(response.text()).resolves.toContain("url: '/openapi.json'");
+  });
+
+  it("does not register API documentation when disabled", async () => {
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      todoService,
+      webOrigin: "http://localhost:5173",
+      documentationEnabled: false,
+    });
+    expect((await app.request("http://localhost/docs")).status).toBe(404);
+    expect((await app.request("http://localhost/openapi.json")).status).toBe(404);
   });
 
   it("documents and enforces Todo input validation", async () => {
@@ -153,6 +202,10 @@ describe("API", () => {
     const apiResponse = await app.request("http://localhost/api/unknown");
     expect(apiResponse.status).toBe(404);
     expect(apiResponse.headers.get("Content-Type")).toContain("application/json");
+
+    const docsResponse = await app.request("http://localhost/docs");
+    expect(docsResponse.status).toBe(200);
+    await expect(docsResponse.text()).resolves.toContain("swagger-ui");
   });
 
   it("does not use the SPA fallback for unsupported methods", async () => {
