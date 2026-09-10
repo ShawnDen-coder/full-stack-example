@@ -55,7 +55,7 @@ const auth = createAuthModule({
 const appWithAuth = setupAuthApp(app, { auth });
 ```
 
-服务端启动流程是：先用 migrator 连接执行迁移，再创建 runtime Database，随后创建 Auth 模块并挂载路由。生产环境必须注入 Mailer；公开注册已关闭。
+服务端启动流程是：先用 migrator 连接执行迁移，再创建 runtime Database，随后创建 Auth 模块并挂载路由。生产环境必须注入 Mailer；邮箱密码注册和登录用户创建工作区默认开启。未配置邮件验证流时，注册不要求验证邮箱。
 
 ## 客户端接入
 
