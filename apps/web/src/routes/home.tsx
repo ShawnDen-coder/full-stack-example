@@ -2,6 +2,7 @@ import { throwApiError } from "@full-stack-example/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { api } from "../api.js";
+import { authClient } from "../auth.js";
 
 async function getHealth() {
   const response = await api.health.$get();
@@ -11,6 +12,7 @@ async function getHealth() {
 
 export function Home() {
   const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
+  const session = authClient.useSession();
   return (
     <main className="min-h-screen bg-base-200 p-6 text-base-content sm:p-12">
       <section className="card mx-auto max-w-xl bg-base-100 shadow-xl">
@@ -35,9 +37,20 @@ export function Home() {
             </div>
           ) : null}
           <div className="card-actions justify-end">
-            <Link className="btn btn-ghost" to="/todos">
-              打开 Todo
-            </Link>
+            {session.data ? (
+              <Link className="btn btn-ghost" to="/todos">
+                打开 Todo
+              </Link>
+            ) : (
+              <>
+                <Link className="btn btn-ghost" to="/login">
+                  登录
+                </Link>
+                <Link className="btn btn-primary" to="/register">
+                  注册
+                </Link>
+              </>
+            )}
             <button className="btn btn-primary" type="button" onClick={() => void health.refetch()}>
               重新检查
             </button>

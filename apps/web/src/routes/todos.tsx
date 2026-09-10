@@ -1,14 +1,25 @@
 import { type FormEvent, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { authClient } from "../auth.js";
 import { useCreateTodo, useDeleteTodo, useTodos, useUpdateTodo } from "../features/todos/api.js";
 
 export function Todos() {
+  const navigate = useNavigate();
+  const session = authClient.useSession();
+  const workspace = authClient.useActiveOrganization();
+  const memberRole = authClient.useActiveMemberRole();
   const [title, setTitle] = useState("");
   const todos = useTodos();
   const createTodo = useCreateTodo();
   const updateTodo = useUpdateTodo();
   const deleteTodo = useDeleteTodo();
   const isMutating = createTodo.isPending || updateTodo.isPending || deleteTodo.isPending;
+  const canDelete = memberRole.data?.role === "owner" || memberRole.data?.role === "admin";
+
+  async function signOut() {
+    await authClient.signOut();
+    navigate("/login");
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -22,10 +33,21 @@ export function Todos() {
       <section className="card mx-auto max-w-xl bg-base-100 shadow-xl">
         <div className="card-body gap-5">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="card-title text-3xl">Todos</h1>
-            <Link className="btn btn-ghost btn-sm" to="/">
-              返回首页
-            </Link>
+            <div>
+              <h1 className="card-title text-3xl">Todos</h1>
+              <p className="text-sm opacity-70">
+                {workspace.data?.name ?? "当前工作区"}
+                {session.data?.user?.email ? ` · ${session.data.user.email}` : ""}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Link className="btn btn-ghost btn-sm" to="/workspaces">
+                切换工作区
+              </Link>
+              <button className="btn btn-ghost btn-sm" onClick={() => void signOut()} type="button">
+                退出
+              </button>
+            </div>
           </div>
           <form className="join w-full" onSubmit={handleSubmit}>
             <input
@@ -71,15 +93,17 @@ export function Todos() {
                   <span className={todo.completed ? "flex-1 line-through opacity-60" : "flex-1"}>
                     {todo.title}
                   </span>
-                  <button
-                    aria-label={`删除 ${todo.title}`}
-                    className="btn btn-error btn-sm"
-                    disabled={isMutating}
-                    onClick={() => deleteTodo.mutate(todo.id)}
-                    type="button"
-                  >
-                    删除
-                  </button>
+                  {canDelete ? (
+                    <button
+                      aria-label={`删除 ${todo.title}`}
+                      className="btn btn-error btn-sm"
+                      disabled={isMutating}
+                      onClick={() => deleteTodo.mutate(todo.id)}
+                      type="button"
+                    >
+                      删除
+                    </button>
+                  ) : null}
                 </li>
               ))}
             </ul>

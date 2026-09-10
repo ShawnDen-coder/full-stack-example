@@ -32,6 +32,14 @@ export default defineConfig({
         fileURLToPath(new URL(".", import.meta.url)),
         "packages/api-client/src/index.ts",
       ),
+      "@full-stack-example/auth/client": resolve(
+        fileURLToPath(new URL(".", import.meta.url)),
+        "packages/auth/src/client.ts",
+      ),
+      "@full-stack-example/auth/server": resolve(
+        fileURLToPath(new URL(".", import.meta.url)),
+        "packages/auth/src/server.ts",
+      ),
       "@full-stack-example/api/contract": resolve(
         fileURLToPath(new URL(".", import.meta.url)),
         "apps/api/src/contract.ts",
