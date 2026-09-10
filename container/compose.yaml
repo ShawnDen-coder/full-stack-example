@@ -31,14 +31,15 @@ services:
     restart: unless-stopped
 
   otel-collector:
-    image: otel/opentelemetry-collector:0.121.0
+    build:
+      context: ..
+      dockerfile: container/Dockerfile.otel-collector
+    image: full-stack-example-otel-collector:local
     command: ["--config=/etc/otelcol/config.yaml"]
     ports:
       - "4317:4317"
       - "4318:4318"
       - "13133:13133"
-    volumes:
-      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
 
   otel-collector-health:
     profiles: [application]
@@ -58,7 +59,10 @@ services:
     restart: "no"
 
   postgres:
-    image: postgres:17-alpine
+    build:
+      context: ..
+      dockerfile: container/Dockerfile.postgres
+    image: full-stack-example-postgres:local
     environment:
       POSTGRES_DB: app
       POSTGRES_USER: app
@@ -71,7 +75,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./postgres/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d app"]
       interval: 5s

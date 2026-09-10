@@ -7,16 +7,22 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
   -v migrator_user="$POSTGRES_MIGRATOR_USER" \
   -v migrator_password="$POSTGRES_MIGRATOR_PASSWORD" \
   -v db_name="$POSTGRES_DB" <<'EOSQL'
-DO $role_setup$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'runtime_user') THEN
-    EXECUTE format('CREATE ROLE %I LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE PASSWORD %L', :'runtime_user', :'runtime_password');
-  END IF;
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'migrator_user') THEN
-    EXECUTE format('CREATE ROLE %I LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE PASSWORD %L', :'migrator_user', :'migrator_password');
-  END IF;
-END
-$role_setup$;
+SELECT format(
+  'CREATE ROLE %I LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE PASSWORD %L',
+  :'runtime_user',
+  :'runtime_password'
+)
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'runtime_user')
+\gexec
+
+SELECT format(
+  'CREATE ROLE %I LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE PASSWORD %L',
+  :'migrator_user',
+  :'migrator_password'
+)
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'migrator_user')
+\gexec
+
 GRANT CONNECT ON DATABASE :"db_name" TO :"runtime_user";
 GRANT CONNECT ON DATABASE :"db_name" TO :"migrator_user";
 GRANT USAGE, CREATE ON SCHEMA public TO :"migrator_user";
