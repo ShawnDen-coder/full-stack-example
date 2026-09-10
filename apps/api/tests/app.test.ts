@@ -1,4 +1,4 @@
-import { configureLogging, getAppLogger } from "@full-stack-example/logging";
+import { configureLogging, createLogStream, getAppLogger } from "@full-stack-example/logging";
 import type { TenantTodoService } from "@full-stack-example/todos";
 import { beforeAll, describe, expect, it } from "vitest";
 import { type CreateAppOptions, createApp as createComposedApp } from "../src/app.js";
@@ -27,16 +27,25 @@ function createApp(options: {
   readonly auth?: CreateAppOptions["modules"]["auth"];
   readonly webAssetsDirectory?: string;
   readonly documentationEnabled?: boolean;
+  readonly logStream?: boolean;
 }) {
+  const auth = options.auth;
+  const base = {
+    system: { checkDatabase: options.checkDatabase },
+    todos: { service: options.todoService },
+  };
+  const modules = auth
+    ? {
+        ...base,
+        auth,
+        ...(options.logStream ? { logStream: { stream: createLogStream(), heartbeatMs: 10 } } : {}),
+      }
+    : base;
   return createComposedApp({
     logger: options.logger,
     http: { webOrigin: options.webOrigin },
     documentation: { enabled: options.documentationEnabled ?? true },
-    modules: {
-      system: { checkDatabase: options.checkDatabase },
-      todos: { service: options.todoService },
-      ...(options.auth ? { auth: options.auth } : {}),
-    },
+    modules,
     web: { ...(options.webAssetsDirectory ? { assetsDirectory: options.webAssetsDirectory } : {}) },
   });
 }
@@ -120,12 +129,13 @@ describe("API", () => {
           next(),
       },
       platform: {},
-      getOpenApiSchema: async () => ({
+      getOpenApiDocument: async () => ({
         components: { securitySchemes: { apiKeyCookie: { type: "apiKey", in: "cookie" } } },
         paths: {
-          "/sign-in/email": { post: { operationId: "signInEmail" } },
-          "/sign-out": { post: { operationId: "signOut" } },
-          "/admin/list-users": { get: { operationId: "listUsers" } },
+          "/api/auth/sign-in/email": { post: { operationId: "signInEmail", security: [] } },
+          "/api/auth/sign-out": {
+            post: { operationId: "signOut", security: [{ apiKeyCookie: [] }] },
+          },
         },
       }),
     } as any;
@@ -141,11 +151,24 @@ describe("API", () => {
       type: "apiKey",
       in: "cookie",
     });
-    expect(document.paths["/api/auth/sign-in/email"].security).toEqual([]);
-    expect(document.paths["/api/auth/sign-out"].security).toEqual([{ apiKeyCookie: [] }]);
-    expect(document.paths["/api/todos"].security).toEqual([{ apiKeyCookie: [] }]);
-    expect(document.paths["/health"].security).toEqual([]);
-    expect(document.paths["/api/auth/admin/list-users"]).toBeUndefined();
+    expect(document.security).toEqual([{ apiKeyCookie: [] }]);
+    expect(document.paths["/api/auth/sign-in/email"].post.security).toEqual([]);
+    expect(document.paths["/api/auth/sign-out"].post.security).toEqual([{ apiKeyCookie: [] }]);
+    expect(document.paths["/api/todos"].get.security).toBeUndefined();
+    expect(document.paths["/health"].get.security).toEqual([]);
+    for (const path of Object.values(document.paths) as Array<{ readonly security?: unknown }>)
+      expect(path.security).toBeUndefined();
+    expect(document.components.securitySchemes.bearerAuth).toBeUndefined();
+    expect(document.paths["/api/platform/users"].post.operationId).toBe("createPlatformUser");
+    expect(document.paths["/api/platform/organizations"].post.operationId).toBe(
+      "createPlatformOrganization",
+    );
+    expect(document.paths["/api/platform/organizations/{id}/status"].patch.operationId).toBe(
+      "setOrganizationStatus",
+    );
+    expect(document.paths["/api/platform/users/{id}/password-reset"].post.operationId).toBe(
+      "requestPlatformPasswordReset",
+    );
   });
 
   it("does not register API documentation when disabled", async () => {
@@ -158,6 +181,55 @@ describe("API", () => {
     });
     expect((await app.request("http://localhost/docs")).status).toBe(404);
     expect((await app.request("http://localhost/openapi.json")).status).toBe(404);
+    expect((await app.request("http://localhost/api/logs/stream")).status).toBe(404);
+  });
+
+  it("protects and documents the log stream only when enabled with auth", async () => {
+    const auth = {
+      auth: { handler: async () => new Response("handled") },
+      require: {
+        requireTenantPermission:
+          () => async (_context: import("hono").Context, next: import("hono").Next) =>
+            next(),
+        requireSession: async (context: import("hono").Context, next: import("hono").Next) =>
+          context.req.header("x-session") ? next() : context.json({ error: "Unauthorized" }, 401),
+        requirePlatformAdmin: async (context: import("hono").Context, next: import("hono").Next) =>
+          context.req.header("x-admin") ? next() : context.json({ error: "Forbidden" }, 403),
+        requireFreshSession: async (context: import("hono").Context, next: import("hono").Next) =>
+          context.req.header("x-fresh") ? next() : context.json({ error: "Forbidden" }, 403),
+      },
+      platform: {},
+      getOpenApiDocument: async () => ({
+        components: { securitySchemes: { apiKeyCookie: { type: "apiKey", in: "cookie" } } },
+        paths: {},
+      }),
+    } as any;
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      todoService,
+      auth,
+      logStream: true,
+      webOrigin: "http://localhost:5173",
+    });
+
+    expect((await app.request("http://localhost/api/logs/stream")).status).toBe(401);
+    expect(
+      (
+        await app.request("http://localhost/api/logs/stream", {
+          headers: { "x-session": "1" },
+        })
+      ).status,
+    ).toBe(403);
+    const response = await app.request("http://localhost/api/logs/stream", {
+      headers: { "x-session": "1", "x-admin": "1", "x-fresh": "1" },
+    });
+    expect(response.status).toBe(200);
+    await response.body?.cancel();
+
+    const document = (await (await app.request("http://localhost/openapi.json")).json()) as any;
+    expect(document.paths["/api/logs/stream"].get.tags).toEqual(["Diagnostics"]);
+    expect(document.paths["/api/logs/stream"].get.security).toBeUndefined();
   });
 
   it("documents and enforces Todo input validation", async () => {

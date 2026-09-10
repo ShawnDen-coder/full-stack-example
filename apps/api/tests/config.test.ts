@@ -36,4 +36,17 @@ describe("API configuration", () => {
     expect(parseConfig({ ...environment, API_DOCS_ENABLED: "true" }).apiDocsEnabled).toBe(true);
     expect(parseConfig({ ...environment, API_DOCS_ENABLED: "false" }).apiDocsEnabled).toBe(false);
   });
+
+  it("allows an explicitly enabled production log stream", () => {
+    const environment = {
+      DATABASE_URL: "postgres://app:app@localhost:5432/app",
+      DATABASE_RUNTIME_URL: "postgres://runtime:runtime@localhost:5432/app",
+      DATABASE_MIGRATOR_URL: "postgres://migrator:migrator@localhost:5432/app",
+      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
+      NODE_ENV: "production" as const,
+      LOG_STREAM_ENABLED: "true" as const,
+    };
+
+    expect(parseConfig(environment).logStreamEnabled).toBe(true);
+  });
 });

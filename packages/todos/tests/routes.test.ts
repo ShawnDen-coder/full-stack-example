@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { testClient } from "hono/testing";
 import { describe, expect, it, vi } from "vitest";
 import { setupTodosApp } from "../src/route.js";
 import type { TenantTodoService } from "../src/service.js";
@@ -20,7 +21,8 @@ describe("Todo route integration", () => {
       authorization: { read: authorize, write: authorize, delete: authorize },
       getTenantId: () => "external-tenant",
     }).get("/dashboard", (c) => c.text("dashboard"));
-    expect((await app.request("/api/todos")).status).toBe(200);
+    const client = testClient(app);
+    expect((await client.api.todos.$get()).status).toBe(200);
     expect(listTodos).toHaveBeenCalledWith("external-tenant");
     expect((await app.request("/dashboard")).status).toBe(200);
     expect((await app.request("/api/dashboard")).status).toBe(404);
