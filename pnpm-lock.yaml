@@ -251,6 +251,9 @@ importers:
       hono:
         specifier: 'catalog:'
         version: 4.13.7
+      hono-openapi:
+        specifier: ^1.3.2
+        version: 1.3.2(hono@4.13.7)(zod@4.5.4)
       react:
         specifier: ^19.2.3
         version: 19.2.8
