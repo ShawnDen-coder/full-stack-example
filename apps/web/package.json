@@ -7,22 +7,27 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "routes:generate": "tsr generate"
   },
   "dependencies": {
-    "@full-stack-example/auth": "workspace:*",
     "@full-stack-example/api-client": "workspace:*",
+    "@full-stack-example/auth": "workspace:*",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/react-query": "^5.90.12",
+    "@tanstack/react-router": "^1.132.0",
+    "@tanstack/router-core": "^1.171.28",
     "@vitejs/plugin-react": "^5.1.1",
     "daisyui": "^5.5.8",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-router": "^7.10.1",
+    "react-hook-form": "^7.68.0",
     "tailwindcss": "^4.1.17"
   },
   "devDependencies": {
     "@full-stack-example/api": "workspace:*",
+    "@tanstack/router-plugin": "^1.132.0",
+    "@tanstack/router-cli": "^1.167.35",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/react": "^19.2.7",
