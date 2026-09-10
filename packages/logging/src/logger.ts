@@ -54,7 +54,7 @@ function streamSink(stream: LogStream): Sink {
 }
 
 function withServiceMetadata(sink: Sink, options: ConfigureLoggingOptions): Sink {
-  return (record) =>
+  const decorated = ((record: LogRecord) =>
     sink({
       ...record,
       properties: {
@@ -63,7 +63,16 @@ function withServiceMetadata(sink: Sink, options: ConfigureLoggingOptions): Sink
         ...(options.version ? { version: options.version } : {}),
         ...record.properties,
       },
-    });
+    })) as Sink & { [key: symbol]: unknown };
+  const disposable = sink as Sink & {
+    [Symbol.dispose]?: () => void;
+    [Symbol.asyncDispose]?: () => Promise<void>;
+  };
+  const disposeSink = disposable[Symbol.dispose];
+  const asyncDisposeSink = disposable[Symbol.asyncDispose];
+  if (disposeSink) decorated[Symbol.dispose] = disposeSink.bind(sink);
+  if (asyncDisposeSink) decorated[Symbol.asyncDispose] = asyncDisposeSink.bind(sink);
+  return decorated;
 }
 
 export async function configureLogging(options: ConfigureLoggingOptions): Promise<void> {

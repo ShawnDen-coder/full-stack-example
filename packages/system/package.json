@@ -19,7 +19,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@full-stack-example/logging": "workspace:*",
     "hono-openapi": "^1.3.2",
     "hono": "catalog:",
     "zod": "catalog:"
