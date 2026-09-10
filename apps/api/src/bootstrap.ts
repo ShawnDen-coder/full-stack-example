@@ -74,6 +74,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
           member: { todos: ["read", "write"] },
         },
       }),
+      openApiEnabled: config.apiDocsEnabled,
     });
     const todoService = createTodoService({ database: databaseContext.db });
     const app = createApp({
