@@ -17,6 +17,8 @@ description: Better Auth organization module and tenant authorization contracts.
 - `@full-stack-example/auth/server`：`createAuthModule`、`setupAuthApp` 和平台管理服务。
 - `@full-stack-example/auth/client`：浏览器端 Better Auth client 与 Organization client plugin。
 
+服务端还提供 `getOpenApiDocument()`，只返回产品实际使用的认证和工作区端点；API 宿主将它合并到 `/openapi.json`。登录、注册标记为公开，其余 Session、退出和工作区操作使用同一个 `apiKeyCookie` Session Cookie scheme，不宣称支持 Bearer Token。
+
 根入口 `@full-stack-example/auth` 只导出共享类型。API 必须使用 `./server`，Web 必须使用 `./client` 或 `./contracts`。
 
 ## 依赖关系
@@ -121,6 +123,8 @@ Todo Service 只创建一次；每个请求从 `tenantPrincipal` 取得租户，
 | `POST /api/platform/users/:id/password-reset` | 无 | `204` |
 
 这些接口统一要求登录、`platform-admin` 和 fresh session；不要直接调用 Better Auth Admin mutation endpoint。
+
+平台接口在 Swagger 中归入 `Platform Admin`，并记录 `401/403/500` 响应及 fresh-session 要求。`/api/auth/ok` 已删除，健康检查统一使用公开的 `/health`。
 
 典型开通流程为：平台管理员创建用户，系统生成临时随机密码并发送密码设置邮件；然后平台管理员创建组织并明确指定首位 owner。平台管理员不会因此自动成为该组织成员。
 
