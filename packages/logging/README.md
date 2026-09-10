@@ -62,7 +62,7 @@ pnpm --filter @full-stack-example/logging typecheck
 pnpm --filter @full-stack-example/logging build
 ```
 
-仅在本地诊断时设置 `LOG_STREAM_ENABLED=true`；生产暴露日志流前必须经过管理员鉴权。
+日志 SSE 路由由 API 宿主按需挂载：`LOG_STREAM_ENABLED=false` 时真实路由和 OpenAPI path 都不存在。显式设置为 `true` 时，`GET /api/logs/stream` 要求 Session、`platform-admin` 和 fresh session；它会保持长连接，Swagger 的 Try it out 主要用于查看合同和浏览器调试。生产默认关闭，但可以在完成管理员保护后显式开启。
 
 ## 扩展规则
 

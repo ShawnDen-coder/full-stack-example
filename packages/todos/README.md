@@ -13,6 +13,8 @@
 - `createTodoService({ database })` 创建一次可复用的租户 Service。
 - `setupTodosApp(app, options)` 把 `/api/todos` 路由挂载到现有 Hono 应用。
 
+路由实现按复杂度分层：`route.desc.ts` 保存 OpenAPI 配置，`route.handler.ts` 使用模块自己的 `createFactory().createHandlers()` 组合 validator、授权和 handler，`route.ts` 用相对路径子应用挂载到宿主。这样既保留 Hono 的 RPC 类型，也不会把 HTTP Context 带入 Service。
+
 Repository 由 Service 内部按请求创建，路由永远不直接访问 Drizzle。模块固定使用 PostgreSQL，schema 和迁移由 Database 统一维护；不单独拆分适配器包。getTenantId 在授权之后执行，返回已验证的租户 ID。
 
 ## 依赖关系
