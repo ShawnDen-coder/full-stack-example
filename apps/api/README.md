@@ -5,7 +5,7 @@
 ## 职责边界
 
 - 安装 request ID、CORS、安全响应头、body limit、timeout、日志和 OpenTelemetry middleware。
-- 注册 Auth、System、Todos 和仅开发期使用的日志流。
+- 注册 Auth、System、Todos 和可选的管理员日志流。日志流默认关闭；设置 `LOG_STREAM_ENABLED=true` 后仍要求平台管理员的新鲜 Session。
 - 在启用文档时提供 `GET /docs` Swagger UI 及 `GET /openapi.json`；生产环境默认关闭，可用 `API_DOCS_ENABLED=true` 显式开启。文档包含邮箱认证、工作区切换及 Todo 的 Cookie 鉴权说明；在 Swagger 登录后，后续请求会复用同源 Session Cookie。
 - 统一处理 404 和未捕获异常。
 - 在生产容器中提供构建后的 Web 应用。
@@ -73,5 +73,15 @@ pnpm --filter @full-stack-example/api build
 ## 扩展规则
 
 新功能通过 `setupXxxApp(app, options)` 接入，并继续使用返回的 Hono app。保持 `apps/api/src/app.ts` 为显式组合根，保留推导的 `AppType`，不要引入通用模块注册器。
+
+复杂模块使用相对路径子应用和 `createFactory().createHandlers()`：
+
+```text
+route.desc.ts     → describeRoute 的纯配置
+route.handler.ts  → 校验、鉴权和 HTTP handler
+route.ts          → 一行一端点的子应用组装，再由宿主 app.route() 挂载
+```
+
+`service.ts` 保持纯业务逻辑，`types.ts` 保存模块配置和 Context Variables。System 只有一个健康端点，因此保持紧凑。路由模块不创建第二个服务器，也不通过自动扫描或通用 registry 注册。
 
 参阅 [HTTP API 参考](/reference/http-api/)和 [API 模块说明](/modules/api/)。
