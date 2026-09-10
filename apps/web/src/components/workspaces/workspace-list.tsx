@@ -24,6 +24,7 @@ export function WorkspaceList({
             <p className="text-sm text-base-content/60">{organization.slug}</p>
           </div>
           <button
+            aria-label={`选择工作区 ${organization.name}`}
             className="btn btn-outline btn-sm"
             disabled={disabled}
             onClick={() => onSelect(organization.id)}
