@@ -100,7 +100,52 @@ describe("API", () => {
     const response = await app.request("http://localhost/docs");
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toContain("text/html");
-    await expect(response.text()).resolves.toContain("url: '/openapi.json'");
+    const html = await response.text();
+    expect(html).toContain("url: '/openapi.json'");
+    expect(html).toContain("withCredentials: true");
+  });
+
+  it("merges the selected Better Auth endpoints and marks protected operations", async () => {
+    const auth = {
+      auth: { handler: async () => new Response("handled") },
+      require: {
+        requireTenantPermission:
+          () => async (_context: import("hono").Context, next: import("hono").Next) =>
+            next(),
+        requireSession: async (_context: import("hono").Context, next: import("hono").Next) =>
+          next(),
+        requirePlatformAdmin: async (_context: import("hono").Context, next: import("hono").Next) =>
+          next(),
+        requireFreshSession: async (_context: import("hono").Context, next: import("hono").Next) =>
+          next(),
+      },
+      platform: {},
+      getOpenApiSchema: async () => ({
+        components: { securitySchemes: { apiKeyCookie: { type: "apiKey", in: "cookie" } } },
+        paths: {
+          "/sign-in/email": { post: { operationId: "signInEmail" } },
+          "/sign-out": { post: { operationId: "signOut" } },
+          "/admin/list-users": { get: { operationId: "listUsers" } },
+        },
+      }),
+    } as any;
+    const app = createApp({
+      checkDatabase: async () => undefined,
+      logger,
+      todoService,
+      auth,
+      webOrigin: "http://localhost:5173",
+    });
+    const document = (await (await app.request("http://localhost/openapi.json")).json()) as any;
+    expect(document.components.securitySchemes.apiKeyCookie).toEqual({
+      type: "apiKey",
+      in: "cookie",
+    });
+    expect(document.paths["/api/auth/sign-in/email"].security).toEqual([]);
+    expect(document.paths["/api/auth/sign-out"].security).toEqual([{ apiKeyCookie: [] }]);
+    expect(document.paths["/api/todos"].security).toEqual([{ apiKeyCookie: [] }]);
+    expect(document.paths["/health"].security).toEqual([]);
+    expect(document.paths["/api/auth/admin/list-users"]).toBeUndefined();
   });
 
   it("does not register API documentation when disabled", async () => {
