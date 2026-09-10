@@ -6,7 +6,8 @@
 
 - 安装 request ID、CORS、安全响应头、body limit、timeout、日志和 OpenTelemetry middleware。
 - 注册 Auth、System、Todos 和仅开发期使用的日志流。
-- 提供 `GET /openapi.json`，并统一处理 404 和未捕获异常。
+- 在启用文档时提供 `GET /docs` Swagger UI 及 `GET /openapi.json`；生产环境默认关闭，可用 `API_DOCS_ENABLED=true` 显式开启。
+- 统一处理 404 和未捕获异常。
 - 在生产容器中提供构建后的 Web 应用。
 
 API 不持有数据库 schema 或 Todo 业务规则，这些能力通过包接口注入。
@@ -38,11 +39,15 @@ just launch
 
 ```ts
 const app = createApp({
-  checkDatabase: async () => {},
   logger,
-  webOrigin: "http://localhost:5173",
-  todoService,
-  auth,
+  http: { webOrigin: "http://localhost:5173" },
+  documentation: { enabled: true },
+  modules: {
+    system: { checkDatabase: async () => {} },
+    todos: { service: todoService },
+    auth,
+  },
+  web: {},
 });
 
 const response = await app.request("/health");
