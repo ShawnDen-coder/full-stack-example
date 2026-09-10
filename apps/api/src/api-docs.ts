@@ -13,18 +13,6 @@ function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
-const authPaths = new Set([
-  "/sign-up/email",
-  "/sign-in/email",
-  "/sign-out",
-  "/get-session",
-  "/organization/list",
-  "/organization/create",
-  "/organization/set-active",
-]);
-const publicAuthPaths = new Set(["/sign-up/email", "/sign-in/email"]);
-const todoPaths = new Set(["/api/todos", "/api/todos/{id}"]);
-
 const documentation = {
   openapi: "3.1.0",
   info: {
@@ -33,42 +21,30 @@ const documentation = {
     description:
       "HTTP API for health checks and todo management. Todo operations require a Better Auth session and an active workspace.",
   },
-  servers: [{ url: "http://localhost:3000", description: "Local development" }],
 };
 
 function mergeAuthDocument(
   document: OpenApiDocument,
   authDocument: OpenApiDocument,
 ): OpenApiDocument {
-  const paths = { ...(document.paths ?? {}) };
-  for (const [path, item] of Object.entries(authDocument.paths ?? {})) {
-    if (!authPaths.has(path)) continue;
-    paths[`/api/auth${path}`] = {
-      ...item,
-      security: publicAuthPaths.has(path) ? [] : [{ apiKeyCookie: [] }],
+  const paths = { ...(document.paths ?? {}), ...(authDocument.paths ?? {}) };
+  const documentComponents = record(document.components);
+  const authComponents = record(authDocument.components);
+  const componentSections = new Set([
+    ...Object.keys(documentComponents),
+    ...Object.keys(authComponents),
+  ]);
+  const components: Record<string, unknown> = {};
+  for (const section of componentSections) {
+    components[section] = {
+      ...record(documentComponents[section]),
+      ...record(authComponents[section]),
     };
   }
-  for (const path of todoPaths) {
-    const item = paths[path];
-    if (item) paths[path] = { ...item, security: [{ apiKeyCookie: [] }] };
-  }
-  const health = paths["/health"];
-  if (health) paths["/health"] = { ...health, security: [] };
   return {
     ...document,
     paths,
-    components: {
-      ...(document.components ?? {}),
-      ...(authDocument.components ?? {}),
-      schemas: {
-        ...record(record(document.components).schemas),
-        ...record(record(authDocument.components).schemas),
-      },
-      securitySchemes: {
-        ...record(record(document.components).securitySchemes),
-        ...record(record(authDocument.components).securitySchemes),
-      },
-    },
+    components,
     security: [{ apiKeyCookie: [] }],
   };
 }
@@ -81,13 +57,13 @@ export function setupApiDocs<E extends Env, S extends Schema, BasePath extends s
 
   const honoDocument = openAPIRouteHandler(app, {
     documentation,
-    exclude: [/^\/api\/logs\/stream$/, /^\/docs$/, /^\/openapi\.json$/],
+    exclude: [/^\/docs$/, /^\/openapi\.json$/],
   });
   const withOpenApi = app.get("/openapi.json", async (context, next) => {
     const response = await honoDocument(context, next);
-    if (!response || !options.auth?.getOpenApiSchema) return response;
+    if (!response || !options.auth?.getOpenApiDocument) return response;
     const document = (await response.json()) as OpenApiDocument;
-    const authDocument = (await options.auth.getOpenApiSchema()) as OpenApiDocument;
+    const authDocument = (await options.auth.getOpenApiDocument()) as OpenApiDocument;
     return context.json(mergeAuthDocument(document, authDocument));
   });
   return withOpenApi.get(
