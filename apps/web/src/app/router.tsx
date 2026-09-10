@@ -1,37 +1,18 @@
-import { createBrowserRouter, type RouteObject, RouterProvider } from "react-router";
-import { RequireSession, RequireWorkspace } from "../components/auth/session-guard.js";
-import { HomePage } from "../pages/home-page.js";
-import { LoginPage } from "../pages/login-page.js";
-import { RegisterPage } from "../pages/register-page.js";
-import { TodosPage } from "../pages/todos-page.js";
-import { WorkspacesPage } from "../pages/workspaces-page.js";
+import { createRouter, RouterProvider } from "@tanstack/react-router";
+import { PageLoading } from "../components/feedback/page-loading.js";
+import { authClient } from "../features/auth/client.js";
+import { routeTree } from "../routeTree.gen.js";
 
-export const routes = [
-  { path: "/", element: <HomePage /> },
-  { path: "/login", element: <LoginPage /> },
-  { path: "/register", element: <RegisterPage /> },
-  {
-    path: "/workspaces",
-    element: (
-      <RequireSession>
-        <WorkspacesPage />
-      </RequireSession>
-    ),
-  },
-  {
-    path: "/todos",
-    element: (
-      <RequireSession>
-        <RequireWorkspace>
-          <TodosPage />
-        </RequireWorkspace>
-      </RequireSession>
-    ),
-  },
-] satisfies RouteObject[];
+export const router = createRouter({ routeTree, context: { session: null } });
 
-const router = createBrowserRouter(routes);
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
 
 export function AppRouter() {
-  return <RouterProvider router={router} />;
+  const session = authClient.useSession();
+  if (session.isPending) return <PageLoading label="正在验证登录状态" />;
+  return <RouterProvider router={router} context={{ session: session.data }} />;
 }

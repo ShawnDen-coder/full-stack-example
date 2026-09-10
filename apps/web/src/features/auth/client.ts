@@ -8,3 +8,5 @@ export const authClient = createAppAuthClient({
   ),
   fetchOptions: { credentials: "include" },
 });
+
+export type AppSession = NonNullable<ReturnType<typeof authClient.useSession>["data"]>;

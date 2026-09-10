@@ -2,9 +2,19 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TodosPage } from "../../src/pages/todos-page.js";
+import { TodosPage } from "../../src/routes/_authenticated/todos.js";
+
+vi.mock("@tanstack/react-router", () => ({
+  createFileRoute: () => (config: unknown) => config,
+  Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
+  useNavigate: () => () => undefined,
+}));
 
 vi.mock("../../src/features/auth/client.js", () => ({
   authClient: {
@@ -25,9 +35,7 @@ function renderTodos() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <TodosPage />
-      </MemoryRouter>
+      <TodosPage />
     </QueryClientProvider>,
   );
 }
