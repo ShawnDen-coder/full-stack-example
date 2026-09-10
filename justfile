@@ -77,16 +77,16 @@ container-build:
     podman build --file container/Dockerfile --ignorefile container/Dockerfile.dockerignore --tag full-stack-example:local .
 
 stack-up:
-    podman compose -f container/compose.yaml --profile application up -d --build --wait
+    podman compose --env-file .env -f container/compose.yaml --profile application up -d --build --wait
 
 stack-down:
-    podman compose -f container/compose.yaml --profile application down
+    podman compose --env-file .env -f container/compose.yaml --profile application down
 
 stack-logs:
-    podman compose -f container/compose.yaml --profile application logs -f app postgres otel-collector
+    podman compose --env-file .env -f container/compose.yaml --profile application logs -f app postgres otel-collector
 
 stack-status:
-    podman compose -f container/compose.yaml --profile application ps
+    podman compose --env-file .env -f container/compose.yaml --profile application ps
 
 db-generate:
     pnpm --filter @full-stack-example/database db:generate
@@ -101,13 +101,13 @@ db-studio:
     pnpm --filter @full-stack-example/database db:studio
 
 infra-up:
-    podman compose -f container/compose.yaml up -d
+    podman compose --env-file .env -f container/compose.yaml up -d
 
 infra-down:
-    podman compose -f container/compose.yaml down
+    podman compose --env-file .env -f container/compose.yaml down
 
 infra-logs service="postgres":
-    podman compose -f container/compose.yaml logs -f {{service}}
+    podman compose --env-file .env -f container/compose.yaml logs -f {{service}}
 
 otel-logs:
-    podman compose -f container/compose.yaml logs -f otel-collector
+    podman compose --env-file .env -f container/compose.yaml logs -f otel-collector
