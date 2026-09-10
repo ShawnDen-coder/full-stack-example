@@ -9,12 +9,15 @@ description: 追踪浏览器请求经过 Hono 中间件、功能路由、service
 sequenceDiagram
   participant B as Browser
   participant A as Hono API
+  participant U as Auth middleware
   participant S as TodoService
   participant R as Repository
   participant D as PostgreSQL
   B->>A: PATCH /api/todos/:id
   A->>A: requestId, CORS, headers, timeout
-  A->>S: updateTodo(input)
+  A->>U: Session + active organization + write permission
+  U-->>A: tenantPrincipal
+  A->>S: updateTodo(tenantId, input)
   S->>R: updateCompleted(input)
   R->>D: UPDATE todos
   D-->>R: row or empty

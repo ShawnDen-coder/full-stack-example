@@ -1,6 +1,6 @@
 ---
 title: HTTP API Reference
-description: 查看 health 与 Todo CRUD HTTP 路由的请求参数、响应 schema、错误状态和 OpenAPI 规范。
+description: 查看 Health、Auth、工作区、平台管理、Todo 与日志流的 OpenAPI 3.1 合同。
 ---
 
 import { ClientOnly } from "../../components/ClientOnly";
@@ -8,19 +8,34 @@ import { OpenApiReference } from "../../components/OpenApiReference";
 
 # HTTP API Reference
 
-OpenAPI 原始规范：<a href="/generated/openapi.json">openapi.json</a>。规范从 API 组合根中的真实 Hono 路由元数据生成，并在构建时通过 OpenAPI 3.1 校验。
+OpenAPI 原始规范：<a href="/generated/openapi.json">openapi.json</a>。规范从 API 组合根中的真实 Hono 路由元数据和 Better Auth 文档片段生成，并在构建时通过 OpenAPI 3.1 校验。运行中的 API 还在 `/docs` 提供 Swagger UI、在 `/openapi.json` 提供同源规范。
 
 ## 公开端点
 
 | Method | Path | 成功响应 | 主要错误 |
 | --- | --- | --- | --- |
 | `GET` | `/health` | `200` 健康、`503` degraded | `500` 内部错误 |
-| `GET` | `/api/todos` | `200` Todo 列表 | `500` 内部错误 |
-| `POST` | `/api/todos` | `201` 创建 Todo | `400` 验证失败、`500` 内部错误 |
-| `PATCH` | `/api/todos/:id` | `200` 更新 Todo | `400` 验证失败、`404` 不存在、`500` 内部错误 |
-| `DELETE` | `/api/todos/:id` | `204` 删除成功 | `400` 验证失败、`404` 不存在、`500` 内部错误 |
+| `POST` | `/api/auth/sign-up/email` | 注册并建立 Session | `400` 输入或账号错误 |
+| `POST` | `/api/auth/sign-in/email` | 登录并建立 Session | `400/401` 凭据错误 |
+
+## Session 与工作区端点
+
+`/api/auth/sign-out`、`/api/auth/get-session`、`/api/auth/organization/list`、`/api/auth/organization/create` 和 `/api/auth/organization/set-active` 使用 Better Auth Session Cookie。Swagger 配置了 `withCredentials`，先调用登录接口后，后续 Try it out 会自动携带 HttpOnly Cookie。
+
+## Todo 端点
+
+| Method | Path | 权限 | 主要错误 |
+| --- | --- | --- | --- |
+| `GET` | `/api/todos` | 当前工作区 owner/admin/member | `400/401/403/500` |
+| `POST` | `/api/todos` | 当前工作区 owner/admin/member | `400/401/403/500` |
+| `PATCH` | `/api/todos/:id` | 当前工作区 owner/admin/member | `400/401/403/404/500` |
+| `DELETE` | `/api/todos/:id` | 当前工作区 owner/admin | `400/401/403/404/500` |
 
 Todo 标题会去除首尾空白，并限制为 1–200 个字符。验证失败返回 `400`，不存在的 Todo 返回 `{ "error": "Todo not found" }`。文档站不配置线上 API 地址，Scalar 的交互客户端按钮保持关闭。
+
+## 平台管理与日志
+
+`/api/platform/*` 四个平台管理接口都要求有效 Session、`platform-admin` 和 fresh session。`LOG_STREAM_ENABLED=true` 时才注册 `GET /api/logs/stream`；日志流使用相同的三层鉴权，并返回 `text/event-stream`。静态规范包含日志流合同，真实运行时关闭日志流后，路由和运行时 OpenAPI path 都不存在。
 
 <ClientOnly fallback={<p>正在加载交互式 API Reference…</p>}>
   <OpenApiReference />

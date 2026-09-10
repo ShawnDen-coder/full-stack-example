@@ -8,3 +8,18 @@ description: 了解 API、Web、数据库、日志和 OpenTelemetry 的环境变
 配置由 Zod schema 校验，API 组合根负责注入数据库检查、日志、Todo service 和 Web 静态资源目录。
 
 生产环境使用单个 Node/Hono 进程同时提供 API 与 Web 静态资源。
+
+| 变量 | 用途与默认行为 |
+| --- | --- |
+| `DATABASE_RUNTIME_URL` | API DML 连接；生产必填并使用受 RLS 约束的 runtime role。 |
+| `DATABASE_MIGRATOR_URL` | 启动迁移连接；生产必填并使用 migrator role。 |
+| `DATABASE_URL` | 当前配置解析必填；本地可作为上述两个连接的兼容回退，生产查询使用分离连接。 |
+| `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET` | Better Auth 服务地址与至少 32 字符的密钥。 |
+| `PLATFORM_ADMIN_EMAIL` / `PLATFORM_ADMIN_NAME` / `PLATFORM_ADMIN_PASSWORD` | 必须同时设置；Compose 应用 profile 要求提供，迁移后幂等创建或提升初始运维管理员，密码至少 8 字符。 |
+| `API_DOCS_ENABLED` | 未设置时开发/测试开启、生产关闭；控制 `/docs` 和 `/openapi.json`。 |
+| `LOG_STREAM_ENABLED` | 默认 `false`；开启后注册管理员保护的 `/api/logs/stream`。 |
+| `LOG_STREAM_BUFFER_SIZE` / `LOG_STREAM_HEARTBEAT_MS` | 内存日志条数与 SSE 心跳间隔。 |
+| `OTEL_ENABLED` / `OTEL_EXPORTER_OTLP_ENDPOINT` | 控制遥测及 OTLP HTTP 地址。 |
+| `WEB_ORIGIN` / `VITE_API_BASE_URL` | 开发期 CORS 来源与 Web 请求的 API origin；生产采用同源。 |
+
+初始管理员密码只用于创建缺失账号；若同邮箱账号已经存在，启动流程只确保其角色为 `platform-admin`，不会覆盖已有密码。生产部署应从密钥管理系统注入凭据。
