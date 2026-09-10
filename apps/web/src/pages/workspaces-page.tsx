@@ -1,7 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
-import { authClient, safeReturnTo } from "../auth.js";
+import { PageLoading } from "../components/feedback/page-loading.js";
+import { WorkspaceForm } from "../components/workspaces/workspace-form.js";
+import { WorkspaceList } from "../components/workspaces/workspace-list.js";
+import { authClient } from "../features/auth/client.js";
+import { safeReturnTo } from "../features/auth/navigation.js";
 
 function slugify(value: string) {
   return value
@@ -12,7 +16,7 @@ function slugify(value: string) {
     .slice(0, 100);
 }
 
-export function Workspaces() {
+export function WorkspacesPage() {
   const session = authClient.useSession();
   const location = useLocation();
   const navigate = useNavigate();
@@ -28,12 +32,7 @@ export function Workspaces() {
     if (!slug || slug === slugify(name)) setSlug(slugify(name));
   }, [name, slug]);
 
-  if (session.isPending)
-    return (
-      <main className="grid min-h-screen place-items-center bg-base-200">
-        <span className="loading loading-spinner loading-lg" role="status" />
-      </main>
-    );
+  if (session.isPending) return <PageLoading label="正在加载工作区" />;
   if (!session.data)
     return <Navigate replace to={`/login?returnTo=${encodeURIComponent(returnTo)}`} />;
 
@@ -67,57 +66,34 @@ export function Workspaces() {
 
   return (
     <main className="min-h-screen bg-base-200 p-6 text-base-content sm:p-12">
-      <section className="card mx-auto max-w-xl bg-base-100 shadow-xl">
+      <section className="card card-border mx-auto max-w-xl bg-base-100">
         <div className="card-body gap-6">
           <div>
             <h1 className="card-title text-3xl">选择工作区</h1>
-            <p className="opacity-70">Todo 数据会按当前工作区隔离。</p>
+            <p className="text-base-content/70">Todo 数据会按当前工作区隔离。</p>
           </div>
           {organizations.isPending ? (
-            <span className="loading loading-spinner" role="status" />
+            <span
+              className="loading loading-spinner"
+              role="status"
+              aria-label="正在加载工作区列表"
+            />
           ) : null}
-          {organizations.data?.map((organization) => (
-            <button
-              className="btn btn-outline justify-between"
-              disabled={submitting}
-              key={organization.id}
-              onClick={() => void activate(organization.id)}
-              type="button"
-            >
-              <span>{organization.name}</span>
-              <span className="opacity-60">{organization.slug}</span>
-            </button>
-          ))}
-          <div className="divider">创建工作区</div>
-          <form className="flex flex-col gap-4" onSubmit={(event) => void create(event)}>
-            <label className="form-control gap-2">
-              <span>名称</span>
-              <input
-                className="input"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
-              />
-            </label>
-            <label className="form-control gap-2">
-              <span>标识</span>
-              <input
-                className="input"
-                pattern="[a-z0-9-]+"
-                value={slug}
-                onChange={(event) => setSlug(event.target.value.toLowerCase())}
-                required
-              />
-            </label>
-            {error ? (
-              <div className="alert alert-error" role="alert">
-                {error}
-              </div>
-            ) : null}
-            <button className="btn btn-primary" disabled={submitting} type="submit">
-              创建并继续
-            </button>
-          </form>
+          <WorkspaceList
+            disabled={submitting}
+            onSelect={(id) => void activate(id)}
+            organizations={organizations.data ?? []}
+          />
+          <div className="divider">或创建一个工作区</div>
+          <WorkspaceForm
+            disabled={submitting}
+            {...(error ? { error } : {})}
+            name={name}
+            onNameChange={setName}
+            onSlugChange={setSlug}
+            onSubmit={(event) => void create(event)}
+            slug={slug}
+          />
         </div>
       </section>
     </main>

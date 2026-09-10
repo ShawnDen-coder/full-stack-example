@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveApiBaseUrl } from "../src/api-base-url.js";
+import { resolveApiBaseUrl } from "../../src/lib/api-base-url.js";
 
 describe("resolveApiBaseUrl", () => {
   it("uses an explicitly configured API origin", () => {
