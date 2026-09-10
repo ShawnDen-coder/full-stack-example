@@ -301,9 +301,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
         });
       },
     },
-    ...(getOpenApiSchema
-      ? { getOpenApiSchema: () => getOpenApiSchema() }
-      : {}),
+    ...(getOpenApiSchema ? { getOpenApiSchema: () => getOpenApiSchema() } : {}),
   };
 }
 
