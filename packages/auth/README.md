@@ -106,6 +106,8 @@ Todo Service 只创建一次；每个请求从 `tenantPrincipal` 取得租户，
 
 `BETTER_AUTH_URL`（API/Auth 地址）、`WEB_ORIGIN`（浏览器跳转地址）、`BETTER_AUTH_SECRET`（至少 32 字符）、`DATABASE_RUNTIME_URL`（运行时连接）和 `DATABASE_MIGRATOR_URL`（迁移连接）。本地可用 `DATABASE_URL` 兼容回退，生产必须配置双连接串。
 
+初始化数据库时可设置 `PLATFORM_ADMIN_EMAIL`、`PLATFORM_ADMIN_NAME` 和 `PLATFORM_ADMIN_PASSWORD`。迁移完成后 API 会创建缺失的账号，或将同邮箱账号幂等提升为 `platform-admin`；密码只用于首次创建，不会覆盖已有账号密码。生产部署应通过密钥管理系统注入这些变量。
+
 ## 平台管理流程
 
 平台管理 API 由模块提供：

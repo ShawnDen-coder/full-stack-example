@@ -40,10 +40,19 @@ export interface AuthModuleOptions {
   readonly openApiEnabled?: boolean;
 }
 
+export interface PlatformAdminBootstrap {
+  readonly email: string;
+  readonly name: string;
+  readonly password: string;
+}
+
 export interface AuthModule {
   readonly auth: AuthHandler;
   readonly require: AuthGuardPort;
   readonly platform: PlatformAuthService;
+  readonly ensurePlatformAdmin: (
+    input: PlatformAdminBootstrap,
+  ) => Promise<{ readonly id: string; readonly created: boolean }>;
   readonly getOpenApiDocument?: () => Promise<Record<string, unknown>>;
 }
 
@@ -301,6 +310,28 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
           metadata: { userId: input.userId },
         });
       },
+    },
+    async ensurePlatformAdmin(input: PlatformAdminBootstrap) {
+      const existing = await options.database.query.user.findFirst({
+        where: eq(userTable.email, input.email),
+      });
+      if (existing) {
+        if (existing.role !== "platform-admin")
+          await options.database
+            .update(userTable)
+            .set({ role: "platform-admin" })
+            .where(eq(userTable.id, existing.id));
+        return { id: existing.id, created: false };
+      }
+      const result = await authApi.createUser({
+        body: {
+          email: input.email,
+          name: input.name,
+          password: input.password,
+          role: "platform-admin",
+        },
+      });
+      return { id: result.user.id, created: true };
     },
     ...(getOpenApiSchema
       ? {

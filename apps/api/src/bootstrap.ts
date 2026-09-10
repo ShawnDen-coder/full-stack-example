@@ -76,6 +76,14 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       }),
       openApiEnabled: config.apiDocsEnabled,
     });
+    if (config.platformAdmin) {
+      const admin = await auth.ensurePlatformAdmin(config.platformAdmin);
+      logger.info("Platform admin is ready", {
+        event: "auth.platform_admin.ready",
+        userId: admin.id,
+        created: admin.created,
+      });
+    }
     const todoService = createTodoService({ database: databaseContext.db });
     const app = createApp({
       logger,

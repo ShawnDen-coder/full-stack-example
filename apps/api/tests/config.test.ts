@@ -49,4 +49,30 @@ describe("API configuration", () => {
 
     expect(parseConfig(environment).logStreamEnabled).toBe(true);
   });
+
+  it("reads the initial platform admin bootstrap credentials", () => {
+    const config = parseConfig({
+      DATABASE_URL: "postgres://app:app@localhost:5432/app",
+      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
+      PLATFORM_ADMIN_EMAIL: "admin@example.com",
+      PLATFORM_ADMIN_NAME: "Platform Admin",
+      PLATFORM_ADMIN_PASSWORD: "Admin123!",
+    });
+
+    expect(config.platformAdmin).toEqual({
+      email: "admin@example.com",
+      name: "Platform Admin",
+      password: "Admin123!",
+    });
+  });
+
+  it("rejects partial initial platform admin credentials", () => {
+    const base = {
+      DATABASE_URL: "postgres://app:app@localhost:5432/app",
+      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
+    };
+    expect(() => parseConfig({ ...base, PLATFORM_ADMIN_EMAIL: "admin@example.com" })).toThrow(
+      "must be configured together",
+    );
+  });
 });

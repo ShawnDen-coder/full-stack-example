@@ -10,6 +10,8 @@
 - 统一处理 404 和未捕获异常。
 - 在生产容器中提供构建后的 Web 应用。
 
+配置 `PLATFORM_ADMIN_EMAIL`、`PLATFORM_ADMIN_NAME` 和 `PLATFORM_ADMIN_PASSWORD` 后，数据库迁移完成时会幂等创建或提升该账号为 `platform-admin`。这三个变量必须同时配置，适合初始化运维账号；不要把示例密码用于真实部署。
+
 API 不持有数据库 schema 或 Todo 业务规则，这些能力通过包接口注入。
 
 ## 对外接口
