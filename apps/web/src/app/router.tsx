@@ -1,14 +1,14 @@
-import { BrowserRouter, Route, Routes } from "react-router";
+import { createBrowserRouter, type RouteObject, RouterProvider } from "react-router";
 import { Home } from "../routes/home.js";
 import { Todos } from "../routes/todos.js";
 
+export const routes = [
+  { path: "/", element: <Home /> },
+  { path: "/todos", element: <Todos /> },
+] satisfies RouteObject[];
+
+const router = createBrowserRouter(routes);
+
 export function AppRouter() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/todos" element={<Todos />} />
-      </Routes>
-    </BrowserRouter>
-  );
+  return <RouterProvider router={router} />;
 }
