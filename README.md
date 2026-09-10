@@ -157,11 +157,11 @@ just stack-down
 
 Health 端点为 `GET /health`，响应带 `Cache-Control: no-store`。浏览器端通过 Hono 的 `hc` 客户端和 TanStack Query 调用该端点。开发环境可从 `GET /docs` 打开 Swagger UI，并由同源的 `GET /openapi.json` 提供 OpenAPI 3.1 规范；文档站的 HTTP Reference 使用同一份规范，不生成 Orval 客户端。
 
-`API_DOCS_ENABLED` 可显式控制这两个端点：开发和测试默认开启，生产默认关闭；在生产环境设置 `API_DOCS_ENABLED=true` 才会公开 API 文档。
+`API_DOCS_ENABLED` 可显式控制这两个端点：开发和测试默认开启，生产默认关闭；在生产环境设置 `API_DOCS_ENABLED=true` 才会公开 API 文档。Swagger 包含登录、注册、会话与工作区接口；Todo 操作需要同源 Better Auth Session Cookie 和当前工作区，先在 Swagger 调用登录接口后即可使用 Try it out。
 
 ## Todo 示例
 
-首页保留 API 与数据库健康检查，点击“打开 Todo”可进入 `http://localhost:5173/todos`。Todo 页面支持新增、完成/取消完成与删除，数据写入 PostgreSQL；生产环境则从同源地址的 `/todos` 访问。
+首页保留 API 与数据库健康检查。用户先注册或登录，再创建或选择工作区后进入 Todo。Todo 页面支持新增、完成/取消完成；仅工作区 owner/admin 可删除，数据写入 PostgreSQL；生产环境则从同源地址的 `/todos` 访问。
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
@@ -193,6 +193,6 @@ curl -N http://localhost:3000/api/logs/stream
 
 当前已完成：React/Vite 与 Hono API workspace、`setupXxxApp(app, options)` 依赖倒置组合、LogTape 脱敏日志、OpenTelemetry Collector、开发期 SSE 日志流、Hono 单进程托管生产 Web、单镜像 Dockerfile/Compose profile，以及根级 Biome、统一 Vitest 和 `check`/`verify` 验证链路。
 
-当前明确不包含 Loki、OpenObserve、Tempo、Prometheus、Redis、缓存或日志持久化。SSE 是单进程、易失、非审计的实时诊断流，生产环境在管理员认证完成前禁止启用。OpenAPI 仅描述公开 HTTP API，不生成 Orval 客户端。HonoX 调研结论是暂不引入 SSR、SSG、文件路由或 islands，仅借鉴其构建边界和测试思路。
+当前明确不包含 Loki、OpenObserve、Tempo、Prometheus、Redis、缓存或日志持久化。SSE 是单进程、易失、非审计的实时诊断流，生产环境在管理员认证完成前禁止启用。OpenAPI 描述公开 Health、选定的认证/工作区接口和 Todo 鉴权合同，不生成 Orval 客户端。HonoX 调研结论是暂不引入 SSR、SSG、文件路由或 islands，仅借鉴其构建边界和测试思路。
 
 后续可按需求增加管理员认证与日志页面、多实例日志聚合或持久化后端，并保持现有 SSE 事件协议兼容。

@@ -6,7 +6,7 @@
 
 - 安装 request ID、CORS、安全响应头、body limit、timeout、日志和 OpenTelemetry middleware。
 - 注册 Auth、System、Todos 和仅开发期使用的日志流。
-- 在启用文档时提供 `GET /docs` Swagger UI 及 `GET /openapi.json`；生产环境默认关闭，可用 `API_DOCS_ENABLED=true` 显式开启。
+- 在启用文档时提供 `GET /docs` Swagger UI 及 `GET /openapi.json`；生产环境默认关闭，可用 `API_DOCS_ENABLED=true` 显式开启。文档包含邮箱认证、工作区切换及 Todo 的 Cookie 鉴权说明；在 Swagger 登录后，后续请求会复用同源 Session Cookie。
 - 统一处理 404 和未捕获异常。
 - 在生产容器中提供构建后的 Web 应用。
 
