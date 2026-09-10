@@ -3,5 +3,6 @@
   "application",
   "request-lifecycle",
   "observability",
+  "package-design",
   "deployment"
 ]

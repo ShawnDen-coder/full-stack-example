@@ -1,0 +1,26 @@
+# 模板模块设计：直接接入，按真实复用拆分
+
+本项目采用 Hono、PostgreSQL/Drizzle、Better Auth 的固定组合。packages 是应用内职责边界，保持 private；不以独立发布通用库为当前验收目标。
+
+## 参考依据
+
+- [Create T3 App 设计理念](https://create.t3.gg/en/introduction)：简洁、模块化和端到端类型安全；按应用需求选用组件。
+- [Create T3 App 目录结构](https://create.t3.gg/en/folder-structure-app)：数据库客户端和 schema 集中管理，子路由在 root 组合并导出类型。
+- [create-t3-turbo](https://github.com/t3-oss/create-t3-turbo)：多应用共享 api、auth、db 等职责包。
+
+这些结构说明模板可以直接依赖所选技术栈；以下规则是本项目的取舍，不是 T3 对所有项目的要求。
+
+## 本项目的边界
+
+- Database 统一持有连接、schema、迁移和租户事务；保留现有 SQL 历史及 RLS。
+- Todos 内部包含 routes、service、repository。组合根调用 `createTodoService({ database })`；不增加 PostgreSQL 适配器包、通用 Repository 工厂或可配置路由前缀。
+- `TenantTodoService` 保留为 HTTP 测试和业务调用的实际边界；`getTenantId` 显式注入，避免隐藏的认证上下文要求。
+- Auth 继续直接使用 Better Auth；其 server/client 入口用于防止服务器代码进入浏览器，具有实际隔离价值。
+- API Client 接受宿主合同类型与请求选项；Web 以类型方式绑定唯一 `AppType`，没有第二份接口合同。
+- System 提供单一数据库探针及失败回调；Logging 保留进程级配置，修复资源生命周期，不新增日志后端抽象。
+
+只在出现第二个真实消费者、不同部署边界或实际需要替换实现时，再讨论拆包和抽象。新增入口应解决明确的运行环境隔离问题；不为每个内部文件增加公开入口。
+
+## 收缩结果
+
+移除上一轮新增的 `todos-postgres`、Todos/System 的重复 `./hono` 入口、Repository 工厂接口和通用路径参数。保留新鲜会话、运行时依赖、日志释放、Todo 返回字段、显式租户获取和错误函数命名的修复。健康检查超时必须清理计时器。
