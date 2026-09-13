@@ -4,6 +4,18 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { type CreateAppOptions, createApp as createComposedApp } from "../src/app.js";
 
 let logger = getAppLogger("test");
+const pass = async (_context: import("hono").Context, next: import("hono").Next) => next();
+const defaultAuth = {
+  auth: { handler: async () => new Response("handled") },
+  require: {
+    requireTenantPermission: () => pass,
+    requireSession: pass,
+    requirePlatformAdmin: pass,
+    requireFreshSession: pass,
+  },
+  platform: {},
+  getOpenApiDocument: async () => ({ paths: {}, components: {} }),
+} as unknown as NonNullable<CreateAppOptions["modules"]["auth"]>;
 const todoService: TenantTodoService = {
   listTodos: async () => [],
   createTodo: async (_tenantId: string, input: { title: string }) => ({
@@ -34,13 +46,11 @@ function createApp(options: {
     system: { checkDatabase: options.checkDatabase },
     todos: { service: options.todoService },
   };
-  const modules = auth
-    ? {
-        ...base,
-        auth,
-        ...(options.logStream ? { logStream: { stream: createLogStream(), heartbeatMs: 10 } } : {}),
-      }
-    : base;
+  const modules = {
+    ...base,
+    auth: auth ?? defaultAuth,
+    ...(options.logStream ? { logStream: { stream: createLogStream(), heartbeatMs: 10 } } : {}),
+  };
   return createComposedApp({
     logger: options.logger,
     http: { webOrigin: options.webOrigin },
@@ -143,7 +153,7 @@ describe("API", () => {
       checkDatabase: async () => undefined,
       logger,
       todoService,
-      auth,
+      auth: auth ?? defaultAuth,
       webOrigin: "http://localhost:5173",
     });
     const document = (await (await app.request("http://localhost/openapi.json")).json()) as any;
@@ -295,7 +305,10 @@ describe("API", () => {
     });
     const response = await app.request("http://localhost/unknown");
     expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toEqual({ error: "Not found" });
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Not found",
+      requestId: expect.any(String),
+    });
   });
 
   it("serves production web assets and preserves API 404 responses", async () => {

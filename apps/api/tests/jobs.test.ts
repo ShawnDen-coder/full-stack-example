@@ -234,6 +234,6 @@ describe("jobs API composition", () => {
         },
         web: {},
       } as unknown as CreateAppOptions),
-    ).toThrow("Jobs and log stream modules require authentication");
+    ).toThrow("The API requires an authentication module");
   });
 });
