@@ -13,6 +13,11 @@
       "@full-stack-example/auth/client": ["./packages/auth/src/client.ts"],
       "@full-stack-example/auth/contracts": ["./packages/auth/src/contracts.ts"],
       "@full-stack-example/auth/server": ["./packages/auth/src/server.ts"],
+      "@full-stack-example/jobs": ["./packages/jobs/src/index.ts"],
+      "@full-stack-example/jobs/contracts": ["./packages/jobs/src/contracts.ts"],
+      "@full-stack-example/jobs/server": ["./packages/jobs/src/server.ts"],
+      "@full-stack-example/jobs/worker": ["./packages/jobs/src/worker.ts"],
+      "@full-stack-example/jobs/migration": ["./packages/jobs/src/migration.ts"],
       "@full-stack-example/api/contract": ["./apps/api/src/contract.ts"]
     },
     "lib": ["ES2022"],

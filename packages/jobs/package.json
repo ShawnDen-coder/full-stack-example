@@ -1,0 +1,54 @@
+{
+  "name": "@full-stack-example/jobs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BullMQ PostgreSQL jobs, workers, migrations, and Bull Board integration.",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js",
+      "default": "./dist/contracts.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js",
+      "default": "./dist/server.js"
+    },
+    "./worker": {
+      "types": "./dist/worker.d.ts",
+      "import": "./dist/worker.js",
+      "default": "./dist/worker.js"
+    },
+    "./migration": {
+      "types": "./dist/migration.d.ts",
+      "import": "./dist/migration.js",
+      "default": "./dist/migration.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@bull-board/api": "^6.15.3",
+    "@bull-board/hono": "^6.15.3",
+    "bullmq": "^6.3.4",
+    "hono": "catalog:",
+    "@hono/node-server": "^1.19.6",
+    "@hono/zod-validator": "catalog:",
+    "pg": "^8.16.3",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.5"
+  }
+}
