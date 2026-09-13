@@ -33,17 +33,37 @@ export async function bootstrap(): Promise<() => Promise<void>> {
   const cleanup = async () => {
     if (closed) return;
     closed = true;
+    const failures: unknown[] = [];
+    const closeResource = async (name: string, close: () => Promise<unknown>) => {
+      try {
+        await close();
+      } catch (error) {
+        failures.push(error);
+        logger.error("API shutdown resource failed", {
+          event: "api.shutdown.resource_failed",
+          resource: name,
+          error,
+        });
+      }
+    };
     const activeServer = server;
     if (activeServer)
-      await new Promise<void>((resolveClose, rejectClose) =>
-        activeServer.close((error) => (error ? rejectClose(error) : resolveClose())),
+      await closeResource(
+        "http-server",
+        () =>
+          new Promise<void>((resolveClose, rejectClose) =>
+            activeServer.close((error) => (error ? rejectClose(error) : resolveClose())),
+          ),
       );
-    if (jobs) await jobs.close();
+    if (jobs) await closeResource("jobs-queue", () => jobs?.close() ?? Promise.resolve());
     const activeDatabase = database;
-    if (activeDatabase) await activeDatabase.close();
-    if (telemetry) await telemetry.shutdown();
+    if (activeDatabase) await closeResource("database", () => activeDatabase.close());
+    if (telemetry)
+      await closeResource("telemetry", () => telemetry?.shutdown() ?? Promise.resolve());
     logger.info("API server stopped", { event: "api.shutdown.completed" });
-    await shutdownLogging();
+    await closeResource("logging", () => shutdownLogging());
+    if (failures.length)
+      throw new AggregateError(failures, "One or more API shutdown steps failed");
   };
   try {
     telemetry = await startTelemetry({
@@ -107,7 +127,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
         ...(jobs
           ? {
               jobs: {
-                service: jobs.service,
+                producer: jobs.producer,
                 board: jobs.board,
                 boardEnabled: config.bullBoardEnabled,
                 boardBasePath: config.bullBoardBasePath,
@@ -125,7 +145,13 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     });
     return cleanup;
   } catch (error) {
-    await cleanup();
+    try {
+      await cleanup();
+    } catch (cleanupError) {
+      process.stderr.write(
+        `API cleanup after startup failure also failed: ${String(cleanupError)}\n`,
+      );
+    }
     throw error;
   }
 }

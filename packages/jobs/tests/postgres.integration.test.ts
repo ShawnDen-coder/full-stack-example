@@ -89,7 +89,7 @@ describe.skipIf(!runtimeUrl || !migratorUrl)("BullMQ PostgreSQL integration", ()
         worker,
         (job) => (job.data as { message?: string }).message === message,
       );
-      const reference = await runtime.service.enqueueExample({
+      const reference = await runtime.producer.enqueue(exampleJob, {
         message,
         steps: 3,
         stepDelayMs: 0,
@@ -122,7 +122,7 @@ describe.skipIf(!runtimeUrl || !migratorUrl)("BullMQ PostgreSQL integration", ()
     });
     try {
       await worker.waitUntilReady();
-      const referencePromise = runtime.service.enqueueExample({
+      const referencePromise = runtime.producer.enqueue(exampleJob, {
         message: `integration-fail-${Date.now()}`,
         steps: 2,
         stepDelayMs: 0,
@@ -177,7 +177,7 @@ describe.skipIf(!runtimeUrl || !migratorUrl)("BullMQ PostgreSQL integration", ()
       poolMax: 5,
       logger,
     });
-    const reference = await runtime.service.enqueueExample({
+    const reference = await runtime.producer.enqueue(exampleJob, {
       message: `integration-restart-${Date.now()}`,
       steps: 1,
       stepDelayMs: 0,
@@ -221,7 +221,7 @@ describe.skipIf(!runtimeUrl || !migratorUrl)("BullMQ PostgreSQL integration", ()
         worker,
         (job) => (job.data as { message?: string }).message === message,
       );
-      await runtime.service.enqueueExample({ message, steps: 1, stepDelayMs: 0 });
+      await runtime.producer.enqueue(exampleJob, { message, steps: 1, stepDelayMs: 0 });
       await completion;
       const metrics = await queue.getMetrics("completed", 0, -1);
       expect(metrics.meta.count).toBeGreaterThan(0);

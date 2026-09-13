@@ -35,10 +35,6 @@ export interface JobProducer {
   ): Promise<JobReference<Definition["name"]>>;
 }
 
-export interface JobService {
-  enqueueExample(input: ExampleJobInput): Promise<JobReference>;
-}
-
 export interface JobExecutionContext<Data> {
   readonly id: string;
   readonly data: Data;
@@ -62,7 +58,6 @@ export interface JobsBoardSource {
 }
 
 export interface JobsRuntime {
-  readonly service: JobService;
   readonly producer: JobProducer;
   readonly board: JobsBoardSource;
   close(): Promise<void>;

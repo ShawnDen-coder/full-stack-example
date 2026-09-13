@@ -1,8 +1,25 @@
 import { isAbsolute } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseConfig } from "../src/config.js";
+import { parseConfig, parseJobsMigrationConfig } from "../src/config.js";
 
 describe("API configuration", () => {
+  it("uses the configured runtime role for BullMQ migration grants", () => {
+    const config = parseJobsMigrationConfig({
+      DATABASE_MIGRATOR_URL: "postgres://migrator:migrator@localhost:5432/app",
+      DATABASE_RUNTIME_ROLE: "worker_runtime",
+    });
+    expect(config).toEqual({
+      databaseUrl: "postgres://migrator:migrator@localhost:5432/app",
+      runtimeRole: "worker_runtime",
+    });
+    expect(() =>
+      parseJobsMigrationConfig({
+        DATABASE_URL: "postgres://migrator:migrator@localhost:5432/app",
+        DATABASE_RUNTIME_ROLE: "worker; DROP ROLE app_runtime",
+      }),
+    ).toThrow();
+  });
+
   it("resolves a relative log file from the workspace root", () => {
     const config = parseConfig({
       DATABASE_URL: "postgres://app:app@localhost:5432/app",

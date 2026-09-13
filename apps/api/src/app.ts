@@ -1,6 +1,5 @@
 import { type AuthModule, setupAuthApp } from "@full-stack-example/auth/server";
-import { setupJobsApp } from "@full-stack-example/jobs";
-import type { JobService, JobsBoardSource } from "@full-stack-example/jobs/contracts";
+import type { JobProducer, JobsBoardSource } from "@full-stack-example/jobs/contracts";
 import { setupJobsBoard } from "@full-stack-example/jobs/server";
 import type { Logger, LogStream } from "@full-stack-example/logging";
 import { setupSystemApp } from "@full-stack-example/system";
@@ -9,6 +8,7 @@ import type { ApplyGlobalResponse } from "hono/client";
 import { setupApiDocs } from "./api-docs.js";
 import { createHttpApp } from "./http.js";
 import { createJobsAdminPolicy } from "./jobs-admin.js";
+import { setupExampleJobsApp } from "./jobs-api.js";
 import { setupLogStreamApp } from "./log-stream.js";
 import { setupWebApp } from "./web-app.js";
 
@@ -22,7 +22,7 @@ interface CreateAppBaseOptions {
 }
 
 interface JobsAppModule {
-  readonly service: JobService;
+  readonly producer: JobProducer;
   readonly board: JobsBoardSource;
   readonly boardEnabled?: boolean;
   readonly boardBasePath?: string;
@@ -93,8 +93,8 @@ export function createApp(options: CreateAppOptions) {
     webOrigin: options.http.webOrigin,
   });
   const withJobs = options.modules.jobs
-    ? setupJobsApp(withTodos, {
-        service: options.modules.jobs.service,
+    ? setupExampleJobsApp(withTodos, {
+        producer: options.modules.jobs.producer,
         beforeAuthorization: jobsPolicy.beforeAuthorization,
         authorization: jobsPolicy.authorization,
       })
