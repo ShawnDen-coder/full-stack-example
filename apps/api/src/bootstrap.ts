@@ -5,6 +5,7 @@ import {
   defaultMigrationsFolder,
   migrateDatabase,
 } from "@full-stack-example/database";
+import { createBullMqJobs } from "@full-stack-example/jobs/server";
 import {
   configureLogging,
   createLogStream,
@@ -33,6 +34,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
   let telemetry: Awaited<ReturnType<typeof startTelemetry>> | undefined;
   let database: ReturnType<typeof createDatabase> | undefined;
   let server: ReturnType<typeof serve> | undefined;
+  let jobs: Awaited<ReturnType<typeof createBullMqJobs>> | undefined;
   let closed = false;
   const cleanup = async () => {
     if (closed) return;
@@ -42,6 +44,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       await new Promise<void>((resolveClose, rejectClose) =>
         activeServer.close((error) => (error ? rejectClose(error) : resolveClose())),
       );
+    if (jobs) await jobs.close();
     const activeDatabase = database;
     if (activeDatabase) await activeDatabase.close();
     if (telemetry) await telemetry.shutdown();
@@ -58,6 +61,13 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       databaseUrl: config.databaseMigratorUrl,
       migrationsFolder: defaultMigrationsFolder,
     });
+    if (config.jobsEnabled) {
+      jobs = await createBullMqJobs({
+        databaseUrl: config.databaseRuntimeUrl,
+        poolMax: config.jobsPoolMax,
+        logger: getAppLogger(["api", "jobs"]),
+      });
+    }
     const databaseContext = createDatabase({ databaseUrl: config.databaseRuntimeUrl });
     database = databaseContext;
     const auth = createAuthModule({
@@ -87,7 +97,9 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     const todoService = createTodoService({ database: databaseContext.db });
     const app = createApp({
       logger,
-      http: { webOrigin: config.webOrigin },
+      http: { webOrigin: config.webOrigin, apiOrigin: config.betterAuthUrl },
+      environment: config.environment,
+      csrfSecret: config.bullBoardCsrfSecret,
       documentation: { enabled: config.apiDocsEnabled },
       modules: {
         system: { checkDatabase: () => checkDatabase(databaseContext.db) },
@@ -95,6 +107,16 @@ export async function bootstrap(): Promise<() => Promise<void>> {
         auth,
         ...(config.logStreamEnabled
           ? { logStream: { stream: logStream, heartbeatMs: config.logStreamHeartbeatMs } }
+          : {}),
+        ...(jobs
+          ? {
+              jobs: {
+                service: jobs.service,
+                board: jobs.board,
+                boardEnabled: config.bullBoardEnabled,
+                boardBasePath: config.bullBoardBasePath,
+              },
+            }
           : {}),
       },
       web: { ...(config.webAssetsDirectory ? { assetsDirectory: config.webAssetsDirectory } : {}) },

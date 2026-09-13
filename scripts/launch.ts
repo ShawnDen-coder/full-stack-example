@@ -132,6 +132,8 @@ async function main(): Promise<void> {
   ]);
   await waitForCollector();
   await run(pnpmCommand, pnpmArgs(["--filter", "@full-stack-example/database", "db:migrate"]));
+  await run(pnpmCommand, pnpmArgs(["--filter", "@full-stack-example/api...", "build"]));
+  await run(pnpmCommand, pnpmArgs(["--filter", "@full-stack-example/api", "jobs:migrate"]));
   try {
     await run(
       pnpmCommand,
@@ -140,8 +142,9 @@ async function main(): Promise<void> {
         "concurrently",
         "--kill-others-on-fail",
         "--names",
-        "api,web",
+        "api,worker,web",
         "pnpm --filter @full-stack-example/api dev",
+        "pnpm --filter @full-stack-example/api jobs:worker:dev",
         "pnpm --filter @full-stack-example/web dev",
       ]),
     );

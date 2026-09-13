@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { authClient } from "../features/auth/client.js";
 import { api } from "../lib/api.js";
+import { resolveApiBaseUrl } from "../lib/api-base-url.js";
 
 async function getHealth() {
   const response = await api.health.$get();
@@ -13,6 +14,9 @@ async function getHealth() {
 export function HomePage() {
   const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
   const session = authClient.useSession();
+  const isPlatformAdmin =
+    (session.data?.user as { readonly role?: string } | undefined)?.role === "platform-admin";
+  const jobsBoardUrl = `${resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL, globalThis.location.origin)}/admin/queues`;
   const primaryAction = session.data ? (
     <Link className="btn btn-primary" to="/todos">
       打开 Todo
@@ -59,6 +63,11 @@ export function HomePage() {
               重新检查
             </button>
             {primaryAction}
+            {isPlatformAdmin ? (
+              <a className="btn btn-ghost" href={jobsBoardUrl}>
+                任务管理
+              </a>
+            ) : null}
           </div>
         </div>
       </section>

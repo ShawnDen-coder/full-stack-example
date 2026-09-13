@@ -13,8 +13,10 @@ COPY packages/database/package.json packages/database/package.json
 COPY packages/logging/package.json packages/logging/package.json
 COPY packages/system/package.json packages/system/package.json
 COPY packages/todos/package.json packages/todos/package.json
+COPY packages/jobs/package.json packages/jobs/package.json
 RUN pnpm install --frozen-lockfile \
   --filter @full-stack-example/api... \
+  --filter @full-stack-example/jobs \
   --filter @full-stack-example/api-client \
   --filter @full-stack-example/web
 
