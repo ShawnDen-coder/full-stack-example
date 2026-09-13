@@ -12,7 +12,6 @@
 │   ├── api/                      # Hono API 宿主：中间件、组合根、启动和生产静态资源托管
 │   └── web/                      # React/Vite 单页应用：页面、路由、TanStack Query 数据访问
 ├── packages/                     # 可复用的领域与基础设施模块
-│   ├── api-client/               # 基于 Hono AppType 的浏览器安全 RPC 客户端与错误处理
 │   ├── auth/                     # Better Auth Session、Organization、平台管理与租户鉴权
 │   ├── database/                 # Drizzle schema、迁移和 PostgreSQL 连接
 │   ├── logging/                  # LogTape 配置、脱敏日志与进程内 SSE 数据源
@@ -32,7 +31,6 @@
 
 - [API 应用](https://github.com/ShawnDen-coder/full-stack-example/blob/master/apps/api/README.md)
 - [Web 应用](https://github.com/ShawnDen-coder/full-stack-example/blob/master/apps/web/README.md)
-- [API Client](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/api-client/README.md)
 - [Auth](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/auth/README.md)
 - [Database](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/database/README.md)
 - [Logging](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/logging/README.md)
@@ -40,7 +38,7 @@
 - [System](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/system/README.md)
 - [Todos](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/todos/README.md)
 
-`apps/api/src/app.ts` 是唯一的 HTTP 组合根。功能包通过 `setupXxxApp(app, options)` 注册路由并返回 Hono app，因而导出的 `AppType` 会传递到 `packages/api-client` 和 Web，避免前后端重复维护接口类型。
+`apps/api/src/app.ts` 是唯一的 HTTP 组合根。功能包通过 `setupXxxApp(app, options)` 注册路由并返回 Hono app，API 导出完整 `AppType`；System、Todos 等供 Web 使用的模块另外导出各自子路由类型，由 Web 按功能创建 Hono RPC client，避免每个消费点实例化整棵路由类型。
 
 后台任务同样由应用组合根显式装配：业务模块通过 `defineJob()` 声明 schema 和处理器，Worker 按 BullMQ 的 `job.name` 分派，producer 使用任务定义对象入队以保持 payload 类型安全。开发时 `just dev` / `just launch` 会 watch Worker 代码。
 
@@ -95,7 +93,7 @@ just launch
 开发服务由两个 watch 进程组成：
 
 - API 使用 `tsx watch`。修改 API 或被 API 直接引用的共享 TypeScript 包后，进程会自动重启；这不是保留运行时状态的 HMR。
-- Web 使用 Vite。React 组件和样式支持 HMR，通常无需完整刷新浏览器；`api-client` 通过 Vite alias 直接加载源码，修改后会重新编译。
+- Web 使用 Vite。React 组件和样式支持 HMR，通常无需完整刷新浏览器；按功能拆分的 RPC client 直接引用 workspace 源码类型，修改服务端路由后会即时反馈类型错误。
 
 API 重启会丢失进程内状态（包括 SSE 日志流和临时状态），但不会删除 PostgreSQL 数据。修改数据库 schema 或 migration 后需要显式执行：
 

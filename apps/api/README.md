@@ -17,7 +17,7 @@ API 不持有数据库 schema 或 Todo 业务规则，这些能力通过包接�
 ## 对外接口
 
 - `createApp(options)` 创建完整 Hono 应用。
-- `AppType` 是 `@full-stack-example/api-client` 使用的 RPC 类型合同。
+- `AppType` 是完整 API 的 RPC 类型合同；Web 按需使用 System/Todos 子路由类型，避免在消费端实例化整棵路由类型。
 - `src/bootstrap.ts` 创建运行时依赖，`src/server.ts` 启动 Node 进程。
 
 ## 依赖与启动流程

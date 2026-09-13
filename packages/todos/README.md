@@ -12,8 +12,9 @@
 - `TenantTodoService` 描述路由所需的租户业务操作。
 - `createTodoService({ database })` 创建一次可复用的租户 Service。
 - `setupTodosApp(app, options)` 把 `/api/todos` 路由挂载到现有 Hono 应用。
+- `TodosApiType` 描述独立的 Todos 子路由，供 Web 创建只覆盖 Todo 端点的 Hono RPC client。
 
-路由实现按复杂度分层：`route.desc.ts` 保存 OpenAPI 配置，`route.handler.ts` 使用模块自己的 `createFactory().createHandlers()` 组合 validator、授权和 handler，`route.ts` 用相对路径子应用挂载到宿主。这样既保留 Hono 的 RPC 类型，也不会把 HTTP Context 带入 Service。
+路由实现按复杂度分层：`route.desc.ts` 保存 OpenAPI 配置，`route.handler.ts` 使用模块自己的 `createFactory().createHandlers()` 组合 validator、授权和 handler，`route.ts` 链式定义带完整 API 路径的子应用。`setupTodosApp()` 将同一子应用挂载到宿主并导出其路由类型，消费者可独立创建小范围 RPC client。
 
 Repository 由 Service 内部按请求创建，路由永远不直接访问 Drizzle。模块固定使用 PostgreSQL，schema 和迁移由 Database 统一维护；不单独拆分适配器包。getTenantId 在授权之后执行，返回已验证的租户 ID。
 
@@ -51,16 +52,15 @@ const withTodos = setupTodosApp(app, {
 const todos = await service.listTodos(tenantPrincipal.tenantId);
 ```
 
-Web 或 API Client 可以直接调用同一合同：
+Web 按功能使用 Todo 路由类型创建独立 client；服务端路由合同仍由本模块实现：
 
 ```ts
-import { createApiClient, throwApiError } from "@full-stack-example/api-client";
+import { hc } from "hono/client";
+import type { TodosApiType } from "@full-stack-example/todos";
 
-import type { AppType } from "@full-stack-example/api/contract";
-
-const api = createApiClient<AppType>("http://localhost:3000", { init: { credentials: "include" } });
-const response = await api.api.todos.$get();
-if (!response.ok) return throwApiError(response);
+const todosApi = hc<TodosApiType>("http://localhost:3000", { init: { credentials: "include" } });
+const response = await todosApi.api.todos.$get();
+if (!response.ok) throw new Error(`Todo request failed: ${response.status}`);
 const { todos } = await response.json();
 ```
 
@@ -93,6 +93,6 @@ pnpm --filter @full-stack-example/todos build
 
 ## 扩展规则
 
-新增字段时同步更新 Zod schema、Service、Repository、OpenAPI、API 测试和 README；所有查询必须携带租户条件，不能把 RLS 当作唯一防线。
+新增字段时同步更新 Zod schema、Service、Repository、OpenAPI、API 测试和 README；所有查询必须携带租户条件，不能把 RLS 当作唯一防线。新增 Web 会调用的路由时，保持 Hono 路由链式定义并更新 `TodosApiType` 覆盖的子应用，让 Web 只实例化该业务路由类型。
 
 参阅 [Todos 模块说明](/modules/todos/)和 [HTTP API 参考](/reference/http-api/)。
