@@ -60,7 +60,14 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     if (activeDatabase) await closeResource("database", () => activeDatabase.close());
     if (telemetry)
       await closeResource("telemetry", () => telemetry?.shutdown() ?? Promise.resolve());
-    logger.info("API server stopped", { event: "api.shutdown.completed" });
+    if (failures.length) {
+      logger.error("API server stopped with shutdown errors", {
+        event: "api.shutdown.failed",
+        failureCount: failures.length,
+      });
+    } else {
+      logger.info("API server stopped", { event: "api.shutdown.completed" });
+    }
     await closeResource("logging", () => shutdownLogging());
     if (failures.length)
       throw new AggregateError(failures, "One or more API shutdown steps failed");

@@ -14,9 +14,10 @@
 
 Database 是底层基础设施包，不依赖 Auth、Todos 或任何 App。Auth 使用认证表，业务 Repository 使用业务表和 `TenantTransaction`。
 
-## 启动流程
+## 连接生命周期
 
 ```ts
+// 仅由独立的 database-migrate 进程调用；API/Worker 不执行 DDL。
 await migrateDatabase({
   databaseUrl: process.env.DATABASE_MIGRATOR_URL!,
   migrationsFolder: defaultMigrationsFolder,
@@ -31,7 +32,7 @@ const database = createDatabase({
 await database.close();
 ```
 
-迁移连接只在启动阶段短暂使用；应用监听端口后只保留 runtime 连接。
+迁移命令结束后释放 migrator 连接；API 进程只持有 runtime 连接。不要在 API bootstrap 中调用 `migrateDatabase()`。
 
 ## 表和字段语义
 
@@ -41,6 +42,7 @@ await database.close();
 | `session` | `token`, `expires_at`, `user_id`, `active_organization_id` | 登录会话；active organization 是当前租户选择 |
 | `account` | `user_id`, `provider_id`, `account_id` | 密码或外部身份提供商凭据 |
 | `verification` | `identifier`, `value`, `expires_at` | 邮箱验证、密码重置等一次性记录 |
+| `rate_limit` | `key`, `count`, `last_request` | Better Auth 持久化请求限流状态 |
 | `organization` | `id`, `name`, `slug`, `status` | 一个租户；status 只能是 active/disabled |
 | `member` | `organization_id`, `user_id`, `role` | 用户加入组织的关系；role 为 owner/admin/member |
 | `invitation` | `organization_id`, `email`, `role`, `status`, `expires_at` | 尚未入组的邀请；接受后才产生 member |
@@ -98,7 +100,7 @@ pnpm --filter @full-stack-example/database db:generate
 pnpm --filter @full-stack-example/database db:migrate
 ```
 
-迁移位于 `packages/database/migrations`，包含 Better Auth 表、Organization 状态约束、租户业务表、数据库角色和 RLS 策略。修改 schema 时必须同步审查 migration。
+迁移位于 `packages/database/migrations`，包含 Better Auth 表、持久化 rate-limit 表、Organization 状态约束、租户业务表、数据库角色和 RLS 策略。修改 schema 时必须同步审查 migration。API 启动时不执行 DDL；先运行 `just db-migrate`，Jobs 使用独立的 `just jobs-migrate`。
 
 新增或修改业务表时按以下顺序操作：
 

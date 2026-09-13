@@ -12,7 +12,8 @@ description: 了解 API、Web、数据库、日志和 OpenTelemetry 的环境变
 | 变量 | 用途与默认行为 |
 | --- | --- |
 | `DATABASE_RUNTIME_URL` | API DML 连接；生产必填并使用受 RLS 约束的 runtime role。 |
-| `DATABASE_MIGRATOR_URL` | 启动迁移连接；生产必填并使用 migrator role。 |
+| `DATABASE_MIGRATOR_URL` | 独立 database/Jobs migration 进程使用的连接；生产必填并使用 migrator role。API/Worker 不执行 DDL。 |
+| `DATABASE_RUNTIME_ROLE` | Jobs migration 授予 BullMQ schema 权限的 PostgreSQL role；默认 `app_runtime`，必须与 runtime 用户一致。 |
 | `DATABASE_URL` | 当前配置解析必填；本地可作为上述两个连接的兼容回退，生产查询使用分离连接。 |
 | `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET` | Better Auth 服务地址与至少 32 字符的密钥。 |
 | `PLATFORM_ADMIN_EMAIL` / `PLATFORM_ADMIN_NAME` / `PLATFORM_ADMIN_PASSWORD` | 必须同时设置；Compose 应用 profile 要求提供，迁移后幂等创建或提升初始运维管理员，密码至少 8 字符。 |

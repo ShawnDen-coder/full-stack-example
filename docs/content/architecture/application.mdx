@@ -25,10 +25,10 @@ API（唯一组合根）
 
 ## 标准组合流程
 
-1. 使用 migrator 连接执行数据库迁移。
-2. 创建 runtime Database 和 Auth Module；若配置 `PLATFORM_ADMIN_*`，幂等准备初始运维管理员。
+1. 由独立 migrator 进程使用迁移凭据执行数据库 migration；Jobs migration 单独授权配置的 runtime role。
+2. API 使用 runtime 连接创建 Database 和 Auth Module；若配置 `PLATFORM_ADMIN_*`，幂等准备初始运维管理员。
 3. 创建 Todo Service 和健康检查依赖，在 API 宿主挂载认证与平台管理路由。
-4. 在组合根声明业务权限，将授权 middleware 注入 Todos。
+4. 在组合根声明业务权限，将授权 middleware 注入 Todos 和 Jobs 管理入口。
 5. 复杂模块内部用 `createHandlers()` 组合描述、校验、授权和 handler，再由 `setupXxxApp()` 使用 `app.route()` 挂载相对路径子应用。
 6. 使用每个 setup 函数的返回值继续组合，保留 Hono 的精确 `AppType`。
 7. System、Todos 等模块导出各自的 Hono 子路由类型；Web 按需创建独立 RPC client，并使用 Auth Client 访问认证端点，不复制 API schema。
