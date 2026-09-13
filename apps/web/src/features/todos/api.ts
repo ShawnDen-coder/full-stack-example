@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { todosApi } from "../../lib/api-client.js";
 import { throwApiError } from "../../lib/api-error.js";
+import { todosApi } from "./client.js";
 
-const todosQueryKey = ["todos"] as const;
+export const todosQueryOptions = (organizationId: string) => ({
+  queryKey: ["todos", organizationId] as const,
+  queryFn: listTodos,
+  staleTime: 30_000,
+});
 
 async function listTodos() {
   const response = await todosApi.api.todos.$get();
@@ -31,15 +35,15 @@ async function deleteTodo(id: number) {
   return throwApiError(response);
 }
 
-export function useTodos() {
-  return useQuery({ queryKey: todosQueryKey, queryFn: listTodos });
+export function useTodos(organizationId: string) {
+  return useQuery(todosQueryOptions(organizationId));
 }
 
 export function useCreateTodo() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createTodo,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: todosQueryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 }
 
@@ -47,7 +51,7 @@ export function useUpdateTodo() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateTodo,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: todosQueryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 }
 
@@ -55,6 +59,6 @@ export function useDeleteTodo() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteTodo,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: todosQueryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 }

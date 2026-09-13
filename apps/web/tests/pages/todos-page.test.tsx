@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TodosPage } from "../../src/routes/_authenticated/todos.js";
+import { TodosPage } from "../../src/features/todos/pages/todos-page.js";
 
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (config: unknown) => config,
@@ -35,7 +35,7 @@ function renderTodos() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <TodosPage />
+      <TodosPage organizationId="org-test" />
     </QueryClientProvider>,
   );
 }

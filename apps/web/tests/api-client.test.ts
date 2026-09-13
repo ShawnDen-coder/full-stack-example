@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { createApiClients } from "../src/lib/api-client.js";
+import { createSystemApiClient } from "../src/features/system/client.js";
+import { createTodosApiClient } from "../src/features/todos/client.js";
 
-describe("createApiClients", () => {
+describe("feature RPC clients", () => {
   it("creates feature-scoped clients that include browser credentials", async () => {
     const fetch = vi.fn(async () => new Response("{}"));
-    const { systemApi, todosApi } = createApiClients("https://example.test", fetch);
+    const systemApi = createSystemApiClient("https://example.test", fetch);
+    const todosApi = createTodosApiClient("https://example.test", fetch);
 
     await systemApi.health.$get();
     await todosApi.api.todos.$get();

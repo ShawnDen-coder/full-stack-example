@@ -6,5 +6,9 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
-  plugins: [TanStackRouterVite({ routesDirectory: "./src/routes" }), react(), tailwindcss()],
+  plugins: [
+    TanStackRouterVite({ routesDirectory: "./src/routes", autoCodeSplitting: true }),
+    react(),
+    tailwindcss(),
+  ],
 });
