@@ -1,4 +1,4 @@
-export { setupTodosApp } from "./route.js";
+export { setupTodosApp, type TodosApiType } from "./route.js";
 export {
   type CreateTodoInput,
   createTodoSchema,
