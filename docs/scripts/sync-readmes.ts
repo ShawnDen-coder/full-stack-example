@@ -39,6 +39,12 @@ const modules: readonly Module[] = [
     source: "packages/logging/README.md",
   },
   {
+    directory: "packages/jobs",
+    route: "jobs",
+    title: "Jobs 包",
+    source: "packages/jobs/README.md",
+  },
+  {
     directory: "packages/system",
     route: "system",
     title: "System 包",

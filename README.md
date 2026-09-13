@@ -17,7 +17,8 @@
 │   ├── database/                 # Drizzle schema、迁移和 PostgreSQL 连接
 │   ├── logging/                  # LogTape 配置、脱敏日志与进程内 SSE 数据源
 │   ├── system/                   # 系统健康检查的 schema、service 和 HTTP 路由
-│   └── todos/                    # Todo schema、Drizzle repository、service 和 HTTP 路由
+│   ├── todos/                    # Todo schema、Drizzle repository、service 和 HTTP 路由
+│   └── jobs/                     # BullMQ PostgreSQL adapter、worker、API 和 Bull Board
 ├── container/                    # 单镜像 Dockerfile、Compose 和 PostgreSQL 初始化
 ├── docs/                         # 架构决策、设计说明和实施计划
 ├── scripts/                      # 本地基础设施、迁移与开发子进程编排
@@ -35,10 +36,13 @@
 - [Auth](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/auth/README.md)
 - [Database](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/database/README.md)
 - [Logging](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/logging/README.md)
+- [Jobs](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/jobs/README.md)
 - [System](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/system/README.md)
 - [Todos](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/todos/README.md)
 
 `apps/api/src/app.ts` 是唯一的 HTTP 组合根。功能包通过 `setupXxxApp(app, options)` 注册路由并返回 Hono app，因而导出的 `AppType` 会传递到 `packages/api-client` 和 Web，避免前后端重复维护接口类型。
+
+后台任务同样由应用组合根显式装配：业务模块通过 `defineJob()` 声明 schema 和处理器，Worker 按 BullMQ 的 `job.name` 分派，producer 使用任务定义对象入队以保持 payload 类型安全。开发时 `just dev` / `just launch` 会 watch Worker 代码。
 
 ## 扩充模块的结构
 
