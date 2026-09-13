@@ -7,7 +7,6 @@ RUN corepack enable && corepack prepare pnpm@11.24.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
-COPY packages/api-client/package.json packages/api-client/package.json
 COPY packages/auth/package.json packages/auth/package.json
 COPY packages/database/package.json packages/database/package.json
 COPY packages/logging/package.json packages/logging/package.json
@@ -17,7 +16,6 @@ COPY packages/jobs/package.json packages/jobs/package.json
 RUN pnpm install --frozen-lockfile \
   --filter @full-stack-example/api... \
   --filter @full-stack-example/jobs \
-  --filter @full-stack-example/api-client \
   --filter @full-stack-example/web
 
 COPY . .

@@ -28,10 +28,6 @@ export default defineConfig({
         fileURLToPath(new URL(".", import.meta.url)),
         "packages/todos/src/index.ts",
       ),
-      "@full-stack-example/api-client": resolve(
-        fileURLToPath(new URL(".", import.meta.url)),
-        "packages/api-client/src/index.ts",
-      ),
       "@full-stack-example/auth/client": resolve(
         fileURLToPath(new URL(".", import.meta.url)),
         "packages/auth/src/client.ts",
@@ -59,10 +55,6 @@ export default defineConfig({
       "@full-stack-example/jobs": resolve(
         fileURLToPath(new URL(".", import.meta.url)),
         "packages/jobs/src/index.ts",
-      ),
-      "@full-stack-example/api/contract": resolve(
-        fileURLToPath(new URL(".", import.meta.url)),
-        "apps/api/src/contract.ts",
       ),
     },
   },

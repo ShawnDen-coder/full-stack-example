@@ -11,7 +11,6 @@
     "routes:generate": "tsr generate"
   },
   "dependencies": {
-    "@full-stack-example/api-client": "workspace:*",
     "@full-stack-example/auth": "workspace:*",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/react-query": "^5.90.12",
@@ -19,13 +18,15 @@
     "@tanstack/router-core": "^1.171.28",
     "@vitejs/plugin-react": "^5.1.1",
     "daisyui": "^5.5.8",
+    "hono": "catalog:",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-hook-form": "^7.68.0",
     "tailwindcss": "^4.1.17"
   },
   "devDependencies": {
-    "@full-stack-example/api": "workspace:*",
+    "@full-stack-example/system": "workspace:*",
+    "@full-stack-example/todos": "workspace:*",
     "@tanstack/router-plugin": "^1.132.0",
     "@tanstack/router-cli": "^1.167.35",
     "@testing-library/react": "^16.3.3",

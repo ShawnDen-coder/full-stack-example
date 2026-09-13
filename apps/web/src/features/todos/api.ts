@@ -1,23 +1,23 @@
-import { throwApiError } from "@full-stack-example/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../lib/api.js";
+import { todosApi } from "../../lib/api-client.js";
+import { throwApiError } from "../../lib/api-error.js";
 
 const todosQueryKey = ["todos"] as const;
 
 async function listTodos() {
-  const response = await api.api.todos.$get();
+  const response = await todosApi.api.todos.$get();
   if (response.ok) return response.json();
   return throwApiError(response);
 }
 
 async function createTodo(title: string) {
-  const response = await api.api.todos.$post({ json: { title } });
+  const response = await todosApi.api.todos.$post({ json: { title } });
   if (response.status === 201) return response.json();
   return throwApiError(response);
 }
 
 async function updateTodo(input: { readonly id: number; readonly completed: boolean }) {
-  const response = await api.api.todos[":id"].$patch({
+  const response = await todosApi.api.todos[":id"].$patch({
     param: { id: input.id.toString() },
     json: { completed: input.completed },
   });
@@ -26,7 +26,7 @@ async function updateTodo(input: { readonly id: number; readonly completed: bool
 }
 
 async function deleteTodo(id: number) {
-  const response = await api.api.todos[":id"].$delete({ param: { id: id.toString() } });
+  const response = await todosApi.api.todos[":id"].$delete({ param: { id: id.toString() } });
   if (response.status === 204) return;
   return throwApiError(response);
 }

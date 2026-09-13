@@ -15,12 +15,6 @@ const modules: readonly Module[] = [
   { directory: "apps/api", route: "api", title: "API 应用", source: "apps/api/README.md" },
   { directory: "apps/web", route: "web", title: "Web 应用", source: "apps/web/README.md" },
   {
-    directory: "packages/api-client",
-    route: "api-client",
-    title: "API Client 包",
-    source: "packages/api-client/README.md",
-  },
-  {
     directory: "packages/auth",
     route: "auth",
     title: "Auth 包",

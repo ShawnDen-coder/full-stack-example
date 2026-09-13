@@ -25,7 +25,6 @@ export default defineConfig({
     pluginSitemap({ siteUrl: `${siteOrigin}${base}` }),
     pluginTypeDoc({
       entryPoints: [
-        path.join(import.meta.dirname, "..", "packages", "api-client", "src", "index.ts"),
         path.join(import.meta.dirname, "..", "packages", "todos", "src", "index.ts"),
         path.join(import.meta.dirname, "..", "packages", "system", "src", "index.ts"),
         path.join(import.meta.dirname, "..", "packages", "database", "src", "index.ts"),

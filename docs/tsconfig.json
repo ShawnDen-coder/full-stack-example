@@ -11,7 +11,6 @@
     "components",
     "scripts",
     "rspress.config.ts",
-    "../packages/api-client/src/**/*.ts",
     "../packages/database/src/**/*.ts",
     "../packages/logging/src/**/*.ts",
     "../packages/system/src/**/*.ts",
