@@ -26,16 +26,36 @@ const worker = createJobsWorker({
 try {
   await worker.waitUntilReady();
 } catch (error) {
-  await worker.close();
-  await shutdownLogging();
+  try {
+    await worker.close();
+  } catch (closeError) {
+    logger.error("Jobs worker cleanup failed after startup error", {
+      event: "jobs.worker.shutdown.failed",
+      error: closeError,
+    });
+  }
+  await shutdownLogging().catch((closeError: unknown) => {
+    process.stderr.write(`Jobs worker logging cleanup failed: ${String(closeError)}\n`);
+  });
   throw error;
 }
 let closing = false;
 const shutdown = async () => {
   if (closing) return;
   closing = true;
-  await worker.close();
-  await shutdownLogging();
+  let failed = false;
+  try {
+    await worker.close();
+  } catch (error) {
+    failed = true;
+    logger.error("Jobs worker shutdown failed", { event: "jobs.worker.shutdown.failed", error });
+  }
+  try {
+    await shutdownLogging();
+  } catch (error) {
+    failed = true;
+    process.stderr.write(`Jobs worker logging shutdown failed: ${String(error)}\n`);
+  }
+  if (failed) process.exitCode = 1;
 };
-for (const signal of ["SIGINT", "SIGTERM"] as const)
-  process.once(signal, () => void shutdown().finally(() => process.exit(0)));
+for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => void shutdown());

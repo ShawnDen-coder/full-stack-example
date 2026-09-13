@@ -1,6 +1,6 @@
 import { createPostgresBackend, type PostgresQueueBackend, Queue } from "bullmq";
 import type { JobProducer, JobsBoardSource, JobsLogger, JobsRuntime } from "./contracts.js";
-import { createJobService, JobBackendUnavailableError } from "./service.js";
+import { JobBackendUnavailableError } from "./errors.js";
 
 export const EXAMPLE_QUEUE_NAME = "examples" as const;
 
@@ -61,7 +61,6 @@ export async function createBullMqJobs(options: BullMqOptions): Promise<JobsRunt
     throw error;
   }
   return {
-    service: createJobService({ producer }),
     producer,
     board: { queue } as JobsBoardSource,
     close: () => queue.close(),

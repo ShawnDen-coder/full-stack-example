@@ -1,4 +1,5 @@
-import type { JobService, JobsBoardSource } from "@full-stack-example/jobs/contracts";
+import { JobBackendUnavailableError } from "@full-stack-example/jobs";
+import type { JobProducer, JobsBoardSource } from "@full-stack-example/jobs/contracts";
 import { configureLogging, createLogStream, getAppLogger } from "@full-stack-example/logging";
 import type { MiddlewareHandler } from "hono";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -6,9 +7,8 @@ import { type CreateAppOptions, createApp } from "../src/app.js";
 
 const logger = getAppLogger("jobs-test");
 const logStream = createLogStream();
-const jobService: JobService = {
-  enqueueExample: async () => ({ id: "job-1", name: "progress-demo", queueName: "examples" }),
-};
+const enqueue = async () => ({ id: "job-1", name: "progress-demo", queueName: "examples" });
+const jobProducer = { enqueue } as unknown as JobProducer;
 const board = {
   queue: {
     name: "examples",
@@ -16,7 +16,7 @@ const board = {
   },
 } as JobsBoardSource;
 
-function createTestApp(boardEnabled = false, service = jobService) {
+function createTestApp(boardEnabled = false, producer: JobProducer = jobProducer) {
   const requireSession: MiddlewareHandler = async (context, next) => {
     if (!context.req.header("x-session")) return context.json({ error: "Unauthorized" }, 401);
     (context as unknown as { set(key: string, value: unknown): void }).set("sessionPrincipal", {
@@ -52,7 +52,7 @@ function createTestApp(boardEnabled = false, service = jobService) {
         },
         auth: { handler: async () => new Response("handled") },
       } as unknown as NonNullable<CreateAppOptions["modules"]["auth"]>,
-      jobs: { service, board, boardEnabled },
+      jobs: { producer, board, boardEnabled },
     },
     web: {},
   });
@@ -156,7 +156,7 @@ describe("jobs API composition", () => {
 
   it("audits handler exceptions as 500 responses", async () => {
     const app = createTestApp(false, {
-      enqueueExample: async () => {
+      enqueue: async () => {
         throw new Error("simulated queue failure");
       },
     });
@@ -181,6 +181,43 @@ describe("jobs API composition", () => {
           record.properties.requestId === "jobs-audit-error-test",
       );
     expect(events[0]?.properties.status).toBe(500);
+  });
+
+  it("returns 503 when the queue backend is unavailable", async () => {
+    const app = createTestApp(false, {
+      enqueue: async () => {
+        throw new JobBackendUnavailableError(new Error("database unavailable"));
+      },
+    } as unknown as JobProducer);
+    const response = await app.request("http://localhost/api/admin/jobs/examples", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "http://localhost:5173",
+        "x-session": "1",
+        "x-admin": "1",
+        "x-fresh": "1",
+      },
+      body: JSON.stringify({ message: "hello" }),
+    });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "Job backend unavailable" });
+  });
+
+  it("validates example payloads at the API boundary", async () => {
+    const app = createTestApp();
+    const response = await app.request("http://localhost/api/admin/jobs/examples", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "http://localhost:5173",
+        "x-session": "1",
+        "x-admin": "1",
+        "x-fresh": "1",
+      },
+      body: JSON.stringify({ message: "  " }),
+    });
+    expect(response.status).toBe(400);
   });
 
   it("audits Bull Board writes rejected by its CSRF guard", async () => {
@@ -230,7 +267,7 @@ describe("jobs API composition", () => {
               deleteTodo: async () => false,
             },
           },
-          jobs: { service: jobService, board },
+          jobs: { producer: jobProducer, board },
         },
         web: {},
       } as unknown as CreateAppOptions),

@@ -9,11 +9,9 @@ export type {
   JobProducer,
   JobReference,
   JobResult,
-  JobService,
   JobsLogger,
 } from "./contracts.js";
 export { defineJob } from "./define-job.js";
+export { JobBackendUnavailableError } from "./errors.js";
 export { exampleJob } from "./example.js";
-export { setupJobsApi, setupJobsApp } from "./routes.js";
 export { exampleJobSchema } from "./schemas.js";
-export { createJobService, JobBackendUnavailableError } from "./service.js";

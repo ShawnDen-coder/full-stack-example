@@ -190,3 +190,16 @@ export function parseMigrationConfig(environment: NodeJS.ProcessEnv = process.en
   const databaseUrl = z.url().parse(environment.DATABASE_MIGRATOR_URL ?? environment.DATABASE_URL);
   return { databaseUrl };
 }
+
+export function parseJobsMigrationConfig(environment: NodeJS.ProcessEnv = process.env): {
+  readonly databaseUrl: string;
+  readonly runtimeRole: string;
+} {
+  const { databaseUrl } = parseMigrationConfig(environment);
+  const runtimeRole = z
+    .string()
+    .regex(/^[a-z_][a-z0-9_]*$/i)
+    .default("app_runtime")
+    .parse(environment.DATABASE_RUNTIME_ROLE);
+  return { databaseUrl, runtimeRole };
+}
