@@ -1,4 +1,5 @@
 #!/bin/sh
+# Postgres executes this during first-time volume initialization; keep it LF-only.
 set -eu
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
