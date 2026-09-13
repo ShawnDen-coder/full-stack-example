@@ -3,7 +3,6 @@ export type {
   AuthHandler,
   AuthMiddleware,
   AuthVariables,
-  Mailer,
   OrganizationRole,
   PermissionPolicy,
   PermissionRequirement,

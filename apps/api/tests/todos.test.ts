@@ -51,10 +51,8 @@ function createTestApp() {
         },
         auth: { handler: async () => new Response("handled") },
         platform: {
-          createUser: async () => ({ id: "user" }),
           createOrganization: async () => ({ id: "org" }),
           setOrganizationStatus: async () => undefined,
-          requestPasswordReset: async () => undefined,
         },
       },
     } as any,

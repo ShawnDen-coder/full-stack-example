@@ -1,10 +1,5 @@
 import { createAuthModule, createPermissionPolicy } from "@full-stack-example/auth/server";
-import {
-  checkDatabase,
-  createDatabase,
-  defaultMigrationsFolder,
-  migrateDatabase,
-} from "@full-stack-example/database";
+import { checkDatabase, createDatabase } from "@full-stack-example/database";
 import { createBullMqJobs } from "@full-stack-example/jobs/server";
 import {
   configureLogging,
@@ -30,7 +25,6 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     ...(config.logFile ? { filePath: config.logFile } : {}),
   });
   const logger = getAppLogger(["api", "bootstrap"]);
-  logger.info("Running database migrations", { event: "database.migration.started" });
   let telemetry: Awaited<ReturnType<typeof startTelemetry>> | undefined;
   let database: ReturnType<typeof createDatabase> | undefined;
   let server: ReturnType<typeof serve> | undefined;
@@ -57,10 +51,6 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       endpoint: config.otelEndpoint,
       metricExportIntervalMillis: config.otelMetricExportInterval,
     });
-    await migrateDatabase({
-      databaseUrl: config.databaseMigratorUrl,
-      migrationsFolder: defaultMigrationsFolder,
-    });
     if (config.jobsEnabled) {
       jobs = await createBullMqJobs({
         databaseUrl: config.databaseRuntimeUrl,
@@ -68,15 +58,21 @@ export async function bootstrap(): Promise<() => Promise<void>> {
         logger: getAppLogger(["api", "jobs"]),
       });
     }
-    const databaseContext = createDatabase({ databaseUrl: config.databaseRuntimeUrl });
+    const databaseContext = createDatabase({
+      databaseUrl: config.databaseRuntimeUrl,
+      poolMax: config.databasePoolMax,
+    });
     database = databaseContext;
     const auth = createAuthModule({
       database: databaseContext.db,
       baseURL: config.betterAuthUrl,
-      webBaseURL: config.webOrigin,
-      requireMailer: config.environment === "production",
       secret: config.betterAuthSecret,
       trustedOrigins: [config.webOrigin],
+      securityEvents: {
+        emit: async (event) => {
+          logger.info("Authentication security event", { ...event });
+        },
+      },
       policy: createPermissionPolicy({
         roles: {
           owner: { todos: ["read", "write", "delete"] },

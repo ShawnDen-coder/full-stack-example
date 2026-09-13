@@ -169,15 +169,11 @@ describe("API", () => {
     for (const path of Object.values(document.paths) as Array<{ readonly security?: unknown }>)
       expect(path.security).toBeUndefined();
     expect(document.components.securitySchemes.bearerAuth).toBeUndefined();
-    expect(document.paths["/api/platform/users"].post.operationId).toBe("createPlatformUser");
     expect(document.paths["/api/platform/organizations"].post.operationId).toBe(
       "createPlatformOrganization",
     );
     expect(document.paths["/api/platform/organizations/{id}/status"].patch.operationId).toBe(
       "setOrganizationStatus",
-    );
-    expect(document.paths["/api/platform/users/{id}/password-reset"].post.operationId).toBe(
-      "requestPlatformPasswordReset",
     );
   });
 

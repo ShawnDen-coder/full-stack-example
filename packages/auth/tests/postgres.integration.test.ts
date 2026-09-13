@@ -32,12 +32,14 @@ describe.skipIf(!process.env.DATABASE_URL)("Better Auth PostgreSQL integration",
         sessionId: "session",
         platformRole: "platform-admin",
       });
-      const created = await auth.platform.createUser(actor, { email, name: "Owner" });
-      userId = created.id;
+      const created = await (auth.auth as any).api.createUser({
+        body: { email, name: "Owner", password: "integration-password-123", role: "user" },
+      });
+      userId = created.user.id;
       const createdOrganization = await auth.platform.createOrganization(actor, {
         name: "Test Org",
         slug,
-        ownerUserId: userId,
+        ownerUserId: created.user.id,
       });
       organizationId = createdOrganization.id;
       const [owner] = await database.db

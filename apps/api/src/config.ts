@@ -15,9 +15,9 @@ const jobsWorkerEnvironmentSchema = z.object({
   LOG_PRETTY: z.enum(["true", "false"]).default("true"),
 });
 const environmentSchema = z.object({
-  DATABASE_URL: z.url(),
+  DATABASE_URL: z.url().optional(),
   DATABASE_RUNTIME_URL: z.url().optional(),
-  DATABASE_MIGRATOR_URL: z.url().optional(),
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
   HOST: z.string().default("0.0.0.0"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   WEB_ORIGIN: z.url().default("http://localhost:5173"),
@@ -50,9 +50,8 @@ const environmentSchema = z.object({
 });
 
 export interface ApiConfig {
-  readonly databaseUrl: string;
   readonly databaseRuntimeUrl: string;
-  readonly databaseMigratorUrl: string;
+  readonly databasePoolMax: number;
   readonly host: string;
   readonly port: number;
   readonly webOrigin: string;
@@ -85,11 +84,10 @@ export interface ApiConfig {
 
 export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiConfig {
   const parsed = environmentSchema.parse(environment);
-  if (
-    parsed.NODE_ENV === "production" &&
-    (!parsed.DATABASE_RUNTIME_URL || !parsed.DATABASE_MIGRATOR_URL)
-  )
-    throw new Error("DATABASE_RUNTIME_URL and DATABASE_MIGRATOR_URL are required in production");
+  const databaseRuntimeUrl = parsed.DATABASE_RUNTIME_URL ?? parsed.DATABASE_URL;
+  if (!databaseRuntimeUrl) throw new Error("DATABASE_RUNTIME_URL or DATABASE_URL is required");
+  if (parsed.NODE_ENV === "production" && !parsed.DATABASE_RUNTIME_URL)
+    throw new Error("DATABASE_RUNTIME_URL is required in production");
   const adminBootstrap = [
     parsed.PLATFORM_ADMIN_EMAIL,
     parsed.PLATFORM_ADMIN_NAME,
@@ -111,9 +109,8 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
   const defaultLevel: LogLevel =
     parsed.NODE_ENV === "production" ? "info" : parsed.NODE_ENV === "test" ? "silent" : "debug";
   return {
-    databaseUrl: parsed.DATABASE_URL,
-    databaseRuntimeUrl: parsed.DATABASE_RUNTIME_URL ?? parsed.DATABASE_URL,
-    databaseMigratorUrl: parsed.DATABASE_MIGRATOR_URL ?? parsed.DATABASE_URL,
+    databaseRuntimeUrl,
+    databasePoolMax: parsed.DATABASE_POOL_MAX,
     host: parsed.HOST,
     port: parsed.PORT,
     webOrigin: parsed.WEB_ORIGIN,
@@ -187,7 +184,7 @@ export function parseJobsWorkerConfig(
   };
 }
 
-export function parseJobsMigrationConfig(environment: NodeJS.ProcessEnv = process.env): {
+export function parseMigrationConfig(environment: NodeJS.ProcessEnv = process.env): {
   readonly databaseUrl: string;
 } {
   const databaseUrl = z.url().parse(environment.DATABASE_MIGRATOR_URL ?? environment.DATABASE_URL);

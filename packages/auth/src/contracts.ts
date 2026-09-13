@@ -38,15 +38,6 @@ export interface SecurityEventSink {
   emit(event: SecurityEvent): Promise<void>;
 }
 
-export interface Mailer {
-  sendPasswordReset(input: { readonly email: string; readonly url: string }): Promise<void>;
-  sendOrganizationInvitation(input: {
-    readonly email: string;
-    readonly organizationName: string;
-    readonly url: string;
-  }): Promise<void>;
-}
-
 export type AuthMiddleware = MiddlewareHandler;
 
 export interface PermissionPolicy {
@@ -67,13 +58,6 @@ export interface AuthHandler {
 }
 
 export interface PlatformAuthService {
-  readonly createUser: (
-    actor: SessionPrincipal,
-    input: {
-      readonly email: string;
-      readonly name: string;
-    },
-  ) => Promise<{ readonly id: string }>;
   readonly createOrganization: (
     actor: SessionPrincipal,
     input: {
@@ -88,9 +72,5 @@ export interface PlatformAuthService {
       readonly organizationId: string;
       readonly status: "active" | "disabled";
     },
-  ) => Promise<void>;
-  readonly requestPasswordReset: (
-    actor: SessionPrincipal,
-    input: { readonly userId: string },
   ) => Promise<void>;
 }
