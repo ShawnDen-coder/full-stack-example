@@ -15,7 +15,6 @@
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/react-query": "^5.90.12",
     "@tanstack/react-router": "^1.132.0",
-    "@tanstack/router-core": "^1.171.28",
     "@vitejs/plugin-react": "^5.1.1",
     "daisyui": "^5.5.8",
     "hono": "catalog:",

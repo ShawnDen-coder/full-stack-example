@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { TodoList } from "../../../src/components/todos/todo-list.js";
+import { TodoList } from "../../../src/features/todos/components/todo-list.js";
 
 describe("TodoList", () => {
   it("hides deletion from members and allows owners to delete", () => {
