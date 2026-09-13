@@ -9,7 +9,13 @@ export interface DatabaseContext {
   readonly close: () => Promise<void>;
 }
 
-export function createDatabase(options: { readonly databaseUrl: string }): DatabaseContext {
-  const client = postgres(options.databaseUrl, { max: 10 });
+export function createDatabase(options: {
+  readonly databaseUrl: string;
+  readonly poolMax?: number;
+}): DatabaseContext {
+  const poolMax = options.poolMax ?? 10;
+  if (!Number.isSafeInteger(poolMax) || poolMax < 1)
+    throw new Error("poolMax must be a positive integer");
+  const client = postgres(options.databaseUrl, { max: poolMax });
   return { db: drizzle(client, { schema }), close: () => client.end({ timeout: 5 }) };
 }

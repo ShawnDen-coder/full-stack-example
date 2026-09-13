@@ -22,6 +22,16 @@ describe("API configuration", () => {
       NODE_ENV: "development",
     });
     expect(config.apiDocsEnabled).toBe(true);
+    expect(config.databasePoolMax).toBe(10);
+  });
+
+  it("accepts a configured API database pool upper bound", () => {
+    const config = parseConfig({
+      DATABASE_URL: "postgres://app:app@localhost:5432/app",
+      DATABASE_POOL_MAX: "24",
+      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
+    });
+    expect(config.databasePoolMax).toBe(24);
   });
 
   it("disables API docs in production unless explicitly enabled", () => {

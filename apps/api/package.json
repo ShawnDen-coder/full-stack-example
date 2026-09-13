@@ -20,6 +20,7 @@
   "scripts": {
     "dev": "tsx watch --exclude ../../logs/** src/server.ts",
     "start": "node dist/server.js",
+    "db:migrate": "node dist/database-migrate.js",
     "jobs:migrate": "node dist/jobs-migrate.js",
     "jobs:worker": "node dist/jobs-worker.js",
     "jobs:worker:dev": "tsx watch src/jobs-worker.ts",
