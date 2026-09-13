@@ -1,0 +1,116 @@
+---
+title: Jobs 包
+description: BullMQ PostgreSQL jobs, workers, migrations, and Bull Board integration.
+---
+
+> 内容来源：[packages/jobs/README.md](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/jobs/README.md)。
+
+BullMQ + PostgreSQL 的后台任务模块。任务定义与 BullMQ 解耦；BullMQ PostgreSQL backend、Worker 生命周期和 Bull Board 只存在于基础设施 adapter 中。
+
+## 快速开始
+
+任务由业务模块显式定义，Worker 组合根明确列出要启动的任务：
+
+```ts
+import { exampleJob } from "@full-stack-example/jobs";
+import { createBullMqJobs } from "@full-stack-example/jobs/server";
+import { createJobsWorker } from "@full-stack-example/jobs/worker";
+import { getAppLogger } from "@full-stack-example/logging";
+
+const logger = getAppLogger(["jobs", "worker"]);
+const runtime = await createBullMqJobs({
+  databaseUrl: process.env.DATABASE_RUNTIME_URL!,
+  logger,
+});
+const worker = createJobsWorker({
+  databaseUrl: process.env.DATABASE_RUNTIME_URL!,
+  definitions: [exampleJob],
+  logger,
+});
+
+await runtime.producer.enqueue(exampleJob, { message: "hello" });
+await worker.close();
+await runtime.close();
+```
+
+数据库迁移必须使用 migrator 账号执行 `runMigrations`；API/worker 只使用 runtime 账号。生产环境建议将 API、worker、migration 分成独立进程。
+
+## 定义和注册任务
+
+使用 `defineJob()` 声明任务名称、Zod 输入 schema 和处理器。Schema 输入类型用于入队，解析后的输出类型用于处理器，因此默认值和转换在执行前完成：
+
+```ts
+import { defineJob } from "@full-stack-example/jobs";
+import { z } from "zod";
+
+export const sendEmailJob = defineJob({
+  name: "email.send",
+  input: z.object({ to: z.email(), template: z.string() }),
+  async process({ data, log }) {
+    await log(`Sending ${data.template} to ${data.to}`);
+    return { sent: true as const };
+  },
+});
+```
+
+业务模块可按 `jobs/*.job.ts` 拆分，并在 `jobs/index.ts` 汇总导出：
+
+```ts
+export const emailJobs = [sendEmailJob, sendReceiptJob] as const;
+```
+
+Worker 组合根显式注册模块任务：
+
+```ts
+const worker = createJobsWorker({
+  databaseUrl,
+  logger,
+  definitions: [...emailJobs, ...reportJobs, exampleJob],
+});
+```
+
+任务依赖通过业务模块工厂注入，例如 `createEmailJobs({ mailer })` 返回 definitions。模块导出是显式的；不依赖装饰器副作用或运行时目录扫描。BullMQ 官方采用一个 Worker 按 `job.name` 分派的方式，本包以任务定义表实现同一模型，并在启动时拒绝重复名称。
+
+`JobDefinition` 和 `JobExecutionContext` 不依赖 BullMQ。执行上下文提供 `data`、`id`、`attempt`、`updateProgress` 和 `log`；业务处理器可以独立单测，也可在 adapter 边界替换队列实现。未知任务和不符合 schema 的 payload 会作为不可重试错误失败。
+
+Producer 将任务描述对象与 payload 绑定，避免任意字符串任务名与错误 payload 组合：
+
+```ts
+await runtime.producer.enqueue(sendEmailJob, {
+  to: "user@example.com",
+  template: "welcome",
+});
+```
+
+HTTP 路由不会自动为任意任务生成接口。每个业务模块应使用自己的 Zod schema、service 和 `setupXxxApp(app, options)`，在组合根注册，避免暴露通用 `unknown` enqueue API。
+
+## 公开入口
+
+- `@full-stack-example/jobs`：领域合同、`defineJob()`、示例任务、示例 service/schema 和 API setup。
+- `@full-stack-example/jobs/server`：BullMQ PostgreSQL adapter、Bull Board setup。
+- `@full-stack-example/jobs/worker`：显式 definitions 的 Worker factory。
+- `@full-stack-example/jobs/migration`：官方 BullMQ PostgreSQL migration。
+
+管理员页面默认为 `/admin/queues`，要求平台管理员、fresh session、CSRF 和 same-origin 保护。Bull Board 展示前会递归脱敏 payload (`data`) 和返回值 (`returnValue`)；日志与错误文本不经过这些 formatter，任务代码不得在其中写入敏感信息。
+
+## 职责边界
+
+本包负责 BullMQ PostgreSQL adapter、Worker 生命周期、任务管理 API 和 Bull Board 挂载。业务包负责任务输入 schema、service、幂等策略、具体处理逻辑和 HTTP 权限策略；应用组合根负责显式注册任务。本包不负责业务副作用和租户级队列模型。
+
+## 开发与验证
+
+```bash
+just jobs-migrate
+just jobs-worker
+just jobs-test-integration
+```
+
+`just dev` 和 `just launch` 使用 `tsx watch` 启动 Worker 开发进程；`just jobs-worker` 用于启动构建后的 Worker。没有 PostgreSQL 时，普通 `just test` 会跳过真实数据库测试；完整验证仍应执行 `just typecheck`、`just test`、`just build` 和 `just container-build`。
+
+## 扩展规则
+
+- 处理器必须按 BullMQ at-least-once 语义设计为幂等。
+- 不要在 Job data 或日志中写入密码、token、Cookie 等敏感信息。
+- 新任务使用自己的 schema、service 和 API 路由，不把所有输入合并为通用 `unknown` 接口。
+- 不要从根入口暴露 BullMQ、`pg` 或 Bull Board 类型；基础设施实现只从 `server`、`worker` 和 `migration` 子路径引入。
+
