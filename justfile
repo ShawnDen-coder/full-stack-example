@@ -18,7 +18,7 @@ launch-doctor:
     pnpm exec tsx scripts/launch.ts --doctor
 
 dev:
-    pnpm exec concurrently --kill-others-on-fail --names api,web "pnpm --filter @full-stack-example/api dev" "pnpm --filter @full-stack-example/web dev"
+    pnpm exec concurrently --kill-others-on-fail --names api,worker,web "pnpm --filter @full-stack-example/api dev" "pnpm --filter @full-stack-example/api jobs:worker:dev" "pnpm --filter @full-stack-example/web dev"
 
 dev-web:
     pnpm --filter @full-stack-example/web dev
@@ -86,7 +86,7 @@ stack-down:
     podman compose --env-file .env -f container/compose.yaml --profile application down
 
 stack-logs:
-    podman compose --env-file .env -f container/compose.yaml --profile application logs -f app postgres otel-collector
+    podman compose --env-file .env -f container/compose.yaml --profile application logs -f app jobs-worker postgres otel-collector
 
 stack-status:
     podman compose --env-file .env -f container/compose.yaml --profile application ps
@@ -96,6 +96,16 @@ db-generate:
 
 db-migrate:
     pnpm --filter @full-stack-example/database db:migrate
+
+jobs-migrate:
+    pnpm --filter @full-stack-example/api... build
+    pnpm --filter @full-stack-example/api jobs:migrate
+
+jobs-worker:
+    pnpm --filter @full-stack-example/api jobs:worker
+
+jobs-test-integration:
+    pnpm vitest packages/jobs/tests/postgres.integration.test.ts --run
 
 db-test-integration:
     pnpm vitest packages/database/tests/postgres.integration.test.ts --run

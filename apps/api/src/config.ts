@@ -5,6 +5,15 @@ import { z } from "zod";
 
 const workspaceRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const logLevels = ["trace", "debug", "info", "warn", "error", "fatal", "silent"] as const;
+const jobsWorkerEnvironmentSchema = z.object({
+  DATABASE_URL: z.url().optional(),
+  DATABASE_RUNTIME_URL: z.url().optional(),
+  JOBS_POOL_MAX: z.coerce.number().int().min(2).max(100).default(10),
+  JOBS_WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(5),
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  LOG_LEVEL: z.enum(logLevels).optional(),
+  LOG_PRETTY: z.enum(["true", "false"]).default("true"),
+});
 const environmentSchema = z.object({
   DATABASE_URL: z.url(),
   DATABASE_RUNTIME_URL: z.url().optional(),
@@ -29,6 +38,15 @@ const environmentSchema = z.object({
   PLATFORM_ADMIN_EMAIL: z.email().optional(),
   PLATFORM_ADMIN_NAME: z.string().min(1).optional(),
   PLATFORM_ADMIN_PASSWORD: z.string().min(8).optional(),
+  JOBS_ENABLED: z.enum(["true", "false"]).default("true"),
+  JOBS_POOL_MAX: z.coerce.number().int().min(2).max(100).default(10),
+  JOBS_WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(5),
+  BULL_BOARD_ENABLED: z.enum(["true", "false"]).default("false"),
+  BULL_BOARD_BASE_PATH: z
+    .string()
+    .regex(/^\/[a-zA-Z0-9/_-]+$/)
+    .default("/admin/queues"),
+  BULL_BOARD_CSRF_SECRET: z.string().min(32).optional(),
 });
 
 export interface ApiConfig {
@@ -57,6 +75,12 @@ export interface ApiConfig {
     readonly name: string;
     readonly password: string;
   };
+  readonly jobsEnabled: boolean;
+  readonly jobsPoolMax: number;
+  readonly jobsWorkerConcurrency: number;
+  readonly bullBoardEnabled: boolean;
+  readonly bullBoardBasePath: string;
+  readonly bullBoardCsrfSecret: string;
 }
 
 export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiConfig {
@@ -78,6 +102,12 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
     throw new Error(
       "PLATFORM_ADMIN_EMAIL, PLATFORM_ADMIN_NAME and PLATFORM_ADMIN_PASSWORD must be configured together",
     );
+  if (
+    parsed.BULL_BOARD_ENABLED === "true" &&
+    parsed.NODE_ENV === "production" &&
+    !parsed.BULL_BOARD_CSRF_SECRET
+  )
+    throw new Error("BULL_BOARD_CSRF_SECRET is required when Bull Board is enabled in production");
   const defaultLevel: LogLevel =
     parsed.NODE_ENV === "production" ? "info" : parsed.NODE_ENV === "test" ? "silent" : "debug";
   return {
@@ -119,5 +149,47 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
           },
         }
       : {}),
+    jobsEnabled: parsed.JOBS_ENABLED === "true",
+    jobsPoolMax: parsed.JOBS_POOL_MAX,
+    jobsWorkerConcurrency: parsed.JOBS_WORKER_CONCURRENCY,
+    bullBoardEnabled: parsed.BULL_BOARD_ENABLED === "true",
+    bullBoardBasePath: parsed.BULL_BOARD_BASE_PATH,
+    bullBoardCsrfSecret:
+      parsed.BULL_BOARD_CSRF_SECRET ?? "development-bull-board-csrf-secret-change-me",
   };
+}
+
+export interface JobsWorkerConfig {
+  readonly databaseUrl: string;
+  readonly poolMax: number;
+  readonly concurrency: number;
+  readonly environment: Environment;
+  readonly logLevel: LogLevel;
+  readonly pretty: boolean;
+}
+
+export function parseJobsWorkerConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): JobsWorkerConfig {
+  const parsed = jobsWorkerEnvironmentSchema.parse(environment);
+  const databaseUrl = parsed.DATABASE_RUNTIME_URL ?? parsed.DATABASE_URL;
+  if (!databaseUrl)
+    throw new Error("DATABASE_RUNTIME_URL or DATABASE_URL is required for the jobs worker");
+  const defaultLevel: LogLevel =
+    parsed.NODE_ENV === "production" ? "info" : parsed.NODE_ENV === "test" ? "silent" : "debug";
+  return {
+    databaseUrl,
+    poolMax: parsed.JOBS_POOL_MAX,
+    concurrency: parsed.JOBS_WORKER_CONCURRENCY,
+    environment: parsed.NODE_ENV,
+    logLevel: parsed.LOG_LEVEL ?? defaultLevel,
+    pretty: parsed.LOG_PRETTY === "true" && parsed.NODE_ENV !== "production",
+  };
+}
+
+export function parseJobsMigrationConfig(environment: NodeJS.ProcessEnv = process.env): {
+  readonly databaseUrl: string;
+} {
+  const databaseUrl = z.url().parse(environment.DATABASE_MIGRATOR_URL ?? environment.DATABASE_URL);
+  return { databaseUrl };
 }
