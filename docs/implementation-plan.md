@@ -7,7 +7,6 @@
 ```text
 apps/api       Hono HTTP/RPC 宿主、SSE、OpenTelemetry 生命周期
 apps/web       React/Vite、TanStack Query 与 Hono RPC 客户端
-packages/api-client  浏览器安全的 hc 封装
 packages/auth        Better Auth Session、Organization、平台管理与租户鉴权
 packages/database    Drizzle schema、postgres.js 连接与迁移
 packages/logging     LogTape、脱敏与进程内日志流

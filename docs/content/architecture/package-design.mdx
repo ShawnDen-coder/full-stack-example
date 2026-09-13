@@ -16,7 +16,7 @@
 - Todos 内部包含 routes、service、repository。组合根调用 `createTodoService({ database })`；不增加 PostgreSQL 适配器包、通用 Repository 工厂或可配置路由前缀。
 - `TenantTodoService` 保留为 HTTP 测试和业务调用的实际边界；`getTenantId` 显式注入，避免隐藏的认证上下文要求。
 - Auth 继续直接使用 Better Auth；其 server/client 入口用于防止服务器代码进入浏览器，具有实际隔离价值。
-- API Client 接受宿主合同类型与请求选项；Web 以类型方式绑定唯一 `AppType`，没有第二份接口合同。
+- Web 在本地创建 Hono RPC client；功能模块导出独立子路由类型，避免 Web 对完整 API `AppType` 做大规模类型实例化，也不复制接口合同。
 - System 提供单一数据库探针及失败回调；Logging 保留进程级配置，修复资源生命周期，不新增日志后端抽象。
 
 只在出现第二个真实消费者、不同部署边界或实际需要替换实现时，再讨论拆包和抽象。新增入口应解决明确的运行环境隔离问题；不为每个内部文件增加公开入口。

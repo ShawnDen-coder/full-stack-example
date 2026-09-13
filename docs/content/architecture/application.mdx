@@ -11,8 +11,8 @@ description: 说明 API 组合根、Web 应用和共享 workspace 包之间的�
 
 ```text
 Web
-├── API Client ──→ API contract（仅类型）
-└── Auth Client ─→ Better Auth endpoint
+├── System/Todos RPC clients ─→ 各自的 Hono 子路由类型
+└── Auth Client ──────────────→ Better Auth endpoint
 
 API（唯一组合根）
 ├── Auth Server ─→ Database
@@ -31,7 +31,7 @@ API（唯一组合根）
 4. 在组合根声明业务权限，将授权 middleware 注入 Todos。
 5. 复杂模块内部用 `createHandlers()` 组合描述、校验、授权和 handler，再由 `setupXxxApp()` 使用 `app.route()` 挂载相对路径子应用。
 6. 使用每个 setup 函数的返回值继续组合，保留 Hono 的精确 `AppType`。
-7. Web 通过 API Client 和 Auth Client 访问服务端，不复制 API schema。
+7. System、Todos 等模块导出各自的 Hono 子路由类型；Web 按需创建独立 RPC client，并使用 Auth Client 访问认证端点，不复制 API schema。
 
 ## 边界原则
 

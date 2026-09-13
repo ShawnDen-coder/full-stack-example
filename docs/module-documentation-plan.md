@@ -21,7 +21,7 @@
 
 ## 实施批次
 
-- 第一批：修正 API Client、Auth、Database 和 Todos 的错误示例与跨包流程。
+- 第一批：修正 Web RPC client、Auth、Database 和 Todos 的错误示例与跨包流程。
 - 第二批：补齐 Logging、System、API 和 Web 的初始化、关闭与错误行为。
 - 第三批：生成文档站内容，执行 TypeScript、测试和文档构建。
 - 后续约束：Public API、配置或行为变化时，同一提交必须更新对应 README 和测试。

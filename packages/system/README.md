@@ -10,6 +10,7 @@
 
 - `healthResponseSchema` 和 `HealthResponse` 定义稳定的健康响应。
 - `setupSystemApp(app, options)` 把健康路由挂载到现有 Hono 应用。
+- `SystemApiType` 描述独立的 `/health` 子路由，可供消费者创建小范围 Hono RPC client。
 - 探针成功返回 `200/status=ok`，失败返回 `503/status=degraded`。
 
 数据库探针和可选失败回调 通过 options 注入，本包不自行创建基础设施客户端。
@@ -42,7 +43,7 @@ const withSystem = setupSystemApp(app, {
 const response = await withSystem.request("/health");
 ```
 
-必须继续使用 `setupSystemApp` 的返回值组合后续模块，才能保留 Hono 精确路由类型。调用方可以使用 `healthResponseSchema` 校验两种响应。
+必须继续使用 `setupSystemApp` 的返回值组合后续模块，才能保留 Hono 精确路由类型。Web 可直接以 `hc<SystemApiType>()` 创建只包含健康路由的客户端；新增 handler 时保持链式路由定义，以保留 Hono 类型推导。调用方可以使用 `healthResponseSchema` 校验两种响应。
 
 ## 错误与边界行为
 
