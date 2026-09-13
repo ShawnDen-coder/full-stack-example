@@ -35,7 +35,7 @@ Todo 标题会去除首尾空白，并限制为 1–200 个字符。验证失败
 
 ## 平台管理与日志
 
-`/api/platform/*` 四个平台管理接口都要求有效 Session、`platform-admin` 和 fresh session。`LOG_STREAM_ENABLED=true` 时才注册 `GET /api/logs/stream`；日志流使用相同的三层鉴权，并返回 `text/event-stream`。静态规范包含日志流合同，真实运行时关闭日志流后，路由和运行时 OpenAPI path 都不存在。
+`POST /api/platform/organizations` 和 `PATCH /api/platform/organizations/:id/status` 要求有效 Session、`platform-admin` 和 fresh session。`LOG_STREAM_ENABLED=true` 时才注册 `GET /api/logs/stream`；日志流使用相同的三层鉴权，并返回 `text/event-stream`。静态规范包含日志流合同，真实运行时关闭日志流后，路由和运行时 OpenAPI path 都不存在。
 
 <ClientOnly fallback={<p>正在加载交互式 API Reference…</p>}>
   <OpenApiReference />

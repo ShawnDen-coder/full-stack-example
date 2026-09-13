@@ -44,7 +44,6 @@
     "bullmq": "^6.3.4",
     "hono": "catalog:",
     "@hono/node-server": "^1.19.6",
-    "@hono/zod-validator": "catalog:",
     "pg": "^8.16.3",
     "zod": "catalog:"
   },

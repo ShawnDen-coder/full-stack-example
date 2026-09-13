@@ -77,7 +77,7 @@ verify:
     pnpm docs:build
 
 container-build:
-    podman build --file container/Dockerfile --ignorefile container/Dockerfile.dockerignore --tag full-stack-example:local .
+    podman build --file container/Dockerfile --tag full-stack-example:local .
 
 stack-up:
     podman compose --env-file .env -f container/compose.yaml --profile application up -d --build --wait

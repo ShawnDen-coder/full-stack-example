@@ -8,7 +8,7 @@
 
 ## 对外接口
 
-- `@full-stack-example/auth/contracts`：Principal、权限要求、Mailer、安全事件和 Hono 变量类型。
+- `@full-stack-example/auth/contracts`：Principal、权限要求、安全事件和 Hono 变量类型。
 - `@full-stack-example/auth/server`：`createAuthModule`、`setupAuthApp` 和平台管理服务。
 - `@full-stack-example/auth/client`：浏览器端 Better Auth client 与 Organization client plugin。
 
@@ -42,17 +42,14 @@ import { createAuthModule, setupAuthApp } from "@full-stack-example/auth/server"
 const auth = createAuthModule({
   database: database.db,
   baseURL: process.env.BETTER_AUTH_URL!,
-  webBaseURL: process.env.WEB_ORIGIN!,
   secret: process.env.BETTER_AUTH_SECRET!,
   trustedOrigins: [process.env.WEB_ORIGIN!],
-  mailer,
   securityEvents,
-  requireMailer: process.env.NODE_ENV === "production",
 });
 const appWithAuth = setupAuthApp(app, { auth });
 ```
 
-服务端启动流程是：先用 migrator 连接执行迁移，再创建 runtime Database，随后创建 Auth 模块并挂载路由。生产环境必须注入 Mailer；邮箱密码注册和登录用户创建工作区默认开启。未配置邮件验证流时，注册不要求验证邮箱。
+Auth 不发送邮件。邮箱密码注册和登录可用，但依赖邮件的验证、重置密码端点明确返回 `410`；组织邀请被禁用并返回稳定的 `403` 错误。生产部署不需要 Mailer 配置。数据库迁移由独立 migrator 命令/Compose service 执行，API 使用 runtime 连接。
 
 ## 客户端接入
 
@@ -98,6 +95,8 @@ Todo Service 只创建一次；每个请求从 `tenantPrincipal` 取得租户，
 
 - Session 默认 7 天有效并定期更新，生产使用 Secure Cookie。
 - 启用 CSRF、trusted origins 和 Better Auth 限流。
+- Rate limit 状态持久化在 PostgreSQL `rate_limit` 表中，由正式 Drizzle migration 管理。
+- 邮件交付未配置：密码重置/验证链接不可用，组织邀请拒绝执行，不返回虚假的成功结果。
 - `BETTER_AUTH_SECRET` 至少 32 个字符。
 - `/api/auth/admin/*` 管理变更端点不对外暴露，统一使用 `PlatformAuthService`。
 - 日志不得写入密码、Cookie、Session token 或完整邀请 URL。
@@ -106,7 +105,7 @@ Todo Service 只创建一次；每个请求从 `tenantPrincipal` 取得租户，
 
 `BETTER_AUTH_URL`（API/Auth 地址）、`WEB_ORIGIN`（浏览器跳转地址）、`BETTER_AUTH_SECRET`（至少 32 字符）、`DATABASE_RUNTIME_URL`（运行时连接）和 `DATABASE_MIGRATOR_URL`（迁移连接）。本地可用 `DATABASE_URL` 兼容回退，生产必须配置双连接串。
 
-初始化数据库时可设置 `PLATFORM_ADMIN_EMAIL`、`PLATFORM_ADMIN_NAME` 和 `PLATFORM_ADMIN_PASSWORD`。迁移完成后 API 会创建缺失的账号，或将同邮箱账号幂等提升为 `platform-admin`；密码只用于首次创建，不会覆盖已有账号密码。生产部署应通过密钥管理系统注入这些变量。
+初始化数据库时可设置 `PLATFORM_ADMIN_EMAIL`、`PLATFORM_ADMIN_NAME` 和 `PLATFORM_ADMIN_PASSWORD`。数据库 migration 完成后 API 会创建缺失的账号，或将同邮箱账号幂等提升为 `platform-admin`；密码只用于首次创建，不会覆盖已有账号密码。生产部署应通过密钥管理系统注入这些变量。
 
 ## 平台管理流程
 
@@ -114,16 +113,14 @@ Todo Service 只创建一次；每个请求从 `tenantPrincipal` 取得租户，
 
 | 接口 | JSON body | 成功响应 |
 | --- | --- | --- |
-| `POST /api/platform/users` | `{ email, name }` | `201 { id }` |
 | `POST /api/platform/organizations` | `{ name, slug, ownerUserId }` | `201 { id }` |
 | `PATCH /api/platform/organizations/:id/status` | `{ status: "active" \| "disabled" }` | `204` |
-| `POST /api/platform/users/:id/password-reset` | 无 | `204` |
 
 这些接口统一要求登录、`platform-admin` 和 fresh session；不要直接调用 Better Auth Admin mutation endpoint。
 
 平台接口在 Swagger 中归入 `Platform Admin`，并记录 `401/403/500` 响应及 fresh-session 要求。`/api/auth/ok` 已删除，健康检查统一使用公开的 `/health`。
 
-典型开通流程为：平台管理员创建用户，系统生成临时随机密码并发送密码设置邮件；然后平台管理员创建组织并明确指定首位 owner。平台管理员不会因此自动成为该组织成员。
+典型开通流程为：用户通过邮箱密码注册，然后平台管理员创建组织并明确指定首位 owner。平台管理员不会因此自动成为该组织成员。邀请和邮件找回流程需在实际接入可靠邮件交付后再开放。
 
 ## 错误与边界行为
 

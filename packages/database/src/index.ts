@@ -6,6 +6,7 @@ export {
   invitation,
   member,
   organization,
+  rateLimit,
   session,
   user,
   verification,

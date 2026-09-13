@@ -5,12 +5,12 @@
 ## 职责边界
 
 - 安装 request ID、CORS、安全响应头、body limit、timeout、日志和 OpenTelemetry middleware。
-- 注册 Auth、System、Todos 和可选的管理员日志流。日志流默认关闭；设置 `LOG_STREAM_ENABLED=true` 后仍要求平台管理员的新鲜 Session。
+- 必须注入 Auth，并注册 System、Todos、可选的 Jobs 管理 API/Bull Board 和可选管理员日志流。日志流默认关闭；设置 `LOG_STREAM_ENABLED=true` 后仍要求平台管理员的新鲜 Session。
 - 在启用文档时提供 `GET /docs` Swagger UI 及 `GET /openapi.json`；生产环境默认关闭，可用 `API_DOCS_ENABLED=true` 显式开启。文档包含邮箱认证、工作区切换及 Todo 的 Cookie 鉴权说明；在 Swagger 登录后，后续请求会复用同源 Session Cookie。
 - 统一处理 404 和未捕获异常。
 - 在生产容器中提供构建后的 Web 应用。
 
-配置 `PLATFORM_ADMIN_EMAIL`、`PLATFORM_ADMIN_NAME` 和 `PLATFORM_ADMIN_PASSWORD` 后，数据库迁移完成时会幂等创建或提升该账号为 `platform-admin`。这三个变量必须同时配置，适合初始化运维账号；不要把示例密码用于真实部署。
+配置 `PLATFORM_ADMIN_EMAIL`、`PLATFORM_ADMIN_NAME` 和 `PLATFORM_ADMIN_PASSWORD` 后，数据库 migration 完成时 API 会幂等创建或提升该账号为 `platform-admin`。这三个变量必须同时配置，适合初始化运维账号；不要把示例密码用于真实部署。邮件依赖的 Auth 能力暂不启用。
 
 API 不持有数据库 schema 或 Todo 业务规则，这些能力通过包接口注入。
 
@@ -23,7 +23,7 @@ API 不持有数据库 schema 或 Todo 业务规则，这些能力通过包接�
 ## 依赖与启动流程
 
 ```text
-读取配置 → 配置日志/遥测 → migrator 执行迁移 → 创建 runtime Database
+独立 migrator 执行迁移 → API 创建 runtime Database → 配置日志/遥测
 → 创建 Auth 和 Todo Service → createApp 组合路由 → 开始监听
 ```
 
@@ -60,7 +60,8 @@ const response = await app.request("/health");
 - 未知 API 路径返回统一 JSON `404`。
 - 未捕获异常返回不泄露内部信息的 JSON `500`。
 - Todo 请求依次可能返回 `401`、`400`、`403`、`404`，具体语义由 Auth 和 Todos README 定义。
-- 生产 `bootstrap` 必须提供 Auth；无 Auth 的组合方式只适用于隔离的测试场景，不应作为运行配置。
+- `createApp()` 类型和运行时都要求提供 Auth；Todo 和 Jobs 管理路由不能在无认证的情况下挂载。
+- 示例 enqueue endpoint 属于 API 组合层；Jobs 包只提供 Producer、Worker、BullMQ adapter、migration 和 Bull Board 能力。
 
 ## 开发与验证
 

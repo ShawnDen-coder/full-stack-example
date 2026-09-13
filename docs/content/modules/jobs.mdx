@@ -82,20 +82,20 @@ await runtime.producer.enqueue(sendEmailJob, {
 });
 ```
 
-HTTP 路由不会自动为任意任务生成接口。每个业务模块应使用自己的 Zod schema、service 和 `setupXxxApp(app, options)`，在组合根注册，避免暴露通用 `unknown` enqueue API。
+HTTP 路由不会自动为任意任务生成接口。当前示例 `POST /api/admin/jobs/examples` 由 API 组合层持有，并注入 `JobProducer`；Jobs 包不会暴露示例 service 或业务路由。新增业务 enqueue endpoint 时，在 API/业务模块定义自己的 Zod schema、鉴权和 HTTP 处理，不开放通用 `unknown` enqueue API。
 
 ## 公开入口
 
-- `@full-stack-example/jobs`：领域合同、`defineJob()`、示例任务、示例 service/schema 和 API setup。
+- `@full-stack-example/jobs`：任务合同、`defineJob()` 和示例任务定义/schema。
 - `@full-stack-example/jobs/server`：BullMQ PostgreSQL adapter、Bull Board setup。
 - `@full-stack-example/jobs/worker`：显式 definitions 的 Worker factory。
 - `@full-stack-example/jobs/migration`：官方 BullMQ PostgreSQL migration。
 
-管理员页面默认为 `/admin/queues`，要求平台管理员、fresh session、CSRF 和 same-origin 保护。Bull Board 展示前会递归脱敏 payload (`data`) 和返回值 (`returnValue`)；日志与错误文本不经过这些 formatter，任务代码不得在其中写入敏感信息。
+管理员页面默认为 `/admin/queues`，要求平台管理员、fresh session、CSRF 和 same-origin 保护。Bull Board 展示前会递归脱敏 payload (`data`) 和返回值 (`returnValue`)；日志与错误文本不经过这些 formatter，任务代码不得在其中写入敏感信息。Jobs migration 授予 `DATABASE_RUNTIME_ROLE`（默认为 `app_runtime`）访问 BullMQ schema 的权限；该值必须与 Worker/API 使用的 runtime 数据库角色相符。
 
 ## 职责边界
 
-本包负责 BullMQ PostgreSQL adapter、Worker 生命周期、任务管理 API 和 Bull Board 挂载。业务包负责任务输入 schema、service、幂等策略、具体处理逻辑和 HTTP 权限策略；应用组合根负责显式注册任务。本包不负责业务副作用和租户级队列模型。
+本包负责 BullMQ PostgreSQL adapter、Worker 生命周期、迁移和 Bull Board 挂载。业务模块负责任务输入 schema、依赖注入、幂等策略和具体处理逻辑；API 组合根负责示例 enqueue HTTP 行为及 HTTP 权限策略，Worker 组合根负责显式注册任务。本包不负责业务副作用和租户级队列模型。
 
 ## 开发与验证
 

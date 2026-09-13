@@ -56,7 +56,7 @@ const requiredPaths = [
   "/health",
   "/api/auth/sign-in/email",
   "/api/auth/organization/set-active",
-  "/api/platform/users",
+  "/api/platform/organizations",
   "/api/todos",
   "/api/logs/stream",
 ] as const;

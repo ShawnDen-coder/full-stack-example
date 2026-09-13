@@ -17,9 +17,9 @@
 │   ├── logging/                  # LogTape 配置、脱敏日志与进程内 SSE 数据源
 │   ├── system/                   # 系统健康检查的 schema、service 和 HTTP 路由
 │   ├── todos/                    # Todo schema、Drizzle repository、service 和 HTTP 路由
-│   └── jobs/                     # BullMQ PostgreSQL adapter、worker、API 和 Bull Board
+│   └── jobs/                     # BullMQ PostgreSQL adapter、worker、migration 和 Bull Board
 ├── container/                    # 单镜像 Dockerfile、Compose 和 PostgreSQL 初始化
-├── docs/                         # 架构决策、设计说明和实施计划
+├── docs/                         # 架构指南、模块说明和 API reference
 ├── scripts/                      # 本地基础设施、迁移与开发子进程编排
 ├── biome.json                    # 全仓唯一的 lint 与格式化配置
 ├── justfile                      # 安装、开发、测试、迁移和容器命令入口
@@ -75,7 +75,7 @@ just launch-doctor
 just launch
 ```
 
-`just launch` 会启动 PostgreSQL 与 OpenTelemetry Collector、执行迁移，并运行 API（`http://localhost:3000`）与 Web（`http://localhost:5173`）。默认退出时保留基础设施；`just launch-clean` 会停止容器但不会删除数据卷。
+`just launch` 会启动 PostgreSQL 与 OpenTelemetry Collector，使用 migrator 凭据执行数据库和 BullMQ migration，然后运行 API（`http://localhost:3000`）、Jobs Worker 与 Web（`http://localhost:5173`）。默认退出时保留基础设施；`just launch-clean` 会停止容器但不会删除数据卷。
 
 `.env.example` 提供初始化运维账号 `admin@example.com` / `Admin123!`。API 在迁移后幂等创建该账号或将同邮箱账号提升为 `platform-admin`；现有账号密码不会被覆盖。真实部署必须替换示例密码。
 
@@ -100,6 +100,7 @@ API 重启会丢失进程内状态（包括 SSE 日志流和临时状态），�
 ```bash
 just db-generate
 just db-migrate
+just jobs-migrate
 ```
 
 修改 `.env`、依赖、Vite/TypeScript/Compose 配置后，请停止当前进程并重新运行 `just launch`。`just stack-up` 是生产形态验证，不支持源码热更新；源码变化后需要重新构建镜像。
@@ -127,8 +128,8 @@ just otel-logs
 
 | 命令 | 用途 |
 | --- | --- |
-| `just dev` | 仅启动 API/Web 热更新开发进程 |
-| `just launch` | 启动基础设施、迁移数据库并启动开发进程 |
+| `just dev` | 启动 API、Jobs Worker 与 Web 热更新开发进程 |
+| `just launch` | 启动基础设施、执行数据库/Jobs migration 并启动 API、Worker、Web |
 | `just check` | lint、typecheck、源码测试，不构建 `dist` |
 | `just test-watch` | Vitest 监听模式 |
 | `just verify` | `check` 后构建全部 workspace |
@@ -138,7 +139,7 @@ just otel-logs
 
 日常修改使用 `just launch` 或 `just dev`，提交前使用 `just check`，发布或容器验证使用 `just verify` 与 `just stack-up`。测试直接消费 TypeScript 源码，不依赖预先存在的 `dist`。
 
-`container/Dockerfile` 会在干净环境中安装锁定依赖并构建完整项目，最终生成一个同时提供 API 和 Web 的 Node 镜像：
+`container/Dockerfile` 会在干净环境中安装锁定依赖，只构建 API、Web 及其 workspace 依赖（不构建文档站），最终生成一个同时提供 API 和 Web 的 Node 镜像：
 
 ```bash
 podman build --file container/Dockerfile --tag full-stack-example:local .
@@ -200,7 +201,7 @@ curl -N --cookie "<Better Auth session cookie>" http://localhost:3000/api/logs/s
 
 ## 计划状态与边界
 
-当前已完成：React/Vite 与 Hono API workspace、TanStack Router 文件路由、Better Auth Session/Organization、`setupXxxApp(app, options)` 与 `createHandlers()` 路由组合、LogTape 脱敏日志、OpenTelemetry Collector、管理员保护的可选 SSE 日志流、Hono 单进程托管生产 Web、单镜像 Dockerfile/Compose profile，以及根级 Biome、统一 Vitest 和 `check`/`verify` 验证链路。
+项目采用 React/Vite 与 Hono API workspace、TanStack Router 文件路由和按功能拆分的 RPC clients、Better Auth Session/Organization、Drizzle/PostgreSQL RLS、BullMQ named jobs、LogTape 脱敏日志及 OpenTelemetry Collector。API 强制认证组合；数据库和 BullMQ migration 由独立 migrator 命令/Compose service 执行；生产使用 Hono 单进程托管 Web。Biome、统一 Vitest、workspace typecheck/build 与 CI 覆盖代码、PostgreSQL 集成和镜像验证。
 
 当前明确不包含 Loki、OpenObserve、Tempo、Prometheus、Redis、缓存或日志持久化。SSE 是单进程、易失、非审计的实时诊断流。OpenAPI 描述公开 Health，并收录认证、工作区、平台管理、Todo 和启用后的日志流合同；受保护操作使用 Session Cookie，不生成 Orval 客户端。HonoX 调研结论是暂不引入 SSR、SSG 或 islands。
 
