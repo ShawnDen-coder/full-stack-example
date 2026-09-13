@@ -40,6 +40,26 @@ export default defineConfig({
         fileURLToPath(new URL(".", import.meta.url)),
         "packages/auth/src/server.ts",
       ),
+      "@full-stack-example/jobs/contracts": resolve(
+        fileURLToPath(new URL(".", import.meta.url)),
+        "packages/jobs/src/contracts.ts",
+      ),
+      "@full-stack-example/jobs/server": resolve(
+        fileURLToPath(new URL(".", import.meta.url)),
+        "packages/jobs/src/server.ts",
+      ),
+      "@full-stack-example/jobs/worker": resolve(
+        fileURLToPath(new URL(".", import.meta.url)),
+        "packages/jobs/src/worker.ts",
+      ),
+      "@full-stack-example/jobs/migration": resolve(
+        fileURLToPath(new URL(".", import.meta.url)),
+        "packages/jobs/src/migration.ts",
+      ),
+      "@full-stack-example/jobs": resolve(
+        fileURLToPath(new URL(".", import.meta.url)),
+        "packages/jobs/src/index.ts",
+      ),
       "@full-stack-example/api/contract": resolve(
         fileURLToPath(new URL(".", import.meta.url)),
         "apps/api/src/contract.ts",
