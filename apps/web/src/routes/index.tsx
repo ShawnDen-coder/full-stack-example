@@ -1,12 +1,12 @@
-import { throwApiError } from "@full-stack-example/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { authClient } from "../features/auth/client.js";
-import { api } from "../lib/api.js";
 import { resolveApiBaseUrl } from "../lib/api-base-url.js";
+import { systemApi } from "../lib/api-client.js";
+import { throwApiError } from "../lib/api-error.js";
 
 async function getHealth() {
-  const response = await api.health.$get();
+  const response = await systemApi.health.$get();
   if (response.status === 200 || response.status === 503) return response.json();
   return throwApiError(response);
 }

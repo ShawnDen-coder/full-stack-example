@@ -8,7 +8,6 @@
       "@full-stack-example/logging": ["./packages/logging/src/index.ts"],
       "@full-stack-example/system": ["./packages/system/src/index.ts"],
       "@full-stack-example/todos": ["./packages/todos/src/index.ts"],
-      "@full-stack-example/api-client": ["./packages/api-client/src/index.ts"],
       "@full-stack-example/auth": ["./packages/auth/src/index.ts"],
       "@full-stack-example/auth/client": ["./packages/auth/src/client.ts"],
       "@full-stack-example/auth/contracts": ["./packages/auth/src/contracts.ts"],
@@ -17,8 +16,7 @@
       "@full-stack-example/jobs/contracts": ["./packages/jobs/src/contracts.ts"],
       "@full-stack-example/jobs/server": ["./packages/jobs/src/server.ts"],
       "@full-stack-example/jobs/worker": ["./packages/jobs/src/worker.ts"],
-      "@full-stack-example/jobs/migration": ["./packages/jobs/src/migration.ts"],
-      "@full-stack-example/api/contract": ["./apps/api/src/contract.ts"]
+      "@full-stack-example/jobs/migration": ["./packages/jobs/src/migration.ts"]
     },
     "lib": ["ES2022"],
     "strict": true,

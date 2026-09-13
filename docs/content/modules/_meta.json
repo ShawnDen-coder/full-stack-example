@@ -6,7 +6,6 @@
   "auth",
   "system",
   "database",
-  "api-client",
   "logging",
   "jobs"
 ]

@@ -108,9 +108,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@full-stack-example/api-client':
-        specifier: workspace:*
-        version: link:../../packages/api-client
       '@full-stack-example/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -132,6 +129,9 @@ importers:
       daisyui:
         specifier: ^5.5.8
         version: 5.7.28
+      hono:
+        specifier: 'catalog:'
+        version: 4.13.7
       react:
         specifier: ^19.2.3
         version: 19.2.8
@@ -145,9 +145,12 @@ importers:
         specifier: ^4.1.17
         version: 4.3.3
     devDependencies:
-      '@full-stack-example/api':
+      '@full-stack-example/system':
         specifier: workspace:*
-        version: link:../api
+        version: link:../../packages/system
+      '@full-stack-example/todos':
+        specifier: workspace:*
+        version: link:../../packages/todos
       '@tanstack/router-cli':
         specifier: ^1.167.35
         version: 1.167.35(supports-color@9.4.0)
@@ -236,12 +239,6 @@ importers:
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
-
-  packages/api-client:
-    dependencies:
-      hono:
-        specifier: 'catalog:'
-        version: 4.13.7
 
   packages/auth:
     dependencies:
