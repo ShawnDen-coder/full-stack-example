@@ -1,18 +1,18 @@
 import type { Env, Hono, Schema } from "hono";
+import { Hono as HonoApp } from "hono";
 import { describeRoute, resolver } from "hono-openapi";
 import { z } from "zod";
 import { healthResponseSchema } from "./schemas.js";
 import { getHealth } from "./service.js";
 
-export function setupSystemApp<E extends Env, S extends Schema, BasePath extends string>(
-  app: Hono<E, S, BasePath>,
-  options: {
-    readonly checkDatabase: () => Promise<void>;
-    readonly timeoutMs?: number;
-    readonly onProbeFailure?: () => void;
-  },
-) {
-  return app.get(
+type SystemRouteOptions = {
+  readonly checkDatabase: () => Promise<void>;
+  readonly timeoutMs?: number;
+  readonly onProbeFailure?: () => void;
+};
+
+function createSystemRoutes(options: SystemRouteOptions) {
+  return new HonoApp().get(
     "/health",
     describeRoute({
       operationId: "getHealth",
@@ -47,4 +47,13 @@ export function setupSystemApp<E extends Env, S extends Schema, BasePath extends
       return context.json(health, 503);
     },
   );
+}
+
+export type SystemApiType = ReturnType<typeof createSystemRoutes>;
+
+export function setupSystemApp<E extends Env, S extends Schema, BasePath extends string>(
+  app: Hono<E, S, BasePath>,
+  options: SystemRouteOptions,
+) {
+  return app.route("/", createSystemRoutes(options));
 }
