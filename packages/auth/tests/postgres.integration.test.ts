@@ -66,11 +66,17 @@ describe.skipIf(!process.env.DATABASE_URL)("Better Auth PostgreSQL integration",
     const database = createDatabase({ databaseUrl: process.env.DATABASE_URL as string });
     const email = `login-${Date.now()}@example.test`;
     const password = "correct-horse-battery-staple";
+    const securityEvents: Array<{ readonly event: string; readonly actorUserId?: string }> = [];
     const auth = createAuthModule({
       database: database.db,
       baseURL: "http://localhost:3000",
       secret: "test-secret-that-is-at-least-32-characters-long",
       trustedOrigins: ["http://localhost:5173"],
+      securityEvents: {
+        async emit(event) {
+          securityEvents.push(event);
+        },
+      },
     });
     let userId: string | undefined;
     try {
@@ -84,6 +90,11 @@ describe.skipIf(!process.env.DATABASE_URL)("Better Auth PostgreSQL integration",
       });
       expect(signIn.user.id).toBe(userId);
       expect(signIn.token).toBeTruthy();
+      expect(
+        securityEvents.some(
+          (event) => event.event === "auth.session.created" && event.actorUserId === userId,
+        ),
+      ).toBe(true);
     } finally {
       if (userId) {
         await database.db.delete(session).where(eq(session.userId, userId));

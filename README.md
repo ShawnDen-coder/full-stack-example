@@ -115,8 +115,8 @@ just jobs-migrate
 just check
 just verify
 just container-build
+just infra-up
 just stack-up
-just db-migrate
 just infra-down
 just otel-logs
 ```
@@ -130,6 +130,7 @@ just otel-logs
 | --- | --- |
 | `just dev` | 启动 API、Jobs Worker 与 Web 热更新开发进程 |
 | `just launch` | 启动基础设施、执行数据库/Jobs migration 并启动 API、Worker、Web |
+| `just infra-up` | 启动 PostgreSQL 和 Collector，并执行数据库与 Jobs migration |
 | `just check` | lint、typecheck、源码测试，不构建 `dist` |
 | `just test-watch` | Vitest 监听模式 |
 | `just verify` | `check` 后构建全部 workspace |

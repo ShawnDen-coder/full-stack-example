@@ -91,8 +91,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
     databaseHooks: {
       session: {
         create: {
-          after: async ({ data }) => {
-            const session = data as { readonly userId: string; readonly id: string };
+          after: async (session) => {
             await options.securityEvents?.emit({
               event: "auth.session.created",
               actorUserId: session.userId,
@@ -101,8 +100,7 @@ export function createAuthModule(options: AuthModuleOptions): AuthModule {
           },
         },
         delete: {
-          after: async ({ data }) => {
-            const session = data as { readonly userId: string; readonly id: string };
+          after: async (session) => {
             await options.securityEvents?.emit({
               event: "auth.session.revoked",
               actorUserId: session.userId,

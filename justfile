@@ -1,6 +1,7 @@
 set dotenv-load := true
 set shell := ["bash", "-euc"]
 set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
+compose-project := "full-stack-example"
 
 default:
     @just --list
@@ -80,16 +81,16 @@ container-build:
     podman build --file container/Dockerfile --tag full-stack-example:local .
 
 stack-up:
-    podman compose --env-file .env -f container/compose.yaml --profile application up -d --build --wait
+    podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml --profile application up -d --build --wait
 
 stack-down:
-    podman compose --env-file .env -f container/compose.yaml --profile application down
+    podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml --profile application down
 
 stack-logs:
-    podman compose --env-file .env -f container/compose.yaml --profile application logs -f app jobs-worker postgres otel-collector
+    podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml --profile application logs -f app jobs-worker postgres otel-collector
 
 stack-status:
-    podman compose --env-file .env -f container/compose.yaml --profile application ps
+    podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml --profile application ps
 
 db-generate:
     pnpm --filter @full-stack-example/database db:generate
@@ -114,13 +115,15 @@ db-studio:
     pnpm --filter @full-stack-example/database db:studio
 
 infra-up:
-    podman compose --env-file .env -f container/compose.yaml up -d --build
+    podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml up -d --build --wait --wait-timeout 60
+    just db-migrate
+    just jobs-migrate
 
 infra-down:
-    podman compose --env-file .env -f container/compose.yaml down
+    podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml down
 
 infra-logs service="postgres":
-    podman compose --env-file .env -f container/compose.yaml logs -f {{service}}
+    podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml logs -f {{service}}
 
 otel-logs:
-    podman compose --env-file .env -f container/compose.yaml logs -f otel-collector
+    podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml logs -f otel-collector
