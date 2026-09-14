@@ -20,35 +20,37 @@ export function TodoList({
   if (todos.length === 0) return <p>还没有待办事项。</p>;
 
   return (
-    <ul className="list rounded-box bg-base-200">
+    <ul className="divide-y divide-border rounded-lg border bg-background">
       {todos.map((todo) => (
-        <li className="list-row" key={todo.id}>
+        <li className="flex items-center gap-3 p-4" key={todo.id}>
           <input
             aria-label={`完成 ${todo.title}`}
             checked={todo.completed}
-            className="checkbox checkbox-primary"
+            className="size-4 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             disabled={disabled}
             onChange={(event) => onToggle(todo, event.target.checked)}
             type="checkbox"
           />
           <span
-            className={todo.completed ? "list-col-grow line-through opacity-60" : "list-col-grow"}
+            className={todo.completed ? "min-w-0 flex-1 break-words text-muted-foreground line-through" : "min-w-0 flex-1 break-words"}
           >
             {todo.title}
           </span>
           {canDelete ? (
-            <button
+            <Button
               aria-label={`删除 ${todo.title}`}
-              className="btn btn-error btn-soft btn-sm"
               disabled={disabled}
               onClick={() => onDelete(todo.id)}
+              size="sm"
               type="button"
+              variant="destructive"
             >
               删除
-            </button>
+            </Button>
           ) : null}
         </li>
       ))}
     </ul>
   );
 }
+import { Button } from "../../../components/ui/button.js";

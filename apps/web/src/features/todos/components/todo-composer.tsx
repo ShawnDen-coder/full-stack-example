@@ -1,4 +1,6 @@
 import { useForm } from "react-hook-form";
+import { Button } from "../../../components/ui/button.js";
+import { Input } from "../../../components/ui/input.js";
 
 export function TodoComposer({
   disabled,
@@ -10,14 +12,14 @@ export function TodoComposer({
   const form = useForm<{ title: string }>();
   return (
     <form
-      className="join w-full"
+      className="flex w-full gap-2"
       onSubmit={(event) =>
         void form.handleSubmit(({ title }) => onSubmit(title.trim(), () => form.reset()))(event)
       }
     >
-      <input
+      <Input
         aria-label="待办事项标题"
-        className="input join-item w-full"
+        className="min-w-0 flex-1"
         disabled={disabled}
         maxLength={200}
         placeholder="添加一个待办事项"
@@ -26,13 +28,9 @@ export function TodoComposer({
           validate: (value) => value.trim().length > 0,
         })}
       />
-      <button
-        className="btn btn-primary join-item"
-        disabled={disabled || form.formState.isSubmitting}
-        type="submit"
-      >
+      <Button disabled={disabled || form.formState.isSubmitting} type="submit">
         添加
-      </button>
+      </Button>
     </form>
   );
 }

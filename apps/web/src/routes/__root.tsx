@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Link, Outlet } from "@tanstack/react-router";
 import type { AppSession } from "../features/auth/client.js";
+import { Button } from "../components/ui/button.js";
 
 export type RouterContext = {
   readonly session: AppSession | null;
@@ -10,14 +11,12 @@ export type RouterContext = {
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: () => <Outlet />,
   notFoundComponent: () => (
-    <main className="hero min-h-screen bg-base-200 text-base-content">
-      <div className="hero-content text-center">
-        <div>
-          <h1 className="text-4xl font-bold">页面不存在</h1>
-          <Link className="btn btn-primary mt-4" to="/">
-            返回首页
+    <main className="grid min-h-screen place-items-center bg-background px-6 text-center text-foreground">
+      <div>
+          <h1 className="text-4xl font-bold tracking-tight">页面不存在</h1>
+          <Link to="/">
+            <Button className="mt-4">返回首页</Button>
           </Link>
-        </div>
       </div>
     </main>
   ),

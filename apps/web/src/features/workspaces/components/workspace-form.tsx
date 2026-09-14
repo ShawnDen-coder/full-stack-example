@@ -1,4 +1,8 @@
 import { useForm } from "react-hook-form";
+import { Alert } from "../../../components/ui/alert.js";
+import { Button } from "../../../components/ui/button.js";
+import { Input } from "../../../components/ui/input.js";
+import { Label } from "../../../components/ui/label.js";
 
 type Values = { name: string; slug: string };
 export function WorkspaceForm({
@@ -22,22 +26,22 @@ export function WorkspaceForm({
         void form.handleSubmit((values) => onSubmit(values, () => form.reset()))(event)
       }
     >
-      <fieldset className="fieldset gap-3">
-        <legend className="fieldset-legend">创建工作区</legend>
-        <label className="label" htmlFor="workspace-name">
+      <fieldset className="grid gap-4">
+        <legend className="text-base font-medium">创建工作区</legend>
+        <Label htmlFor="workspace-name">
           名称
-        </label>
-        <input
-          className="input w-full"
+        </Label>
+        <Input
+          autoComplete="organization"
           disabled={disabled}
           id="workspace-name"
           {...form.register("name", { required: "请输入名称" })}
         />
-        <label className="label" htmlFor="workspace-slug">
+        <Label htmlFor="workspace-slug">
           标识
-        </label>
-        <input
-          className="input w-full"
+        </Label>
+        <Input
+          autoComplete="off"
           disabled={disabled}
           id="workspace-slug"
           {...form.register("slug", {
@@ -52,17 +56,13 @@ export function WorkspaceForm({
         />
       </fieldset>
       {error ? (
-        <div className="alert alert-error" role="alert">
+        <Alert className="border-destructive/40 text-destructive" role="alert">
           {error}
-        </div>
+        </Alert>
       ) : null}
-      <button
-        className="btn btn-primary w-full"
-        disabled={disabled || form.formState.isSubmitting}
-        type="submit"
-      >
+      <Button className="w-full" disabled={disabled || form.formState.isSubmitting} type="submit">
         创建并继续
-      </button>
+      </Button>
     </form>
   );
 }

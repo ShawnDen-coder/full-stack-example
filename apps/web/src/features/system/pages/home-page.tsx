@@ -2,6 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { resolveApiBaseUrl } from "../../../lib/api-base-url.js";
 import { authClient } from "../../auth/client.js";
+import { Alert } from "../../../components/ui/alert.js";
+import { Button, buttonVariants } from "../../../components/ui/button.js";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card.js";
 import { getHealth } from "../api.js";
 
 export function HomePage() {
@@ -11,59 +14,54 @@ export function HomePage() {
     (session.data?.user as { readonly role?: string } | undefined)?.role === "platform-admin";
   const jobsBoardUrl = `${resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL, globalThis.location.origin)}/admin/queues`;
   const primaryAction = session.data ? (
-    <Link className="btn btn-primary" to="/todos">
-      打开 Todo
-    </Link>
+    <Link className={buttonVariants()} to="/todos">打开 Todo</Link>
   ) : (
-    <Link className="btn btn-primary" to="/register" search={{ returnTo: "/todos" }}>
-      注册
-    </Link>
+    <Link className={buttonVariants()} to="/register" search={{ returnTo: "/todos" }}>注册</Link>
   );
 
   return (
-    <main className="min-h-screen bg-base-200 p-6 text-base-content sm:p-12">
-      <section className="card card-border mx-auto max-w-xl bg-base-100">
-        <div className="card-body gap-5">
-          <h1 className="card-title text-3xl">Full Stack Example</h1>
+    <main className="min-h-screen bg-background p-4 text-foreground sm:p-10">
+      <Card className="mx-auto max-w-xl">
+        <CardHeader>
+          <CardTitle className="text-3xl">Full Stack Example</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-5">
           {health.isLoading ? (
             <span
-              className="loading loading-spinner loading-lg"
+              className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent motion-reduce:animate-none"
               role="status"
               aria-label="正在检查服务"
             />
           ) : null}
           {health.isError ? (
-            <div className="alert alert-error" role="alert">
+            <Alert className="border-destructive/40 text-destructive" role="alert">
               无法连接 API，请稍后重试。
-            </div>
+            </Alert>
           ) : null}
           {health.data ? (
-            <div
-              className={health.data.status === "ok" ? "alert alert-success" : "alert alert-error"}
-              role="alert"
-            >
+            <Alert className={health.data.status === "ok" ? "border-primary/30 bg-accent text-accent-foreground" : "border-destructive/40 text-destructive"} role="status">
               <span>API：{health.data.status}</span>
               <span>PostgreSQL：{health.data.services.database.status}</span>
-            </div>
+            </Alert>
           ) : null}
-          <div className="card-actions justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {!session.data ? (
-              <Link className="btn btn-ghost" to="/login" search={{ returnTo: "/todos" }}>
+              <Link className={buttonVariants({ variant: "ghost" })} to="/login" search={{ returnTo: "/todos" }}>
                 登录
               </Link>
             ) : null}
-            <button className="btn btn-ghost" type="button" onClick={() => void health.refetch()}>
+            <Button onClick={() => void health.refetch()} type="button" variant="ghost">
               重新检查
-            </button>
+            </Button>
             {primaryAction}
             {isPlatformAdmin ? (
-              <a className="btn btn-ghost" href={jobsBoardUrl}>
+              <a className={buttonVariants({ variant: "ghost" })} href={jobsBoardUrl}>
                 任务管理
               </a>
             ) : null}
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     </main>
   );
 }
