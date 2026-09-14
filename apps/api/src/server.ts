@@ -1,9 +1,11 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { bootstrap } from "./bootstrap.js";
+import { discardPrivilegedEnvironment } from "./runtime-environment.js";
 
 const environmentFile = fileURLToPath(new URL("../../../.env", import.meta.url));
 if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
+discardPrivilegedEnvironment();
 
 let shutdown: (() => Promise<void>) | undefined;
 try {

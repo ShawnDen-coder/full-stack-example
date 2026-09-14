@@ -1,5 +1,9 @@
 import { createAuthModule, createPermissionPolicy } from "@full-stack-example/auth/server";
-import { checkDatabase, createDatabase } from "@full-stack-example/database";
+import {
+  assertDatabaseMigrations,
+  checkDatabase,
+  createDatabase,
+} from "@full-stack-example/database";
 import { createBullMqJobs } from "@full-stack-example/jobs/server";
 import {
   configureLogging,
@@ -12,6 +16,7 @@ import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { parseConfig } from "./config.js";
 import { startTelemetry } from "./telemetry.js";
+import { waitForListening } from "./wait-for-listening.js";
 
 export async function bootstrap(): Promise<() => Promise<void>> {
   const config = parseConfig();
@@ -28,6 +33,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
   let telemetry: Awaited<ReturnType<typeof startTelemetry>> | undefined;
   let database: ReturnType<typeof createDatabase> | undefined;
   let server: ReturnType<typeof serve> | undefined;
+  let serverListening = false;
   let jobs: Awaited<ReturnType<typeof createBullMqJobs>> | undefined;
   let closed = false;
   const cleanup = async () => {
@@ -47,7 +53,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       }
     };
     const activeServer = server;
-    if (activeServer)
+    if (activeServer && serverListening)
       await closeResource(
         "http-server",
         () =>
@@ -78,18 +84,12 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       endpoint: config.otelEndpoint,
       metricExportIntervalMillis: config.otelMetricExportInterval,
     });
-    if (config.jobsEnabled) {
-      jobs = await createBullMqJobs({
-        databaseUrl: config.databaseRuntimeUrl,
-        poolMax: config.jobsPoolMax,
-        logger: getAppLogger(["api", "jobs"]),
-      });
-    }
     const databaseContext = createDatabase({
       databaseUrl: config.databaseRuntimeUrl,
       poolMax: config.databasePoolMax,
     });
     database = databaseContext;
+    await assertDatabaseMigrations(databaseContext.db);
     const auth = createAuthModule({
       database: databaseContext.db,
       baseURL: config.betterAuthUrl,
@@ -109,13 +109,19 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       }),
       openApiEnabled: config.apiDocsEnabled,
     });
-    if (config.platformAdmin) {
-      const admin = await auth.ensurePlatformAdmin(config.platformAdmin);
-      logger.info("Platform admin is ready", {
-        event: "auth.platform_admin.ready",
-        userId: admin.id,
-        created: admin.created,
-      });
+    if (config.jobsEnabled) {
+      try {
+        jobs = await createBullMqJobs({
+          databaseUrl: config.databaseRuntimeUrl,
+          poolMax: config.jobsPoolMax,
+          logger: getAppLogger(["api", "jobs"]),
+        });
+      } catch (error) {
+        throw new Error(
+          "Could not initialize BullMQ. Run `just infra-up` to provision database and jobs schemas.",
+          { cause: error },
+        );
+      }
     }
     const todoService = createTodoService({ database: databaseContext.db });
     const app = createApp({
@@ -145,6 +151,11 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       web: { ...(config.webAssetsDirectory ? { assetsDirectory: config.webAssetsDirectory } : {}) },
     });
     server = serve({ fetch: app.fetch, hostname: config.host, port: config.port });
+    server.on("error", (error) => {
+      logger.error("API HTTP server error", { event: "api.server.error", error });
+    });
+    await waitForListening(server);
+    serverListening = true;
     logger.info("API server started", {
       event: "api.started",
       host: config.host,
