@@ -16,4 +16,4 @@ flowchart TD
 
 应用镜像由 `container/Dockerfile` 构建；文档站由 Rspress 输出静态资源并通过 Pages Artifact 发布。
 
-应用容器使用 `DATABASE_RUNTIME_URL` 执行业务查询。独立 `database-migrate` 和 `jobs-migrate` Compose services 使用 `DATABASE_MIGRATOR_URL` 执行 DDL；API 与 Worker 不执行迁移。首次部署通过 `PLATFORM_ADMIN_*` 注入运维管理员凭据；API 启动会幂等确保账号存在且角色为 `platform-admin`。生产应替换仓库示例密码并从密钥管理系统提供该值。
+本仓库 Compose 用于本地和 CI 的生产形态验证。`just stack-up` 使用一个应用镜像运行 API、Worker、统一 migration 和一次性 admin-provision 服务。migration 使用 `DATABASE_MIGRATOR_URL`；API、Worker 与 provision 使用 `DATABASE_RUNTIME_URL`。API 和 Worker 不执行 DDL，API 也不接收管理员初始密码。真实部署编排应复用同一镜像及 migration → admin-provision → 长期服务的顺序，并由密钥管理系统向短生命周期 provisioning 注入 `PLATFORM_ADMIN_*`。

@@ -40,7 +40,7 @@
 
 `apps/api/src/app.ts` 是唯一的 HTTP 组合根。功能包通过 `setupXxxApp(app, options)` 注册路由并返回 Hono app，API 导出完整 `AppType`；System、Todos 等供 Web 使用的模块另外导出各自子路由类型，由 Web 按功能创建 Hono RPC client，避免每个消费点实例化整棵路由类型。
 
-后台任务同样由应用组合根显式装配：业务模块通过 `defineJob()` 声明 schema 和处理器，Worker 按 BullMQ 的 `job.name` 分派，producer 使用任务定义对象入队以保持 payload 类型安全。开发时 `just dev` / `just launch` 会 watch Worker 代码。
+后台任务同样由应用组合根显式装配：业务模块通过 `defineJob()` 声明 schema 和处理器，Worker 按 BullMQ 的 `job.name` 分派，producer 使用任务定义对象入队以保持 payload 类型安全。开发时 `just dev` 会 watch Worker 代码。
 
 ## 扩充模块的结构
 
@@ -71,13 +71,12 @@ packages/<module>/
 ```bash
 just init
 Copy-Item .env.example .env
-just launch-doctor
-just launch
+just dev
 ```
 
-`just launch` 会启动 PostgreSQL 与 OpenTelemetry Collector，使用 migrator 凭据执行数据库和 BullMQ migration，然后运行 API（`http://localhost:3000`）、Jobs Worker 与 Web（`http://localhost:5173`）。默认退出时保留基础设施；`just launch-clean` 会停止容器但不会删除数据卷。
+`just dev` 会检查本机依赖，启动 PostgreSQL 和 OpenTelemetry Collector，执行数据库与 BullMQ migration、provision 初始管理员，再启动 API（`http://localhost:3000`）、Jobs Worker 与 Web（`http://localhost:5173`）。退出开发进程会保留基础设施和数据卷。
 
-`.env.example` 提供初始化运维账号 `admin@example.com` / `Admin123!`。API 在迁移后幂等创建该账号或将同邮箱账号提升为 `platform-admin`；现有账号密码不会被覆盖。真实部署必须替换示例密码。
+`.env.example` 提供本地初始运维账号 `admin@example.com` / `Admin123!`。独立的一次性 provision 命令幂等创建该账号或将同邮箱账号提升为 `platform-admin`，不会覆盖现有密码。API 和 Worker 不接收管理员初始化密码。
 
 ## 开发流程与热更新
 
@@ -86,28 +85,27 @@ just launch
 ```bash
 just init
 Copy-Item .env.example .env
-just launch-doctor
-just launch
+just dev
 ```
 
-开发服务由两个 watch 进程组成：
+开发服务由三个并行 watch 进程组成：
 
 - API 使用 `tsx watch`。修改 API 或被 API 直接引用的共享 TypeScript 包后，进程会自动重启；这不是保留运行时状态的 HMR。
+- Jobs Worker 使用 `tsx watch`。修改 Worker 入口或处理器后会自动重启。
 - Web 使用 Vite。React 组件和样式支持 HMR，通常无需完整刷新浏览器；按功能拆分的 RPC client 直接引用 workspace 源码类型，修改服务端路由后会即时反馈类型错误。
 
 API 重启会丢失进程内状态（包括 SSE 日志流和临时状态），但不会删除 PostgreSQL 数据。修改数据库 schema 或 migration 后需要显式执行：
 
 ```bash
 just db-generate
-just db-migrate
-just jobs-migrate
+just provision
 ```
 
-修改 `.env`、依赖、Vite/TypeScript/Compose 配置后，请停止当前进程并重新运行 `just launch`。`just stack-up` 是生产形态验证，不支持源码热更新；源码变化后需要重新构建镜像。
+基础设施已经运行且迁移和管理员已 provision 时，可使用 `just dev-only` 只启动宿主机进程。单独排查 API/Web/Worker 时使用对应的 `dev-api`、`dev-web` 和 `dev-worker`。修改 `.env`、依赖、Vite/TypeScript/Compose 配置后，请停止当前进程并重新运行 `just dev`。`just stack-up` 是本地/CI 的生产形态验证，不支持源码热更新；源码变化后需要重新构建镜像。
 
 开发地址：Web `http://localhost:5173`，API `http://localhost:3000`，Health `http://localhost:3000/health`，Collector health `http://localhost:13133`。
 
-按 `Ctrl+C` 停止宿主机 API/Web；默认保留基础设施。使用 `just launch-clean` 同时停止基础设施，使用 `just infra-down` 仅停止基础设施。
+按 `Ctrl+C` 停止宿主机 API、Worker 和 Web；基础设施默认继续运行。使用 `just infra-down` 停止基础设施并保留数据卷；只有明确要删除开发数据库时才运行带警告的 `just infra-reset`。
 
 ## 常用命令
 
@@ -116,8 +114,10 @@ just check
 just verify
 just container-build
 just infra-up
+just provision
 just stack-up
 just infra-down
+just infra-reset
 just otel-logs
 ```
 
@@ -128,9 +128,10 @@ just otel-logs
 
 | 命令 | 用途 |
 | --- | --- |
-| `just dev` | 启动 API、Jobs Worker 与 Web 热更新开发进程 |
-| `just launch` | 启动基础设施、执行数据库/Jobs migration 并启动 API、Worker、Web |
-| `just infra-up` | 启动 PostgreSQL 和 Collector，并执行数据库与 Jobs migration |
+| `just dev` | 检查依赖、启动基础设施、迁移与管理员 provisioning，并启动 API、Worker、Web |
+| `just dev-only` | 只启动宿主机开发进程，要求 `infra-up` 和 `provision` 已完成 |
+| `just infra-up` | 启动 PostgreSQL 和 Collector，等待健康后执行完整 provisioning |
+| `just provision` | 顺序执行 Drizzle migration、BullMQ migration 和管理员 provisioning |
 | `just check` | lint、typecheck、源码测试，不构建 `dist` |
 | `just test-watch` | Vitest 监听模式 |
 | `just verify` | `check` 后构建全部 workspace |
@@ -138,7 +139,7 @@ just otel-logs
 | `just stack-up` | 启动 PostgreSQL、Collector 和应用容器 |
 | `just stack-down` | 停止完整容器栈 |
 
-日常修改使用 `just launch` 或 `just dev`，提交前使用 `just check`，发布或容器验证使用 `just verify` 与 `just stack-up`。测试直接消费 TypeScript 源码，不依赖预先存在的 `dist`。
+日常开发使用 `just dev`，提交前使用 `just check`，发布或容器验证使用 `just verify` 与 `just stack-up`。`just launch` 等旧命令保留为兼容别名。测试直接消费 TypeScript 源码，不依赖预先存在的 `dist`。
 
 `container/Dockerfile` 会在干净环境中安装锁定依赖，只构建 API、Web 及其 workspace 依赖（不构建文档站），最终生成一个同时提供 API 和 Web 的 Node 镜像：
 
@@ -149,7 +150,7 @@ podman build --file container/Dockerfile --tag full-stack-example:local .
 镜像内只有一个 Node 进程：Hono 在 3000 端口提供 API、React SPA 和静态资源，Web 生产请求使用 same-origin 调用 API，
 无需 Nginx。容器运行时通过环境变量配置数据库、Web Origin 和 OTLP 地址。
 
-完整容器栈（PostgreSQL、Collector、应用）使用 Compose profile 启动：
+完整生产形态容器栈（PostgreSQL、Collector、migrator、admin provision、API 和 Worker）使用 Compose 启动。API 与 Worker 只使用 `app_runtime`，统一 `migrate` 服务使用 `app_migrator`；管理员初始密码只传给一次性 `admin-provision` 服务。所有应用服务共用一个镜像：
 
 ```bash
 just stack-up

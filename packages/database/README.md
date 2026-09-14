@@ -93,14 +93,14 @@ await withTenantTransaction(databaseContext.db, tenantId, async (tx) => {
 
 - `DATABASE_RUNTIME_URL`：API、Better Auth、业务 Repository 使用，只能执行允许的 DML，并受业务表 RLS 保护。
 - `DATABASE_MIGRATOR_URL`：只由 migration 使用，拥有 DDL/schema 权限。
-- `DATABASE_URL`：仅作为本地开发兼容回退，不应在生产使用超级用户连接。
+- `DATABASE_URL`：仅供 PostgreSQL 集成测试或明确的维护命令使用；API、Worker、migration 和 Drizzle Kit 都不从它回退。
 
 ```bash
 pnpm --filter @full-stack-example/database db:generate
 pnpm --filter @full-stack-example/database db:migrate
 ```
 
-迁移位于 `packages/database/migrations`，包含 Better Auth 表、持久化 rate-limit 表、Organization 状态约束、租户业务表、数据库角色和 RLS 策略。修改 schema 时必须同步审查 migration。API 启动时不执行 DDL；先运行 `just db-migrate`，Jobs 使用独立的 `just jobs-migrate`。
+迁移位于 `packages/database/migrations`，包含 Better Auth 表、持久化 rate-limit 表、Organization 状态约束、租户业务表、数据库角色和 RLS 策略。修改 schema 时必须同步审查 migration。API 启动时不执行 DDL；`just provision` 会按顺序执行 Drizzle migration、BullMQ migration 和管理员初始化，单独排查时可运行 `just db-migrate`。PostgreSQL 集成测试由 `just db-test-integration` 显式开启，不会因为 `.env` 配置了连接串而混入 `just test`。
 
 新增或修改业务表时按以下顺序操作：
 

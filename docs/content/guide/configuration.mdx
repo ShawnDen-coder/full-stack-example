@@ -11,16 +11,18 @@ description: 了解 API、Web、数据库、日志和 OpenTelemetry 的环境变
 
 | 变量 | 用途与默认行为 |
 | --- | --- |
-| `DATABASE_RUNTIME_URL` | API DML 连接；生产必填并使用受 RLS 约束的 runtime role。 |
-| `DATABASE_MIGRATOR_URL` | 独立 database/Jobs migration 进程使用的连接；生产必填并使用 migrator role。API/Worker 不执行 DDL。 |
-| `DATABASE_RUNTIME_ROLE` | Jobs migration 授予 BullMQ schema 权限的 PostgreSQL role；默认 `app_runtime`，必须与 runtime 用户一致。 |
-| `DATABASE_URL` | 当前配置解析必填；本地可作为上述两个连接的兼容回退，生产查询使用分离连接。 |
+| `DATABASE_RUNTIME_URL` | API、Worker 和管理员 provisioning 使用的连接；所有环境必须显式设置为 `app_runtime`。 |
+| `DATABASE_MIGRATOR_URL` | 仅 migration 进程使用；所有环境必须显式设置为 `app_migrator`。API/Worker 不执行 DDL。 |
+| `POSTGRES_RUNTIME_PASSWORD` / `POSTGRES_MIGRATOR_PASSWORD` | Compose 初始化固定的 `app_runtime` 和 `app_migrator` 角色；角色名不可配置。 |
+| `DATABASE_URL` | 只供 PostgreSQL 集成测试或明确的维护命令使用，应用启动不会读取或回退到该值。 |
 | `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET` | Better Auth 服务地址与至少 32 字符的密钥。 |
-| `PLATFORM_ADMIN_EMAIL` / `PLATFORM_ADMIN_NAME` / `PLATFORM_ADMIN_PASSWORD` | 必须同时设置；Compose 应用 profile 要求提供，迁移后幂等创建或提升初始运维管理员，密码至少 8 字符。 |
+| `PLATFORM_ADMIN_EMAIL` / `PLATFORM_ADMIN_NAME` / `PLATFORM_ADMIN_PASSWORD` | 仅一次性 `admin-provision` 进程使用，迁移后幂等创建或提升初始管理员；现有账号密码不变。 |
 | `API_DOCS_ENABLED` | 未设置时开发/测试开启、生产关闭；控制 `/docs` 和 `/openapi.json`。 |
 | `LOG_STREAM_ENABLED` | 默认 `false`；开启后注册管理员保护的 `/api/logs/stream`。 |
 | `LOG_STREAM_BUFFER_SIZE` / `LOG_STREAM_HEARTBEAT_MS` | 内存日志条数与 SSE 心跳间隔。 |
 | `OTEL_ENABLED` / `OTEL_EXPORTER_OTLP_ENDPOINT` | 控制遥测及 OTLP HTTP 地址。 |
 | `WEB_ORIGIN` / `VITE_API_BASE_URL` | 开发期 CORS 来源与 Web 请求的 API origin；生产采用同源。 |
 
-初始管理员密码只用于创建缺失账号；若同邮箱账号已经存在，启动流程只确保其角色为 `platform-admin`，不会覆盖已有密码。生产部署应从密钥管理系统注入凭据。
+初始管理员密码只用于一次性创建缺失账号；若同邮箱账号已经存在，provision 流程只确保其角色为 `platform-admin`，不会覆盖已有密码。生产流程应在数据库 migration 后运行独立 provisioning，并从密钥管理系统提供凭据。
+
+Compose 首次初始化 PostgreSQL data volume 时会创建固定数据库角色并设置 `POSTGRES_RUNTIME_PASSWORD`、`POSTGRES_MIGRATOR_PASSWORD`。之后修改 `.env` 不会自动更改现有 PostgreSQL 角色密码；需在数据库中更新密码并同步连接串。`just infra-reset` 会停止项目容器并删除 PostgreSQL data volume，其他命名卷会保留。

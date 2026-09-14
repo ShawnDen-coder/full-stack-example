@@ -108,9 +108,9 @@ Todo Service 只创建一次；每个请求从 `tenantPrincipal` 取得租户，
 
 ## 环境变量
 
-`BETTER_AUTH_URL`（API/Auth 地址）、`WEB_ORIGIN`（浏览器跳转地址）、`BETTER_AUTH_SECRET`（至少 32 字符）、`DATABASE_RUNTIME_URL`（运行时连接）和 `DATABASE_MIGRATOR_URL`（迁移连接）。本地可用 `DATABASE_URL` 兼容回退，生产必须配置双连接串。
+`BETTER_AUTH_URL`（API/Auth 地址）、`WEB_ORIGIN`（浏览器跳转地址）、`BETTER_AUTH_SECRET`（至少 32 字符）和 `DATABASE_RUNTIME_URL`（运行时连接）。Auth 不使用 migrator 连接；本地与生产均应显式提供 runtime URL。
 
-初始化数据库时可设置 `PLATFORM_ADMIN_EMAIL`、`PLATFORM_ADMIN_NAME` 和 `PLATFORM_ADMIN_PASSWORD`。数据库 migration 完成后 API 会创建缺失的账号，或将同邮箱账号幂等提升为 `platform-admin`；已存在账号的密码不会在 API 启动时重置。
+初始化管理员由独立的一次性 `admin-provision` 进程执行。它使用 `DATABASE_RUNTIME_URL` 与 `PLATFORM_ADMIN_EMAIL`、`PLATFORM_ADMIN_NAME`、`PLATFORM_ADMIN_PASSWORD`；缺失账号会被创建，同邮箱账号会被幂等提升为 `platform-admin`，现有密码不会被覆盖。API 长期运行时不接收这些管理员初始化凭据。
 
 ## 平台管理流程
 
@@ -142,7 +142,7 @@ pnpm --filter @full-stack-example/auth typecheck
 pnpm vitest packages/auth/tests --run
 ```
 
-设置 `DATABASE_URL` 后会额外执行真实 PostgreSQL 的用户、组织、登录和 Session 集成测试。
+PostgreSQL 集成测试不会被普通 `just test` 自动触发。配置 `DATABASE_RUNTIME_URL` 并启动数据库后，使用 `just auth-test-integration` 显式运行用户、组织、登录、Session 和管理员 provisioning 测试。
 
 ## 扩展规则
 
