@@ -5,6 +5,7 @@ import { setupSystemApp } from "@full-stack-example/system";
 import { setupTodosApp, type TenantTodoService } from "@full-stack-example/todos";
 import type { ApplyGlobalResponse } from "hono/client";
 import { setupLogStreamApp } from "../features/diagnostics/log-stream.js";
+import { setupJobsBoardApp } from "../features/jobs-admin/board.js";
 import { setupJobsAdminApp } from "../features/jobs-admin/setup.js";
 import { createHttpApp } from "./http.js";
 import { setupApiDocs } from "./openapi.js";
@@ -84,27 +85,30 @@ export function createApp(options: CreateAppOptions) {
     ? setupJobsAdminApp(withTodos, {
         policies,
         logger: options.logger,
-        webOrigin: options.http.webOrigin,
         producer: options.modules.jobs.producer,
-        board: options.modules.jobs.board,
-        ...(options.modules.jobs.boardEnabled !== undefined
-          ? { boardEnabled: options.modules.jobs.boardEnabled }
-          : {}),
-        ...(options.modules.jobs.boardBasePath
-          ? { boardBasePath: options.modules.jobs.boardBasePath }
-          : {}),
-        environment: options.environment ?? "development",
-        csrfSecret: options.csrfSecret ?? "development-bull-board-csrf-secret-change-me",
-        allowedOrigins: [options.http.webOrigin, options.http.apiOrigin ?? options.http.webOrigin],
       })
     : withTodos;
+  const withJobsBoard =
+    options.modules.jobs?.boardEnabled === true
+      ? setupJobsBoardApp(withJobs, {
+          logger: options.logger,
+          policies,
+          board: options.modules.jobs.board,
+          ...(options.modules.jobs.boardBasePath
+            ? { basePath: options.modules.jobs.boardBasePath }
+            : {}),
+          environment: options.environment ?? "development",
+          csrfSecret: options.csrfSecret ?? "development-bull-board-csrf-secret-change-me",
+          allowedOrigins: [options.http.webOrigin, options.http.apiOrigin ?? options.http.webOrigin],
+        })
+      : withJobs;
   const withLogStream = options.modules.logStream
-    ? setupLogStreamApp(withJobs, {
+    ? setupLogStreamApp(withJobsBoard, {
         stream: options.modules.logStream.stream,
         heartbeatMs: options.modules.logStream.heartbeatMs ?? 15_000,
         authorization: policies.platformAdminFresh,
       })
-    : withJobs;
+    : withJobsBoard;
   const withApiDocs = setupApiDocs(withLogStream, {
     ...options.documentation,
     auth: options.modules.auth,
