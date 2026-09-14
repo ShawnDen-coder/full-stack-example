@@ -56,7 +56,7 @@ typecheck:
     pnpm exec tsc -p tsconfig.scripts.json --noEmit
 
 test:
-    node scripts/run-tests.mjs
+    pnpm exec tsx scripts/run-tests.ts
 
 test-watch:
     pnpm exec vitest --config vitest.config.ts
@@ -119,13 +119,13 @@ jobs-worker:
     pnpm --filter @full-stack-example/api jobs:worker
 
 jobs-test-integration:
-    node scripts/run-tests.mjs --postgres packages/jobs/tests/postgres.integration.test.ts
+    pnpm exec tsx scripts/run-tests.ts --postgres jobs
 
 db-test-integration:
-    node scripts/run-tests.mjs --postgres packages/database/tests/postgres.integration.test.ts
+    pnpm exec tsx scripts/run-tests.ts --postgres database
 
 auth-test-integration:
-    node scripts/run-tests.mjs --postgres packages/auth/tests/postgres.integration.test.ts
+    pnpm exec tsx scripts/run-tests.ts --postgres auth
 
 db-studio:
     pnpm --filter @full-stack-example/database db:studio

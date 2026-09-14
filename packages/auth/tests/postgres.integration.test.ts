@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import { createSessionPrincipal } from "../src/middleware.js";
 import { createAuthModule } from "../src/server.js";
 
-const databaseUrl = process.env.DATABASE_RUNTIME_URL ?? process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_RUNTIME_URL;
 const runPostgresIntegration = process.env.RUN_POSTGRES_INTEGRATION === "true";
 const skipPostgresIntegration = !runPostgresIntegration || !databaseUrl;
 

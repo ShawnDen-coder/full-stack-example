@@ -12,8 +12,8 @@ import { exampleJob } from "../src/example.js";
 import { migrateJobs } from "../src/migration.js";
 import { createJobsWorker } from "../src/worker.js";
 
-const runtimeUrl = process.env.DATABASE_RUNTIME_URL ?? process.env.DATABASE_URL;
-const migratorUrl = process.env.DATABASE_MIGRATOR_URL ?? process.env.DATABASE_URL;
+const runtimeUrl = process.env.DATABASE_RUNTIME_URL;
+const migratorUrl = process.env.DATABASE_MIGRATOR_URL;
 const runPostgresIntegration = process.env.RUN_POSTGRES_INTEGRATION === "true";
 const skipPostgresIntegration = !runPostgresIntegration || !runtimeUrl || !migratorUrl;
 
