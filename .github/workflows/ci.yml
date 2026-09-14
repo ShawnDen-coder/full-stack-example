@@ -33,8 +33,7 @@ jobs:
     env:
       DATABASE_URL: postgres://app:app@localhost:5432/app
       DATABASE_RUNTIME_URL: postgres://app_runtime:runtime@localhost:5432/app
-      DATABASE_MIGRATOR_URL: postgres://app:app@localhost:5432/app
-      DATABASE_RUNTIME_ROLE: app_runtime
+      DATABASE_MIGRATOR_URL: postgres://app_migrator:migrator@localhost:5432/app
       BETTER_AUTH_SECRET: test-secret-that-is-at-least-32-characters-long
       BETTER_AUTH_URL: http://localhost:3000
       WEB_ORIGIN: http://localhost:5173
@@ -50,21 +49,32 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Create the runtime database role
+      - name: Create runtime and migrator database roles
         run: |
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE ROLE app_runtime LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE PASSWORD 'runtime'"
-      - name: Run database migrations
-        run: pnpm --filter @full-stack-example/database db:migrate
-      - name: Build migration entrypoint and run BullMQ migrations
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE ROLE app_migrator LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE PASSWORD 'migrator'"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "GRANT CONNECT, CREATE ON DATABASE app TO app_migrator"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "GRANT USAGE, CREATE ON SCHEMA public TO app_migrator"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "GRANT CONNECT ON DATABASE app TO app_runtime"
+      - name: Run migrations with the migrator role
         run: |
-          pnpm --filter @full-stack-example/api... build
-          pnpm --filter @full-stack-example/api jobs:migrate
+          pnpm --filter @full-stack-example/api migrate:dev
+          pnpm --filter @full-stack-example/api migrate:dev
+      - name: Provision platform administrator
+        env:
+          PLATFORM_ADMIN_EMAIL: admin@example.com
+          PLATFORM_ADMIN_NAME: Platform Admin
+          PLATFORM_ADMIN_PASSWORD: TestAdmin123!
+        run: |
+          pnpm --filter @full-stack-example/api admin:provision:dev
+          pnpm --filter @full-stack-example/api admin:provision:dev
       - run: just lint-check
       - run: just typecheck
       - run: just test
       - run: just db-test-integration
+      - run: just auth-test-integration
       - run: just jobs-test-integration
       - run: just build
       - run: pnpm docs:build
