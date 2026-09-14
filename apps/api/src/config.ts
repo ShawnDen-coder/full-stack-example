@@ -6,8 +6,7 @@ import { z } from "zod";
 const workspaceRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const logLevels = ["trace", "debug", "info", "warn", "error", "fatal", "silent"] as const;
 const jobsWorkerEnvironmentSchema = z.object({
-  DATABASE_URL: z.url().optional(),
-  DATABASE_RUNTIME_URL: z.url().optional(),
+  DATABASE_RUNTIME_URL: z.url(),
   JOBS_POOL_MAX: z.coerce.number().int().min(2).max(100).default(10),
   JOBS_WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(5),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -15,8 +14,7 @@ const jobsWorkerEnvironmentSchema = z.object({
   LOG_PRETTY: z.enum(["true", "false"]).default("true"),
 });
 const environmentSchema = z.object({
-  DATABASE_URL: z.url().optional(),
-  DATABASE_RUNTIME_URL: z.url().optional(),
+  DATABASE_RUNTIME_URL: z.url(),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
   HOST: z.string().default("0.0.0.0"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
@@ -35,9 +33,6 @@ const environmentSchema = z.object({
   LOG_STREAM_BUFFER_SIZE: z.coerce.number().int().min(1).max(10_000).default(1000),
   LOG_STREAM_HEARTBEAT_MS: z.coerce.number().int().min(1000).default(15_000),
   API_DOCS_ENABLED: z.enum(["true", "false"]).optional(),
-  PLATFORM_ADMIN_EMAIL: z.email().optional(),
-  PLATFORM_ADMIN_NAME: z.string().min(1).optional(),
-  PLATFORM_ADMIN_PASSWORD: z.string().min(8).optional(),
   JOBS_ENABLED: z.enum(["true", "false"]).default("true"),
   JOBS_POOL_MAX: z.coerce.number().int().min(2).max(100).default(10),
   JOBS_WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(100).default(5),
@@ -69,11 +64,6 @@ export interface ApiConfig {
   readonly logStreamBufferSize: number;
   readonly logStreamHeartbeatMs: number;
   readonly apiDocsEnabled: boolean;
-  readonly platformAdmin?: {
-    readonly email: string;
-    readonly name: string;
-    readonly password: string;
-  };
   readonly jobsEnabled: boolean;
   readonly jobsPoolMax: number;
   readonly jobsWorkerConcurrency: number;
@@ -84,22 +74,6 @@ export interface ApiConfig {
 
 export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiConfig {
   const parsed = environmentSchema.parse(environment);
-  const databaseRuntimeUrl = parsed.DATABASE_RUNTIME_URL ?? parsed.DATABASE_URL;
-  if (!databaseRuntimeUrl) throw new Error("DATABASE_RUNTIME_URL or DATABASE_URL is required");
-  if (parsed.NODE_ENV === "production" && !parsed.DATABASE_RUNTIME_URL)
-    throw new Error("DATABASE_RUNTIME_URL is required in production");
-  const adminBootstrap = [
-    parsed.PLATFORM_ADMIN_EMAIL,
-    parsed.PLATFORM_ADMIN_NAME,
-    parsed.PLATFORM_ADMIN_PASSWORD,
-  ];
-  if (
-    adminBootstrap.some((value) => value !== undefined) &&
-    adminBootstrap.some((value) => value === undefined)
-  )
-    throw new Error(
-      "PLATFORM_ADMIN_EMAIL, PLATFORM_ADMIN_NAME and PLATFORM_ADMIN_PASSWORD must be configured together",
-    );
   if (
     parsed.BULL_BOARD_ENABLED === "true" &&
     parsed.NODE_ENV === "production" &&
@@ -109,7 +83,7 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
   const defaultLevel: LogLevel =
     parsed.NODE_ENV === "production" ? "info" : parsed.NODE_ENV === "test" ? "silent" : "debug";
   return {
-    databaseRuntimeUrl,
+    databaseRuntimeUrl: parsed.DATABASE_RUNTIME_URL,
     databasePoolMax: parsed.DATABASE_POOL_MAX,
     host: parsed.HOST,
     port: parsed.PORT,
@@ -137,15 +111,6 @@ export function parseConfig(environment: NodeJS.ProcessEnv = process.env): ApiCo
       parsed.API_DOCS_ENABLED === undefined
         ? parsed.NODE_ENV !== "production"
         : parsed.API_DOCS_ENABLED === "true",
-    ...(parsed.PLATFORM_ADMIN_EMAIL && parsed.PLATFORM_ADMIN_NAME && parsed.PLATFORM_ADMIN_PASSWORD
-      ? {
-          platformAdmin: {
-            email: parsed.PLATFORM_ADMIN_EMAIL,
-            name: parsed.PLATFORM_ADMIN_NAME,
-            password: parsed.PLATFORM_ADMIN_PASSWORD,
-          },
-        }
-      : {}),
     jobsEnabled: parsed.JOBS_ENABLED === "true",
     jobsPoolMax: parsed.JOBS_POOL_MAX,
     jobsWorkerConcurrency: parsed.JOBS_WORKER_CONCURRENCY,
@@ -169,13 +134,10 @@ export function parseJobsWorkerConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): JobsWorkerConfig {
   const parsed = jobsWorkerEnvironmentSchema.parse(environment);
-  const databaseUrl = parsed.DATABASE_RUNTIME_URL ?? parsed.DATABASE_URL;
-  if (!databaseUrl)
-    throw new Error("DATABASE_RUNTIME_URL or DATABASE_URL is required for the jobs worker");
   const defaultLevel: LogLevel =
     parsed.NODE_ENV === "production" ? "info" : parsed.NODE_ENV === "test" ? "silent" : "debug";
   return {
-    databaseUrl,
+    databaseUrl: parsed.DATABASE_RUNTIME_URL,
     poolMax: parsed.JOBS_POOL_MAX,
     concurrency: parsed.JOBS_WORKER_CONCURRENCY,
     environment: parsed.NODE_ENV,
@@ -187,19 +149,68 @@ export function parseJobsWorkerConfig(
 export function parseMigrationConfig(environment: NodeJS.ProcessEnv = process.env): {
   readonly databaseUrl: string;
 } {
-  const databaseUrl = z.url().parse(environment.DATABASE_MIGRATOR_URL ?? environment.DATABASE_URL);
+  const value = environment.DATABASE_MIGRATOR_URL;
+  if (!value) throw new Error("DATABASE_MIGRATOR_URL is required for migrations");
+  const databaseUrl = z.url().parse(value);
   return { databaseUrl };
 }
 
 export function parseJobsMigrationConfig(environment: NodeJS.ProcessEnv = process.env): {
   readonly databaseUrl: string;
-  readonly runtimeRole: string;
 } {
   const { databaseUrl } = parseMigrationConfig(environment);
-  const runtimeRole = z
-    .string()
-    .regex(/^[a-z_][a-z0-9_]*$/i)
-    .default("app_runtime")
-    .parse(environment.DATABASE_RUNTIME_ROLE);
-  return { databaseUrl, runtimeRole };
+  return { databaseUrl };
+}
+
+export interface AdminProvisionConfig {
+  readonly databaseRuntimeUrl: string;
+  readonly databasePoolMax: number;
+  readonly betterAuthSecret: string;
+  readonly betterAuthUrl: string;
+  readonly webOrigin: string;
+  readonly environment: Environment;
+  readonly logLevel: LogLevel;
+  readonly pretty: boolean;
+  readonly platformAdmin: {
+    readonly email: string;
+    readonly name: string;
+    readonly password: string;
+  };
+}
+
+export function parseAdminProvisionConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): AdminProvisionConfig {
+  const parsed = z
+    .object({
+      DATABASE_RUNTIME_URL: z.url(),
+      DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+      BETTER_AUTH_SECRET: z.string().min(32),
+      BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
+      WEB_ORIGIN: z.url().default("http://localhost:5173"),
+      NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+      LOG_LEVEL: z.enum(logLevels).optional(),
+      LOG_PRETTY: z.enum(["true", "false"]).default("true"),
+      PLATFORM_ADMIN_EMAIL: z.email(),
+      PLATFORM_ADMIN_NAME: z.string().min(1),
+      PLATFORM_ADMIN_PASSWORD: z.string().min(8),
+    })
+    .parse(environment);
+  const defaultLevel: LogLevel =
+    parsed.NODE_ENV === "production" ? "info" : parsed.NODE_ENV === "test" ? "silent" : "debug";
+  return {
+    databaseRuntimeUrl: parsed.DATABASE_RUNTIME_URL,
+    databasePoolMax: parsed.DATABASE_POOL_MAX,
+    betterAuthSecret: parsed.BETTER_AUTH_SECRET,
+    betterAuthUrl: parsed.BETTER_AUTH_URL,
+    webOrigin: parsed.WEB_ORIGIN,
+    environment: parsed.NODE_ENV,
+    logLevel: parsed.LOG_LEVEL ?? defaultLevel,
+    pretty: parsed.LOG_PRETTY === "true" && parsed.NODE_ENV !== "production",
+    platformAdmin: {
+      email: parsed.PLATFORM_ADMIN_EMAIL,
+      name: parsed.PLATFORM_ADMIN_NAME,
+      password: parsed.PLATFORM_ADMIN_PASSWORD,
+    },
+  };
 }
