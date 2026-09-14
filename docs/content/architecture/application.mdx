@@ -5,7 +5,7 @@ description: 说明 API 组合根、Web 应用和共享 workspace 包之间的�
 
 # 应用组合与 workspace 边界
 
-`apps/api/src/app/create-app.ts` 负责跨切面 HTTP policy 和功能模块组合；API workspace 的进程入口位于 `apps/api/src/entrypoints/`，运行资源生命周期位于 `apps/api/src/runtime/`。`packages/todos`、`packages/system` 等包只接收宿主 app 与显式依赖。
+`apps/api/src/app/create-app.ts` 负责命名 HTTP policy 和功能模块组合；API workspace 的进程入口位于 `apps/api/src/entrypoints/`，运行资源生命周期位于 `apps/api/src/runtime/`。`packages/todos`、`packages/system` 等包只接收宿主 app 与显式依赖。
 
 ## 依赖方向
 
@@ -28,11 +28,11 @@ API（唯一组合根）
 1. 由统一 migrator 进程使用 `DATABASE_MIGRATOR_URL` 依次执行 Drizzle 与 BullMQ migration；BullMQ schema 权限固定授予 `app_runtime`。
 2. 一次性 `admin-provision` 进程使用 runtime 连接创建或提升平台管理员，现有密码不会被覆盖。
 3. API 和 Worker 使用 `DATABASE_RUNTIME_URL`；它们不持有 migrator 凭据或管理员初始密码。
-4. 创建 Todo Service 和健康检查依赖，在 API 宿主挂载认证与平台管理路由。
-5. 在组合根声明业务权限，将授权 middleware 注入 Todos 和 Jobs 管理入口。
-6. 复杂模块内部用 `createHandlers()` 组合描述、校验、授权和 handler，再由 `setupXxxApp()` 使用 `app.route()` 挂载相对路径子应用。
-7. 使用每个 setup 函数的返回值继续组合，保留 Hono 的精确 `AppType`。
-8. System、Todos 等模块导出各自的 Hono 子路由类型；Web 按需创建独立 RPC client，并使用 Auth Client 访问认证端点，不复制 API schema。
+4. 创建 Todo Service 和健康检查依赖，并由组合根创建具名租户、管理员安全策略。
+5. 将 Auth、Todos、Jobs Admin、Diagnostics 的 setup 接到独立 `/api` 子应用；根应用统一挂载 `/api` 前缀。
+6. System 与 Bull Board 接入根应用；OpenAPI 在业务路由之后、Web fallback 之前安装。
+7. 复杂模块内部用 `createHandlers()` 组合描述、校验、授权和 handler，再由 `setupXxxApp()` 使用 `app.route()` 挂载相对路径子应用。
+8. 使用每个 setup 函数的返回值继续组合，保留 Hono 的精确 `AppType`。Web 按需创建 System/Todos 子路由 RPC client，并使用 Auth Client 访问认证端点，不复制 API schema。
 
 ## 边界原则
 

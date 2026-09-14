@@ -31,7 +31,7 @@ description: 说明 apps、packages、container、scripts 与 docs 的所有权�
 | Logging | LogTape 和进程级输出能力 | Auth、Todos、Jobs 等业务实现 |
 | Database | Drizzle、PostgreSQL、schema 和 migration | Auth、Todos、API 等上层模块 |
 
-依赖总体从应用流向能力包，再流向基础设施。Auth contracts 可供业务包使用类型，但不把认证实现或数据库访问反向塞进业务层。API 是唯一服务端 HTTP 组合根；子模块通过具体的 `setupXxxApp(app, options)` 注入宿主并返回链式 Hono app。
+依赖总体从应用流向能力包，再流向基础设施。Auth contracts 可供业务包使用类型，但不把认证实现或数据库访问反向塞进业务层。API 是唯一服务端 HTTP 组合根；子模块通过具体的 `setupXxxApp(app, options)` 注入宿主并返回链式 Hono app。宿主统一管理 `/api` 前缀，功能 setup 只管理自身资源路径；根级 System、Bull Board、OpenAPI 与静态资源也由组合根显式排序。
 
 ## 新代码放在哪里
 
