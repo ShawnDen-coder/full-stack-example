@@ -28,18 +28,14 @@ export function WorkspaceForm({
     >
       <fieldset className="grid gap-4">
         <legend className="text-base font-medium">创建工作区</legend>
-        <Label htmlFor="workspace-name">
-          名称
-        </Label>
+        <Label htmlFor="workspace-name">名称</Label>
         <Input
           autoComplete="organization"
           disabled={disabled}
           id="workspace-name"
           {...form.register("name", { required: "请输入名称" })}
         />
-        <Label htmlFor="workspace-slug">
-          标识
-        </Label>
+        <Label htmlFor="workspace-slug">标识</Label>
         <Input
           autoComplete="off"
           disabled={disabled}

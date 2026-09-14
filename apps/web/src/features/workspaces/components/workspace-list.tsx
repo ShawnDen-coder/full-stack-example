@@ -13,7 +13,8 @@ export function WorkspaceList({
   readonly onSelect: (organizationId: string) => void;
   readonly organizations: readonly WorkspaceListItem[];
 }) {
-  if (organizations.length === 0) return <p className="text-sm text-muted-foreground">还没有工作区。</p>;
+  if (organizations.length === 0)
+    return <p className="text-sm text-muted-foreground">还没有工作区。</p>;
 
   return (
     <ul className="divide-y divide-border rounded-lg border bg-background">
@@ -38,4 +39,5 @@ export function WorkspaceList({
     </ul>
   );
 }
+
 import { Button } from "../../../components/ui/button.js";

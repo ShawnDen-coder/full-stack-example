@@ -1,3 +1,6 @@
+import { Button } from "../../../components/ui/button.js";
+import { Checkbox } from "../../../components/ui/checkbox.js";
+
 export type TodoListItem = {
   readonly id: number;
   readonly title: string;
@@ -23,16 +26,18 @@ export function TodoList({
     <ul className="divide-y divide-border rounded-lg border bg-background">
       {todos.map((todo) => (
         <li className="flex items-center gap-3 p-4" key={todo.id}>
-          <input
+          <Checkbox
             aria-label={`完成 ${todo.title}`}
             checked={todo.completed}
-            className="size-4 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             disabled={disabled}
-            onChange={(event) => onToggle(todo, event.target.checked)}
-            type="checkbox"
+            onCheckedChange={(checked) => onToggle(todo, checked)}
           />
           <span
-            className={todo.completed ? "min-w-0 flex-1 break-words text-muted-foreground line-through" : "min-w-0 flex-1 break-words"}
+            className={
+              todo.completed
+                ? "min-w-0 flex-1 break-words text-muted-foreground line-through"
+                : "min-w-0 flex-1 break-words"
+            }
           >
             {todo.title}
           </span>
@@ -53,4 +58,3 @@ export function TodoList({
     </ul>
   );
 }
-import { Button } from "../../../components/ui/button.js";

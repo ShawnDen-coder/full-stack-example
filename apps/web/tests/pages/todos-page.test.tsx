@@ -117,9 +117,7 @@ describe("TodosPage", () => {
     renderTodos();
     const checkbox = await screen.findByRole("checkbox", { name: "完成 Finish task" });
     fireEvent.click(checkbox);
-    await waitFor(() =>
-      expect(checkbox instanceof HTMLInputElement && checkbox.checked).toBe(true),
-    );
+    await waitFor(() => expect(checkbox.getAttribute("aria-checked")).toBe("true"));
     fireEvent.click(screen.getByRole("button", { name: "删除 Finish task" }));
     expect(await screen.findByText("还没有待办事项。")).toBeTruthy();
   });

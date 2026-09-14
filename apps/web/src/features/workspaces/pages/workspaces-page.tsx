@@ -3,7 +3,8 @@ import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageLoading } from "../../../components/feedback/page-loading.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card.js";
-import { ThemeSelect } from "../../../app/theme-provider.js";
+import { Separator } from "../../../components/ui/separator.js";
+import { Skeleton } from "../../../components/ui/skeleton.js";
 import { authClient } from "../../auth/client.js";
 import { WorkspaceForm } from "../components/workspace-form.js";
 import { WorkspaceList } from "../components/workspace-list.js";
@@ -51,9 +52,11 @@ export function WorkspacesPage({ returnTo }: { readonly returnTo: string }) {
     await router.navigate({ to: returnTo });
   }
   return (
-    <main className="relative min-h-screen bg-background p-4 text-foreground sm:p-10">
-      <ThemeSelect className="absolute right-4 top-4 sm:right-8 sm:top-6" />
-      <Card className="mx-auto mt-14 max-w-xl">
+    <main
+      id="main-content"
+      className="min-h-[calc(100vh-4rem)] bg-muted/40 px-4 py-8 text-foreground sm:px-6"
+    >
+      <Card className="mx-auto max-w-xl">
         <CardHeader>
           <div>
             <CardTitle>选择工作区</CardTitle>
@@ -62,18 +65,21 @@ export function WorkspacesPage({ returnTo }: { readonly returnTo: string }) {
         </CardHeader>
         <CardContent className="grid gap-5">
           {organizations.isPending ? (
-            <span
-              className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent motion-reduce:animate-none"
-              role="status"
-              aria-label="正在加载工作区列表"
-            />
+            <div aria-label="正在加载工作区列表" className="grid gap-3" role="status">
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+            </div>
           ) : null}
           <WorkspaceList
             disabled={submitting}
             onSelect={(id) => void activate(id)}
             organizations={organizations.data ?? []}
           />
-          <div className="flex items-center gap-3 text-xs text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">或创建一个工作区</div>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <Separator className="flex-1" />
+            <span>或创建一个工作区</span>
+            <Separator className="flex-1" />
+          </div>
           <WorkspaceForm
             disabled={submitting}
             {...(error ? { error } : {})}
