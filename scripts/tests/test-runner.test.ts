@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTestRunPlan } from "../../../scripts/test-runner.js";
+import { createTestRunPlan } from "../test-runner.js";
 
 const databaseEnvironment = {
   DATABASE_URL: "postgres://maintenance:secret@localhost:5432/app",

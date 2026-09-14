@@ -37,8 +37,11 @@ description: 说明 apps、packages、container、scripts 与 docs 的所有权�
 
 | 变化 | 放置位置 | 示例 |
 | --- | --- | --- |
-| HTTP 中间件、路由挂载顺序、跨模块权限策略 | `apps/api/src/app.ts` | CORS、request ID、Todos 权限 policy |
-| 数据库、Auth、Jobs 等进程资源的创建/关闭 | `apps/api/src/bootstrap.ts` 或专用启动入口 | API bootstrap、`migrate.ts`、`admin-provision.ts` |
+| HTTP 中间件、路由挂载顺序、跨模块权限策略 | `apps/api/src/app/` | Hono composition、CORS、request ID |
+| API 自有 HTTP 功能 | `apps/api/src/features/` | Jobs Admin 与 Diagnostics Log Stream |
+| 进程配置 | `apps/api/src/config/` | API、Worker、migration、admin provision 各自解析配置 |
+| 进程资源的创建/关闭及运行基础设施 | `apps/api/src/runtime/` | API server、环境加载、listen、telemetry |
+| 可执行进程的顶层副作用 | `apps/api/src/entrypoints/` | API、Worker、migration、admin provision |
 | 可复用业务规则和输入合同 | `packages/<domain>` | Todos schema、service、repository |
 | 表结构、RLS、角色权限和正式迁移 | `packages/database` | Drizzle schema 与 SQL migration |
 | 业务 Job 定义 | 拥有该业务的领域模块；当前示例在 Jobs 合同入口 | Zod 输入、processor、依赖工厂 |
@@ -54,7 +57,7 @@ description: 说明 apps、packages、container、scripts 与 docs 的所有权�
 
 ```text
 apps/
-  api/src/       HTTP composition、bootstrap、server、migration/provision commands
+  api/src/       app、features、config、runtime、entrypoints
   web/src/       routes、features、components、lib
 packages/
   <module>/src/  module public entry、contracts、implementation、tests
@@ -62,6 +65,8 @@ container/       Dockerfiles、Compose、PostgreSQL initialization
 scripts/         launch/test/documentation tooling
 docs/content/    hand-authored architecture and guide pages
 ```
+
+API workspace 同时容纳 API、Worker、migration 和 admin provision 进程，以共享依赖与单一应用镜像；进程边界由 `entrypoints/` 和各自的 config 明确表达。`app/` 是 HTTP 组合根，`features/` 只放由 API 拥有的 HTTP 功能。业务规则仍归 `packages/<domain>`，队列 adapter 归 Jobs package。
 
 公共入口只暴露消费者需要的能力。Auth 使用 `./server` 和 `./client` 分离运行环境；Jobs 使用 `./server`、`./worker`、`./migration` 分离 adapter；Web 只导入 System/Todos 等功能自己的 route type。不要从模块根入口泄漏 `pg`、BullMQ 或服务端实现类型，也不要为了内部文件建立大量 export subpath。
 

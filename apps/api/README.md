@@ -1,6 +1,17 @@
 # API 应用
 
-`@full-stack-example/api` 是 Hono 宿主，也是唯一组合根；中间件、功能路由、OpenAPI 和生产 Web 静态资源都在 `src/app.ts` 组装。
+`@full-stack-example/api` 是服务端 HTTP 宿主和四类同镜像进程的 workspace：API server、Jobs Worker、migration、admin provisioning。它是唯一 Hono 组合根，但不是领域逻辑的归属点。
+
+```text
+src/
+  app/          Hono 组合、全局 HTTP middleware、OpenAPI、Web assets
+  features/     API 自有 HTTP 功能（Jobs Admin、Diagnostics）
+  config/       按 API、Worker、migration、provision 进程拆分的配置
+  runtime/      API 资源生命周期、环境加载、listen、telemetry
+  entrypoints/  加载环境并启动各进程的薄入口
+  index.ts      workspace 公共 API
+  contract.ts   仅供类型消费的 AppType 入口
+```
 
 ## 职责边界
 
@@ -18,12 +29,12 @@ API 不持有数据库 schema 或 Todo 业务规则，这些能力通过包接�
 
 - `createApp(options)` 创建完整 Hono 应用。
 - `AppType` 是完整 API 的 RPC 类型合同；Web 按需使用 System/Todos 子路由类型，避免在消费端实例化整棵路由类型。
-- `src/bootstrap.ts` 创建运行时依赖，`src/server.ts` 启动 Node 进程。
+- `src/app/create-app.ts` 创建组合后的 Hono 应用，`src/runtime/api-server.ts` 创建运行依赖，`src/entrypoints/api.ts` 启动 Node 进程。
 
 ## 依赖关系
 
 ```text
-应用 server → API bootstrap → Auth/Database/Jobs/Logging/业务模块
+entrypoints/api → runtime/api-server → app/create-app → Auth/Database/Jobs/Logging/业务模块
 API → Todos、System、可选 Jobs 管理路由
 ```
 
@@ -83,7 +94,7 @@ pnpm --filter @full-stack-example/api build
 
 ## 扩展规则
 
-新功能通过 `setupXxxApp(app, options)` 接入，并继续使用返回的 Hono app。保持 `apps/api/src/app.ts` 为显式组合根，保留推导的 `AppType`，不要引入通用模块注册器。
+新领域能力优先放在对应 workspace package；只有 API 自己拥有的 HTTP 流程才放进 `features/`。新路由通过 `setupXxxApp(app, options)` 接入。保持 `apps/api/src/app/create-app.ts` 为显式组合根，保留推导的 `AppType`，不要引入通用模块注册器。
 
 复杂模块使用相对路径子应用和 `createFactory().createHandlers()`：
 
