@@ -1,12 +1,12 @@
 services:
   app:
     profiles: [application]
+    image: full-stack-example:local
     build:
       context: ..
       dockerfile: container/Dockerfile
     environment:
-      DATABASE_URL: postgres://${POSTGRES_RUNTIME_USER:?POSTGRES_RUNTIME_USER is required}:${POSTGRES_RUNTIME_PASSWORD:?POSTGRES_RUNTIME_PASSWORD is required}@postgres:5432/app
-      DATABASE_RUNTIME_URL: postgres://${POSTGRES_RUNTIME_USER:?POSTGRES_RUNTIME_USER is required}:${POSTGRES_RUNTIME_PASSWORD:?POSTGRES_RUNTIME_PASSWORD is required}@postgres:5432/app
+      DATABASE_RUNTIME_URL: postgres://app_runtime:${POSTGRES_RUNTIME_PASSWORD:?POSTGRES_RUNTIME_PASSWORD is required}@postgres:5432/app
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
       HOST: 0.0.0.0
       PORT: 3000
@@ -15,9 +15,6 @@ services:
       NODE_ENV: production
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
       BETTER_AUTH_URL: http://localhost:3000
-      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:?PLATFORM_ADMIN_EMAIL is required}
-      PLATFORM_ADMIN_NAME: ${PLATFORM_ADMIN_NAME:?PLATFORM_ADMIN_NAME is required}
-      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:?PLATFORM_ADMIN_PASSWORD is required}
       LOG_LEVEL: info
       LOG_PRETTY: "false"
       LOG_FILE: /app/logs/api.jsonl
@@ -36,65 +33,68 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      database-migrate:
+      migrate:
+        condition: service_completed_successfully
+      admin-provision:
         condition: service_completed_successfully
       otel-collector-health:
-        condition: service_completed_successfully
-      jobs-migrate:
-        condition: service_completed_successfully
+        condition: service_healthy
     restart: unless-stopped
-
-  database-migrate:
-    profiles: [application]
-    build:
-      context: ..
-      dockerfile: container/Dockerfile
-    command: ["node", "dist/database-migrate.js"]
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_MIGRATOR_USER:?POSTGRES_MIGRATOR_USER is required}:${POSTGRES_MIGRATOR_PASSWORD:?POSTGRES_MIGRATOR_PASSWORD is required}@postgres:5432/app
-      DATABASE_MIGRATOR_URL: postgres://${POSTGRES_MIGRATOR_USER:?POSTGRES_MIGRATOR_USER is required}:${POSTGRES_MIGRATOR_PASSWORD:?POSTGRES_MIGRATOR_PASSWORD is required}@postgres:5432/app
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: "no"
-
-  jobs-migrate:
-    profiles: [application]
-    build:
-      context: ..
-      dockerfile: container/Dockerfile
-    command: ["node", "dist/jobs-migrate.js"]
-    environment:
-      DATABASE_RUNTIME_URL: postgres://${POSTGRES_RUNTIME_USER:?POSTGRES_RUNTIME_USER is required}:${POSTGRES_RUNTIME_PASSWORD:?POSTGRES_RUNTIME_PASSWORD is required}@postgres:5432/app
-      DATABASE_MIGRATOR_URL: postgres://${POSTGRES_MIGRATOR_USER:?POSTGRES_MIGRATOR_USER is required}:${POSTGRES_MIGRATOR_PASSWORD:?POSTGRES_MIGRATOR_PASSWORD is required}@postgres:5432/app
-      DATABASE_URL: postgres://${POSTGRES_MIGRATOR_USER:?POSTGRES_MIGRATOR_USER is required}:${POSTGRES_MIGRATOR_PASSWORD:?POSTGRES_MIGRATOR_PASSWORD is required}@postgres:5432/app
-      DATABASE_RUNTIME_ROLE: ${DATABASE_RUNTIME_ROLE:-app_runtime}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-replace-with-a-32-character-minimum-secret}
-      JOBS_ENABLED: "true"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      database-migrate:
-        condition: service_completed_successfully
-    restart: "no"
 
   jobs-worker:
     profiles: [application]
-    build:
-      context: ..
-      dockerfile: container/Dockerfile
+    image: full-stack-example:local
     command: ["node", "dist/jobs-worker.js"]
     environment:
-      DATABASE_RUNTIME_URL: postgres://${POSTGRES_RUNTIME_USER:?POSTGRES_RUNTIME_USER is required}:${POSTGRES_RUNTIME_PASSWORD:?POSTGRES_RUNTIME_PASSWORD is required}@postgres:5432/app
-      DATABASE_URL: postgres://${POSTGRES_RUNTIME_USER:?POSTGRES_RUNTIME_USER is required}:${POSTGRES_RUNTIME_PASSWORD:?POSTGRES_RUNTIME_PASSWORD is required}@postgres:5432/app
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-replace-with-a-32-character-minimum-secret}
-      JOBS_ENABLED: "true"
+      DATABASE_RUNTIME_URL: postgres://app_runtime:${POSTGRES_RUNTIME_PASSWORD:?POSTGRES_RUNTIME_PASSWORD is required}@postgres:5432/app
+      JOBS_POOL_MAX: ${JOBS_POOL_MAX:-10}
       JOBS_WORKER_CONCURRENCY: ${JOBS_WORKER_CONCURRENCY:-5}
+      NODE_ENV: production
+      LOG_LEVEL: info
+      LOG_PRETTY: "false"
     depends_on:
-      jobs-migrate:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      admin-provision:
         condition: service_completed_successfully
     stop_grace_period: 60s
     restart: unless-stopped
+
+  migrate:
+    profiles: [application]
+    image: full-stack-example:local
+    command: ["node", "dist/migrate.js"]
+    environment:
+      DATABASE_MIGRATOR_URL: postgres://app_migrator:${POSTGRES_MIGRATOR_PASSWORD:?POSTGRES_MIGRATOR_PASSWORD is required}@postgres:5432/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  admin-provision:
+    profiles: [application]
+    image: full-stack-example:local
+    command: ["node", "dist/admin-provision.js"]
+    environment:
+      DATABASE_RUNTIME_URL: postgres://app_runtime:${POSTGRES_RUNTIME_PASSWORD:?POSTGRES_RUNTIME_PASSWORD is required}@postgres:5432/app
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+      BETTER_AUTH_URL: http://localhost:3000
+      WEB_ORIGIN: http://localhost:3000
+      NODE_ENV: production
+      LOG_LEVEL: info
+      LOG_PRETTY: "false"
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:?PLATFORM_ADMIN_EMAIL is required}
+      PLATFORM_ADMIN_NAME: ${PLATFORM_ADMIN_NAME:?PLATFORM_ADMIN_NAME is required}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:?PLATFORM_ADMIN_PASSWORD is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
 
   otel-collector:
     image: otel/opentelemetry-collector:0.121.0
@@ -136,21 +136,15 @@ services:
       - "13133:13133"
 
   otel-collector-health:
-    profiles: [application]
     image: curlimages/curl:8.12.1
-    command:
-      - --fail
-      - --silent
-      - --show-error
-      - --retry
-      - "30"
-      - --retry-connrefused
-      - --retry-delay
-      - "2"
-      - http://otel-collector:13133/
+    command: ["sh", "-c", "while true; do sleep 3600; done"]
     depends_on:
       - otel-collector
-    restart: "no"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://otel-collector:13133/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   postgres:
     build:
@@ -161,9 +155,7 @@ services:
       POSTGRES_DB: app
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
-      POSTGRES_RUNTIME_USER: ${POSTGRES_RUNTIME_USER:?POSTGRES_RUNTIME_USER is required}
       POSTGRES_RUNTIME_PASSWORD: ${POSTGRES_RUNTIME_PASSWORD:?POSTGRES_RUNTIME_PASSWORD is required}
-      POSTGRES_MIGRATOR_USER: ${POSTGRES_MIGRATOR_USER:?POSTGRES_MIGRATOR_USER is required}
       POSTGRES_MIGRATOR_PASSWORD: ${POSTGRES_MIGRATOR_PASSWORD:?POSTGRES_MIGRATOR_PASSWORD is required}
     ports:
       - "5432:5432"

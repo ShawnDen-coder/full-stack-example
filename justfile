@@ -10,7 +10,7 @@ init:
     pnpm install
 
 launch:
-    pnpm exec tsx scripts/launch.ts
+    just dev
 
 launch-clean:
     pnpm exec tsx scripts/launch.ts --stop-infra-on-exit
@@ -19,16 +19,22 @@ launch-doctor:
     pnpm exec tsx scripts/launch.ts --doctor
 
 dev:
-    pnpm exec concurrently --kill-others-on-fail --names api,worker,web "pnpm --filter @full-stack-example/api dev" "pnpm --filter @full-stack-example/api jobs:worker:dev" "pnpm --filter @full-stack-example/web dev"
+    pnpm exec tsx scripts/launch.ts
+
+dev-only:
+    pnpm exec tsx scripts/dev-processes.ts
 
 dev-web:
-    pnpm --filter @full-stack-example/web dev
+    node scripts/run-dev-component.mjs web
 
 routes-generate:
     pnpm --filter @full-stack-example/web routes:generate
 
 dev-api:
-    pnpm --filter @full-stack-example/api dev
+    node scripts/run-dev-component.mjs api
+
+dev-worker:
+    node scripts/run-dev-component.mjs worker
 
 docs-generate:
     pnpm docs:generate
@@ -50,7 +56,7 @@ typecheck:
     pnpm exec tsc -p tsconfig.scripts.json --noEmit
 
 test:
-    pnpm exec vitest run --config vitest.config.ts
+    node scripts/run-tests.mjs
 
 test-watch:
     pnpm exec vitest --config vitest.config.ts
@@ -99,28 +105,42 @@ db-migrate:
     pnpm --filter @full-stack-example/database db:migrate
 
 jobs-migrate:
-    pnpm --filter @full-stack-example/api... build
-    pnpm --filter @full-stack-example/api jobs:migrate
+    pnpm --filter @full-stack-example/jobs db:migrate
+
+admin-provision:
+    pnpm --filter @full-stack-example/api admin:provision:dev
+
+provision:
+    just db-migrate
+    just jobs-migrate
+    just admin-provision
 
 jobs-worker:
     pnpm --filter @full-stack-example/api jobs:worker
 
 jobs-test-integration:
-    pnpm vitest packages/jobs/tests/postgres.integration.test.ts --run
+    node scripts/run-tests.mjs --postgres packages/jobs/tests/postgres.integration.test.ts
 
 db-test-integration:
-    pnpm vitest packages/database/tests/postgres.integration.test.ts --run
+    node scripts/run-tests.mjs --postgres packages/database/tests/postgres.integration.test.ts
+
+auth-test-integration:
+    node scripts/run-tests.mjs --postgres packages/auth/tests/postgres.integration.test.ts
 
 db-studio:
     pnpm --filter @full-stack-example/database db:studio
 
 infra-up:
-    podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml up -d --build --wait --wait-timeout 60
-    just db-migrate
-    just jobs-migrate
+    podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml up -d --build --wait --wait-timeout 60 postgres otel-collector-health
+    just provision
 
 infra-down:
     podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml down
+
+infra-reset:
+    @echo "WARNING: deleting the full-stack-example PostgreSQL data volume. This cannot be undone."
+    podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml down
+    podman volume rm {{compose-project}}_postgres-data
 
 infra-logs service="postgres":
     podman compose --project-name {{compose-project}} --env-file .env -f container/compose.yaml logs -f {{service}}
