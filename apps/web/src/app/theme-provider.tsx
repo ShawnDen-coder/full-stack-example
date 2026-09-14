@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
 import type { PropsWithChildren } from "react";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 export type ThemeMode = "light" | "dark" | "system";
 const STORAGE_KEY = "ui-theme";
@@ -10,15 +9,22 @@ function getStoredTheme(): ThemeMode {
   return value === "light" || value === "dark" || value === "system" ? value : "system";
 }
 
-export function ThemeProvider({ children }: PropsWithChildren) {
-  const [theme, setTheme] = useState<ThemeMode>("system");
+export function ThemeProvider({
+  children,
+  initialTheme = "system",
+  persist = true,
+}: PropsWithChildren<{
+  readonly initialTheme?: ThemeMode;
+  readonly persist?: boolean;
+}>) {
+  const [theme, setTheme] = useState<ThemeMode>(initialTheme);
 
-  useEffect(() => setTheme(getStoredTheme()), []);
+  useEffect(() => setTheme(persist ? getStoredTheme() : initialTheme), [initialTheme, persist]);
 
   useEffect(() => {
     const media = globalThis.matchMedia?.("(prefers-color-scheme: dark)");
     const apply = () => {
-      const isDark = theme === "dark" || (theme === "system" && media.matches);
+      const isDark = theme === "dark" || (theme === "system" && (media?.matches ?? false));
       document.documentElement.classList.toggle("dark", isDark);
       document.documentElement.style.colorScheme = isDark ? "dark" : "light";
     };
@@ -29,13 +35,11 @@ export function ThemeProvider({ children }: PropsWithChildren) {
 
   function changeTheme(value: string) {
     if (value !== "light" && value !== "dark" && value !== "system") return;
-    globalThis.localStorage?.setItem(STORAGE_KEY, value);
+    if (persist) globalThis.localStorage?.setItem(STORAGE_KEY, value);
     setTheme(value);
   }
 
-  return (
-    <ThemeContext.Provider value={{ theme, changeTheme }}>{children}</ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={{ theme, changeTheme }}>{children}</ThemeContext.Provider>;
 }
 
 const ThemeContext = createContext<{ theme: ThemeMode; changeTheme: (value: string) => void }>({
@@ -60,4 +64,8 @@ export function ThemeSelect({ className = "" }: { readonly className?: string })
       </select>
     </label>
   );
+}
+
+export function useTheme() {
+  return useContext(ThemeContext);
 }

@@ -1,8 +1,9 @@
 import { useForm } from "react-hook-form";
 import { Alert } from "../../../components/ui/alert.js";
 import { Button } from "../../../components/ui/button.js";
+import { Field, FieldError, FieldLabel } from "../../../components/ui/field.js";
 import { Input } from "../../../components/ui/input.js";
-import { Label } from "../../../components/ui/label.js";
+import type { AuthFormStatus } from "./login-form.js";
 
 export type RegisterValues = {
   name: string;
@@ -13,25 +14,26 @@ export type RegisterValues = {
 
 export function RegisterForm({
   error,
-  isSubmitting = false,
+  status = "idle",
   onSubmit,
 }: {
   readonly error?: string | undefined;
-  readonly isSubmitting?: boolean | undefined;
+  readonly status?: AuthFormStatus | undefined;
   readonly onSubmit: (values: RegisterValues) => void | Promise<void>;
 }) {
   const form = useForm<RegisterValues>();
   const errors = form.formState.errors;
+  const submitting = status === "submitting" || form.formState.isSubmitting;
 
   return (
     <form
       className="flex flex-col gap-5"
       noValidate
-      onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}
+      onSubmit={(event) => void form.handleSubmit((values) => onSubmit(values))(event)}
     >
       <div className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="register-name">姓名</Label>
+        <Field data-invalid={errors.name ? true : undefined}>
+          <FieldLabel htmlFor="register-name">姓名</FieldLabel>
           <Input
             autoComplete="name"
             aria-describedby={errors.name ? "register-name-error" : undefined}
@@ -39,14 +41,10 @@ export function RegisterForm({
             id="register-name"
             {...form.register("name", { required: "请输入姓名" })}
           />
-          {errors.name ? (
-            <p className="text-sm text-destructive" id="register-name-error">
-              {errors.name.message}
-            </p>
-          ) : null}
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="register-email">邮箱</Label>
+          <FieldError id="register-name-error">{errors.name?.message}</FieldError>
+        </Field>
+        <Field data-invalid={errors.email ? true : undefined}>
+          <FieldLabel htmlFor="register-email">邮箱</FieldLabel>
           <Input
             autoComplete="email"
             aria-describedby={errors.email ? "register-email-error" : undefined}
@@ -58,14 +56,10 @@ export function RegisterForm({
               pattern: { value: /^\S+@\S+$/, message: "请输入有效邮箱" },
             })}
           />
-          {errors.email ? (
-            <p className="text-sm text-destructive" id="register-email-error">
-              {errors.email.message}
-            </p>
-          ) : null}
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="register-password">密码</Label>
+          <FieldError id="register-email-error">{errors.email?.message}</FieldError>
+        </Field>
+        <Field data-invalid={errors.password ? true : undefined}>
+          <FieldLabel htmlFor="register-password">密码</FieldLabel>
           <Input
             autoComplete="new-password"
             aria-describedby={errors.password ? "register-password-error" : undefined}
@@ -77,14 +71,10 @@ export function RegisterForm({
               minLength: { value: 8, message: "密码至少 8 位" },
             })}
           />
-          {errors.password ? (
-            <p className="text-sm text-destructive" id="register-password-error">
-              {errors.password.message}
-            </p>
-          ) : null}
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="register-confirmation">确认密码</Label>
+          <FieldError id="register-password-error">{errors.password?.message}</FieldError>
+        </Field>
+        <Field data-invalid={errors.confirmation ? true : undefined}>
+          <FieldLabel htmlFor="register-confirmation">确认密码</FieldLabel>
           <Input
             autoComplete="new-password"
             aria-describedby={errors.confirmation ? "register-confirmation-error" : undefined}
@@ -93,24 +83,19 @@ export function RegisterForm({
             type="password"
             {...form.register("confirmation", {
               required: "请确认密码",
-              validate: (value) =>
-                value === form.getValues("password") || "两次输入的密码不一致。",
+              validate: (value) => value === form.getValues("password") || "两次输入的密码不一致。",
             })}
           />
-          {errors.confirmation ? (
-            <p className="text-sm text-destructive" id="register-confirmation-error">
-              {errors.confirmation.message}
-            </p>
-          ) : null}
-        </div>
+          <FieldError id="register-confirmation-error">{errors.confirmation?.message}</FieldError>
+        </Field>
       </div>
       {error ? (
         <Alert className="border-destructive/40 text-destructive" role="alert">
           {error}
         </Alert>
       ) : null}
-      <Button className="w-full" disabled={isSubmitting || form.formState.isSubmitting} type="submit">
-        {isSubmitting || form.formState.isSubmitting ? "正在创建账号…" : "创建账号"}
+      <Button className="w-full" disabled={submitting} type="submit">
+        {submitting ? "正在创建账号…" : "创建账号"}
       </Button>
     </form>
   );

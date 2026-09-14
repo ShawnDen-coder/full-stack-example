@@ -1,4 +1,5 @@
 import type { Preview } from "@storybook/react-vite";
+import { ThemeProvider } from "../src/app/theme-provider.js";
 import "../src/styles/index.css";
 
 const preview: Preview = {
@@ -19,9 +20,14 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => (
-      <div className={`${context.globals.colorMode === "dark" ? "dark" : ""} min-h-screen bg-background text-foreground`}>
-        <Story />
-      </div>
+      <ThemeProvider
+        initialTheme={context.globals.colorMode === "dark" ? "dark" : "light"}
+        persist={false}
+      >
+        <div className="min-h-screen bg-background text-foreground">
+          <Story />
+        </div>
+      </ThemeProvider>
     ),
   ],
   parameters: {

@@ -9,7 +9,12 @@ export function RegisterPage({ returnTo }: { readonly returnTo: string }) {
   const router = useRouter();
   const [error, setError] = useState<string>();
 
-  async function submit(values: { name: string; email: string; password: string; confirmation: string }) {
+  async function submit(values: {
+    name: string;
+    email: string;
+    password: string;
+    confirmation: string;
+  }) {
     setError(undefined);
     try {
       const result = await authClient.signUp.email({
@@ -31,7 +36,11 @@ export function RegisterPage({ returnTo }: { readonly returnTo: string }) {
       <RegisterForm error={error} onSubmit={submit} />
       <p className="text-center text-sm text-muted-foreground">
         已有账号？{" "}
-        <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/login" search={{ returnTo }}>
+        <Link
+          className="font-medium text-primary underline-offset-4 hover:underline"
+          to="/login"
+          search={{ returnTo }}
+        >
           登录
         </Link>
       </p>

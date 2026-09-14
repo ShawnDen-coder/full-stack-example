@@ -27,7 +27,11 @@ export function LoginPage({ returnTo }: { readonly returnTo: string }) {
       <LoginForm error={error} onSubmit={submit} />
       <p className="text-center text-sm text-muted-foreground">
         还没有账号？{" "}
-        <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/register" search={{ returnTo }}>
+        <Link
+          className="font-medium text-primary underline-offset-4 hover:underline"
+          to="/register"
+          search={{ returnTo }}
+        >
           注册
         </Link>
       </p>
