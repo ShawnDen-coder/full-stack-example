@@ -7,7 +7,11 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   root,
   test: {
-    include: ["apps/*/tests/**/*.test.{ts,tsx}", "packages/*/tests/**/*.test.{ts,tsx}"],
+    include: [
+      "apps/*/tests/**/*.test.{ts,tsx}",
+      "packages/*/tests/**/*.test.{ts,tsx}",
+      "scripts/tests/**/*.test.{ts,tsx}",
+    ],
     exclude: ["**/dist/**", "**/node_modules/**", "**/coverage/**"],
   },
   resolve: {

@@ -38,7 +38,7 @@
 - [System](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/system/README.md)
 - [Todos](https://github.com/ShawnDen-coder/full-stack-example/blob/master/packages/todos/README.md)
 
-`apps/api/src/app.ts` 是唯一的 HTTP 组合根。功能包通过 `setupXxxApp(app, options)` 注册路由并返回 Hono app，API 导出完整 `AppType`；System、Todos 等供 Web 使用的模块另外导出各自子路由类型，由 Web 按功能创建 Hono RPC client，避免每个消费点实例化整棵路由类型。
+`apps/api/src/app/create-app.ts` 是唯一的 HTTP 组合根。API workspace 还承载 Worker、migration 和 admin-provision 进程，分别由 `entrypoints/` 启动；配置、运行资源和 API 自有 HTTP features 按目录分开。功能包通过 `setupXxxApp(app, options)` 注册路由并返回 Hono app，API 导出完整 `AppType`；System、Todos 等供 Web 使用的模块另外导出各自子路由类型，由 Web 按功能创建 Hono RPC client，避免每个消费点实例化整棵路由类型。
 
 后台任务同样由应用组合根显式装配：业务模块通过 `defineJob()` 声明 schema 和处理器，Worker 按 BullMQ 的 `job.name` 分派，producer 使用任务定义对象入队以保持 payload 类型安全。开发时 `just dev` 会 watch Worker 代码。
 
