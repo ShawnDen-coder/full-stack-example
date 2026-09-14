@@ -8,13 +8,16 @@ loadWorkspaceEnvironment();
 discardPrivilegedEnvironment();
 
 const config = parseJobsWorkerEnvironment();
+
 await configureLogging({
   service: "jobs-worker",
   environment: config.NODE_ENV,
   level: config.LOG_LEVEL,
   pretty: config.LOG_PRETTY,
 });
+
 const logger = getAppLogger(["jobs", "worker"]);
+
 const worker = createJobsWorker({
   databaseUrl: config.DATABASE_RUNTIME_URL,
   poolMax: config.JOBS_POOL_MAX,
@@ -22,6 +25,7 @@ const worker = createJobsWorker({
   definitions: [exampleJob],
   logger,
 });
+
 try {
   await worker.waitUntilReady();
 } catch (error) {
@@ -42,6 +46,7 @@ try {
   );
 }
 let closing = false;
+
 const shutdown = async () => {
   if (closing) return;
   closing = true;
@@ -60,4 +65,5 @@ const shutdown = async () => {
   }
   if (failed) process.exitCode = 1;
 };
+
 for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => void shutdown());
