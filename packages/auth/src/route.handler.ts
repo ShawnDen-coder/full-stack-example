@@ -61,15 +61,16 @@ export function setOrganizationStatusHandlers(options: SetupAuthAppOptions) {
 
 export function authHandler(options: SetupAuthAppOptions) {
   return authFactory.createHandlers(async (context) => {
-    if (context.req.path === "/api/auth/ok" || context.req.path.includes("/admin/"))
+    const path = context.req.path.replace(/^\/api(?=\/auth(?:\/|$))/u, "");
+    if (path === "/auth/ok" || path.includes("/admin/"))
       return context.json({ error: "Not found" }, 404);
     if (
       [
-        "/api/auth/request-password-reset",
-        "/api/auth/send-verification-email",
-        "/api/auth/verify-email",
-      ].includes(context.req.path) ||
-      context.req.path.startsWith("/api/auth/reset-password/")
+        "/auth/request-password-reset",
+        "/auth/send-verification-email",
+        "/auth/verify-email",
+      ].includes(path) ||
+      path.startsWith("/auth/reset-password/")
     )
       return context.json(
         { error: "Email delivery is not configured", code: "EMAIL_DISABLED" },

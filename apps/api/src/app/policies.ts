@@ -23,10 +23,7 @@ export function createAppPolicies(options: {
     auth.require.requireSession,
     auth.require.requirePlatformAdmin,
   ] as const;
-  const platformAdminFresh = [
-    ...platformAdminRead,
-    auth.require.requireFreshSession,
-  ] as const;
+  const platformAdminFresh = [...platformAdminRead, auth.require.requireFreshSession] as const;
   const sameOrigin = requireSameOrigin(options.webOrigin);
   const platformAdminMutation = [sameOrigin, ...platformAdminFresh] as const;
   const platformAdminBoard = [

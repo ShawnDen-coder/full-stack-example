@@ -52,7 +52,9 @@ function createApp(options: {
     },
     features: {
       documentation: { enabled: options.documentationEnabled ?? true },
-      web: { ...(options.webAssetsDirectory ? { assetsDirectory: options.webAssetsDirectory } : {}) },
+      web: {
+        ...(options.webAssetsDirectory ? { assetsDirectory: options.webAssetsDirectory } : {}),
+      },
       ...(options.logStream ? { logStream: { stream: createLogStream(), heartbeatMs: 10 } } : {}),
     },
   });
