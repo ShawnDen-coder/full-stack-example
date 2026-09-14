@@ -14,7 +14,7 @@ import {
 import { createTodoService } from "@full-stack-example/todos";
 import { serve } from "@hono/node-server";
 import { createApp } from "../app/create-app.js";
-import { parseApiConfig } from "../config/api.js";
+import type { ApiEnvironment } from "../config/api.js";
 import { waitForListening } from "./listen.js";
 import { startTelemetry } from "./telemetry.js";
 
@@ -22,16 +22,15 @@ export interface ApiServerRuntime {
   close(): Promise<void>;
 }
 
-export async function startApiServer(): Promise<ApiServerRuntime> {
-  const config = parseApiConfig();
-  const logStream = createLogStream({ capacity: config.logStreamBufferSize });
+export async function startApiServer(environment: ApiEnvironment): Promise<ApiServerRuntime> {
+  const logStream = createLogStream({ capacity: environment.LOG_STREAM_BUFFER_SIZE });
   await configureLogging({
     service: "api",
-    environment: config.environment,
-    level: config.logLevel,
-    pretty: config.pretty,
+    environment: environment.NODE_ENV,
+    level: environment.LOG_LEVEL,
+    pretty: environment.LOG_PRETTY,
     stream: logStream,
-    ...(config.logFile ? { filePath: config.logFile } : {}),
+    ...(environment.LOG_FILE ? { filePath: environment.LOG_FILE } : {}),
   });
   const logger = getAppLogger(["api", "server"]);
   let telemetry: Awaited<ReturnType<typeof startTelemetry>> | undefined;
@@ -84,21 +83,21 @@ export async function startApiServer(): Promise<ApiServerRuntime> {
   };
   try {
     telemetry = await startTelemetry({
-      enabled: config.otelEnabled,
-      endpoint: config.otelEndpoint,
-      metricExportIntervalMillis: config.otelMetricExportInterval,
+      enabled: environment.OTEL_ENABLED,
+      endpoint: environment.OTEL_EXPORTER_OTLP_ENDPOINT,
+      metricExportIntervalMillis: environment.OTEL_METRIC_EXPORT_INTERVAL,
     });
     const databaseContext = createDatabase({
-      databaseUrl: config.databaseRuntimeUrl,
-      poolMax: config.databasePoolMax,
+      databaseUrl: environment.DATABASE_RUNTIME_URL,
+      poolMax: environment.DATABASE_POOL_MAX,
     });
     database = databaseContext;
     await assertDatabaseMigrations(databaseContext.db);
     const auth = createAuthModule({
       database: databaseContext.db,
-      baseURL: config.betterAuthUrl,
-      secret: config.betterAuthSecret,
-      trustedOrigins: [config.webOrigin],
+      baseURL: environment.BETTER_AUTH_URL,
+      secret: environment.BETTER_AUTH_SECRET,
+      trustedOrigins: [environment.WEB_ORIGIN],
       securityEvents: {
         emit: async (event) => {
           logger.info("Authentication security event", { ...event });
@@ -111,13 +110,13 @@ export async function startApiServer(): Promise<ApiServerRuntime> {
           member: { todos: ["read", "write"] },
         },
       }),
-      openApiEnabled: config.apiDocsEnabled,
+      openApiEnabled: environment.API_DOCS_ENABLED,
     });
-    if (config.jobsEnabled) {
+    if (environment.JOBS_ENABLED) {
       try {
         jobs = await createBullMqJobs({
-          databaseUrl: config.databaseRuntimeUrl,
-          poolMax: config.jobsPoolMax,
+          databaseUrl: environment.DATABASE_RUNTIME_URL,
+          poolMax: environment.JOBS_POOL_MAX,
           logger: getAppLogger(["api", "jobs"]),
         });
       } catch (error) {
@@ -130,31 +129,33 @@ export async function startApiServer(): Promise<ApiServerRuntime> {
     const todoService = createTodoService({ database: databaseContext.db });
     const app = createApp({
       logger,
-      http: { webOrigin: config.webOrigin, apiOrigin: config.betterAuthUrl },
-      environment: config.environment,
-      csrfSecret: config.bullBoardCsrfSecret,
-      documentation: { enabled: config.apiDocsEnabled },
+      http: { webOrigin: environment.WEB_ORIGIN, apiOrigin: environment.BETTER_AUTH_URL },
+      environment: environment.NODE_ENV,
+      csrfSecret: environment.BULL_BOARD_CSRF_SECRET,
+      documentation: { enabled: environment.API_DOCS_ENABLED },
       modules: {
         system: { checkDatabase: () => checkDatabase(databaseContext.db) },
         todos: { service: todoService },
         auth,
-        ...(config.logStreamEnabled
-          ? { logStream: { stream: logStream, heartbeatMs: config.logStreamHeartbeatMs } }
+        ...(environment.LOG_STREAM_ENABLED
+          ? { logStream: { stream: logStream, heartbeatMs: environment.LOG_STREAM_HEARTBEAT_MS } }
           : {}),
         ...(jobs
           ? {
               jobs: {
                 producer: jobs.producer,
                 board: jobs.board,
-                boardEnabled: config.bullBoardEnabled,
-                boardBasePath: config.bullBoardBasePath,
+                boardEnabled: environment.BULL_BOARD_ENABLED,
+                boardBasePath: environment.BULL_BOARD_BASE_PATH,
               },
             }
           : {}),
       },
-      web: { ...(config.webAssetsDirectory ? { assetsDirectory: config.webAssetsDirectory } : {}) },
+      web: {
+        ...(environment.WEB_ASSETS_DIR ? { assetsDirectory: environment.WEB_ASSETS_DIR } : {}),
+      },
     });
-    server = serve({ fetch: app.fetch, hostname: config.host, port: config.port });
+    server = serve({ fetch: app.fetch, hostname: environment.HOST, port: environment.PORT });
     server.on("error", (error) => {
       logger.error("API HTTP server error", { event: "api.server.error", error });
     });
@@ -162,8 +163,8 @@ export async function startApiServer(): Promise<ApiServerRuntime> {
     serverListening = true;
     logger.info("API server started", {
       event: "api.started",
-      host: config.host,
-      port: config.port,
+      host: environment.HOST,
+      port: environment.PORT,
     });
     return { close: cleanup };
   } catch (error) {

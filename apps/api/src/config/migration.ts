@@ -1,9 +1,14 @@
 import { z } from "zod";
+import { parseEnvironment } from "./shared.js";
 
-export function parseMigrationConfig(environment: NodeJS.ProcessEnv = process.env): {
-  readonly databaseUrl: string;
-} {
-  const value = environment.DATABASE_MIGRATOR_URL;
-  if (!value) throw new Error("DATABASE_MIGRATOR_URL is required for migrations");
-  return { databaseUrl: z.url().parse(value) };
+export const migrationEnvironmentSchema = z.object({
+  DATABASE_MIGRATOR_URL: z.url(),
+});
+
+export type MigrationEnvironment = z.output<typeof migrationEnvironmentSchema>;
+
+export function parseMigrationEnvironment(
+  source: NodeJS.ProcessEnv = process.env,
+): MigrationEnvironment {
+  return parseEnvironment("Migration", migrationEnvironmentSchema, source);
 }

@@ -1,10 +1,10 @@
 import { defaultMigrationsFolder, migrateDatabase } from "@full-stack-example/database";
 import { migrateJobs } from "@full-stack-example/jobs/migration";
-import { parseMigrationConfig } from "../config/migration.js";
+import { parseMigrationEnvironment } from "../config/migration.js";
 import { loadWorkspaceEnvironment } from "../runtime/environment.js";
 
 loadWorkspaceEnvironment();
 
-const { databaseUrl } = parseMigrationConfig();
+const { DATABASE_MIGRATOR_URL: databaseUrl } = parseMigrationEnvironment();
 await migrateDatabase({ databaseUrl, migrationsFolder: defaultMigrationsFolder });
 await migrateJobs({ databaseUrl });

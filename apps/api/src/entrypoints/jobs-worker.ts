@@ -1,24 +1,24 @@
 import { exampleJob } from "@full-stack-example/jobs";
 import { createJobsWorker } from "@full-stack-example/jobs/worker";
 import { configureLogging, getAppLogger, shutdownLogging } from "@full-stack-example/logging";
-import { parseJobsWorkerConfig } from "../config/jobs-worker.js";
+import { parseJobsWorkerEnvironment } from "../config/jobs-worker.js";
 import { discardPrivilegedEnvironment, loadWorkspaceEnvironment } from "../runtime/environment.js";
 
 loadWorkspaceEnvironment();
 discardPrivilegedEnvironment();
 
-const config = parseJobsWorkerConfig();
+const config = parseJobsWorkerEnvironment();
 await configureLogging({
   service: "jobs-worker",
-  environment: config.environment,
-  level: config.logLevel,
-  pretty: config.pretty,
+  environment: config.NODE_ENV,
+  level: config.LOG_LEVEL,
+  pretty: config.LOG_PRETTY,
 });
 const logger = getAppLogger(["jobs", "worker"]);
 const worker = createJobsWorker({
-  databaseUrl: config.databaseUrl,
-  poolMax: config.poolMax,
-  concurrency: config.concurrency,
+  databaseUrl: config.DATABASE_RUNTIME_URL,
+  poolMax: config.JOBS_POOL_MAX,
+  concurrency: config.JOBS_WORKER_CONCURRENCY,
   definitions: [exampleJob],
   logger,
 });
