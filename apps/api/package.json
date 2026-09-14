@@ -2,32 +2,30 @@
   "name": "@full-stack-example/api",
   "version": "0.1.0",
   "private": true,
-  "description": "Hono API host that composes application routes, cross-cutting HTTP policy, and production web assets.",
+  "description": "Server workspace for the Hono API, Jobs Worker, migrations, and admin provisioning processes.",
   "type": "module",
   "files": [
     "dist"
   ],
   "exports": {
     ".": {
-      "types": "./dist/app.d.ts",
-      "import": "./dist/app.js",
-      "default": "./dist/app.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./contract": {
       "types": "./dist/contract.d.ts"
     }
   },
   "scripts": {
-    "dev": "tsx watch --exclude ../../logs/** src/server.ts",
-    "start": "node dist/server.js",
-    "db:migrate": "node dist/database-migrate.js",
-    "jobs:migrate": "node dist/jobs-migrate.js",
-    "migrate": "node dist/migrate.js",
-    "migrate:dev": "tsx src/migrate.ts",
-    "admin:provision": "node dist/admin-provision.js",
-    "admin:provision:dev": "tsx src/admin-provision.ts",
-    "jobs:worker": "node dist/jobs-worker.js",
-    "jobs:worker:dev": "tsx watch src/jobs-worker.ts",
+    "dev": "tsx watch --exclude ../../logs/** src/entrypoints/api.ts",
+    "start": "node dist/entrypoints/api.js",
+    "migrate": "node dist/entrypoints/migrate.js",
+    "migrate:dev": "tsx src/entrypoints/migrate.ts",
+    "admin:provision": "node dist/entrypoints/admin-provision.js",
+    "admin:provision:dev": "tsx src/entrypoints/admin-provision.ts",
+    "jobs:worker": "node dist/entrypoints/jobs-worker.js",
+    "jobs:worker:dev": "tsx watch src/entrypoints/jobs-worker.ts",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
