@@ -6,7 +6,7 @@
 src/
   app/          Hono 组合、全局 HTTP middleware、OpenAPI、Web assets
   features/     API 自有 HTTP 功能（Jobs Admin、Diagnostics）
-  config/       按 API、Worker、migration、provision 进程拆分的配置
+  config/       按进程定义 Zod environment schema 和解析函数
   runtime/      API 资源生命周期、环境加载、listen、telemetry
   entrypoints/  加载环境并启动各进程的薄入口
   index.ts      workspace 公共 API
@@ -45,6 +45,8 @@ API → Todos、System、可选 Jobs 管理路由
 ## 配置与运行资源
 
 API 要求 `DATABASE_RUNTIME_URL`、`BETTER_AUTH_SECRET` 和 Web/API origin 配置。生产 API 不接收 `DATABASE_MIGRATOR_URL` 或 `PLATFORM_ADMIN_PASSWORD`。可选资源包括 Jobs producer、Bull Board、日志 SSE、OpenAPI 和生产 Web 静态目录；具体开关见[配置指南](/guide/configuration/)。
+
+每个进程入口先加载仓库根目录 `.env`，API/Worker 随后清除 migrator、maintenance 和管理员 provisioning 凭据，再调用自己的 `parseXxxEnvironment()`。Zod schema 的 `z.output` 类型直接传入 runtime；配置错误按变量名报告，不泄露连接串或密钥。新增配置时只在所属进程 schema 中声明并消费，布尔值必须写为 `true` 或 `false`。
 
 ## 使用流程
 

@@ -5,7 +5,9 @@ description: 了解 API、Web、数据库、日志和 OpenTelemetry 的环境变
 
 # 配置与运行环境
 
-配置由 Zod schema 校验，API 组合根负责注入数据库检查、日志、Todo service 和 Web 静态资源目录。
+各 Node 进程在启动入口加载 workspace `.env` 后，使用各自的 Zod schema 校验并转换环境变量，再把推导出的类型化结果传给 runtime。API/Worker 会先移除 migrator、maintenance 和 admin provisioning 凭据，再解析自己的配置。配置错误列出变量名和原因，不包含输入值。
+
+新增环境变量时，应添加到拥有该变量的进程 schema，并通过 schema 输出类型消费；不要在 runtime 中直接读取 `process.env`。字符串布尔值只接受精确的 `true` 或 `false`，数字字符串会在校验时转换为数字。
 
 生产环境使用单个 Node/Hono 进程同时提供 API 与 Web 静态资源。
 
@@ -22,6 +24,8 @@ description: 了解 API、Web、数据库、日志和 OpenTelemetry 的环境变
 | `LOG_STREAM_BUFFER_SIZE` / `LOG_STREAM_HEARTBEAT_MS` | 内存日志条数与 SSE 心跳间隔。 |
 | `OTEL_ENABLED` / `OTEL_EXPORTER_OTLP_ENDPOINT` | 控制遥测及 OTLP HTTP 地址。 |
 | `WEB_ORIGIN` / `VITE_API_BASE_URL` | 开发期 CORS 来源与 Web 请求的 API origin；生产采用同源。 |
+
+`.env.example` 按 PostgreSQL/Compose、runtime、API options、migration、admin provisioning、Web 和 integration test 分组。API、Worker、migration 和 admin provisioning 分别只解析本进程需要的变量；未知环境变量会被忽略，不会进入解析结果。
 
 初始管理员密码只用于一次性创建缺失账号；若同邮箱账号已经存在，provision 流程只确保其角色为 `platform-admin`，不会覆盖已有密码。生产流程应在数据库 migration 后运行独立 provisioning，并从密钥管理系统提供凭据。
 
