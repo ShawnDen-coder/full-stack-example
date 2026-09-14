@@ -8,6 +8,7 @@ import { setupLogStreamApp } from "../features/diagnostics/log-stream.js";
 import { setupJobsAdminApp } from "../features/jobs-admin/setup.js";
 import { createHttpApp } from "./http.js";
 import { setupApiDocs } from "./openapi.js";
+import { createAppPolicies } from "./policies.js";
 import { setupWebApp } from "./web-assets.js";
 
 interface CreateAppBaseOptions {
@@ -40,7 +41,10 @@ export type CreateAppOptions = CreateAppBaseOptions & {
 };
 
 export function createApp(options: CreateAppOptions) {
-  if (!options.modules.auth) throw new Error("The API requires an authentication module");
+  const policies = createAppPolicies({
+    auth: options.modules.auth,
+    webOrigin: options.http.webOrigin,
+  });
   const withErrors = createHttpApp({ logger: options.logger, webOrigin: options.http.webOrigin })
     .notFound((context) =>
       context.json({ error: "Not found", requestId: context.get("requestId") }, 404),
@@ -70,24 +74,15 @@ export function createApp(options: CreateAppOptions) {
   const withTodos = setupTodosApp(withAuth, {
     service: options.modules.todos.service,
     authorization: {
-      read: options.modules.auth.require.requireTenantPermission({
-        resource: "todos",
-        action: "read",
-      }),
-      write: options.modules.auth.require.requireTenantPermission({
-        resource: "todos",
-        action: "write",
-      }),
-      delete: options.modules.auth.require.requireTenantPermission({
-        resource: "todos",
-        action: "delete",
-      }),
+      read: policies.tenantPermission({ resource: "todos", action: "read" }),
+      write: policies.tenantPermission({ resource: "todos", action: "write" }),
+      delete: policies.tenantPermission({ resource: "todos", action: "delete" }),
     },
-    getTenantId: (context) => context.get("tenantPrincipal")?.tenantId,
+    getTenantId: policies.resolveTenantId,
   });
   const withJobs = options.modules.jobs
     ? setupJobsAdminApp(withTodos, {
-        auth: options.modules.auth,
+        policies,
         logger: options.logger,
         webOrigin: options.http.webOrigin,
         producer: options.modules.jobs.producer,
@@ -107,11 +102,7 @@ export function createApp(options: CreateAppOptions) {
     ? setupLogStreamApp(withJobs, {
         stream: options.modules.logStream.stream,
         heartbeatMs: options.modules.logStream.heartbeatMs ?? 15_000,
-        authorization: [
-          options.modules.auth.require.requireSession,
-          options.modules.auth.require.requirePlatformAdmin,
-          options.modules.auth.require.requireFreshSession,
-        ],
+        authorization: policies.platformAdminFresh,
       })
     : withJobs;
   const withApiDocs = setupApiDocs(withLogStream, {

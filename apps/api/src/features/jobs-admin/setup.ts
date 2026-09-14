@@ -1,13 +1,13 @@
-import type { AuthModule } from "@full-stack-example/auth/server";
 import type { JobProducer, JobsBoardSource } from "@full-stack-example/jobs/contracts";
 import { setupJobsBoard } from "@full-stack-example/jobs/server";
 import type { Logger } from "@full-stack-example/logging";
 import type { Env, Hono, Schema } from "hono";
+import type { AppPolicies } from "../../app/policies.js";
 import { createJobsAdminPolicy } from "./policy.js";
 import { setupExampleJobsApp } from "./routes.js";
 
 export interface JobsAdminOptions {
-  readonly auth: AuthModule;
+  readonly policies: AppPolicies;
   readonly logger: Logger;
   readonly webOrigin: string;
   readonly producer: JobProducer;
@@ -24,9 +24,8 @@ export function setupJobsAdminApp<E extends Env, S extends Schema, BasePath exte
   options: JobsAdminOptions,
 ) {
   const policy = createJobsAdminPolicy({
-    auth: options.auth,
     logger: options.logger,
-    webOrigin: options.webOrigin,
+    policies: options.policies,
   });
   const withJobsRoutes = setupExampleJobsApp(app, {
     producer: options.producer,
