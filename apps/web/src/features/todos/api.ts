@@ -9,19 +9,19 @@ export const todosQueryOptions = (organizationId: string) => ({
 });
 
 async function listTodos() {
-  const response = await todosApi.api.todos.$get();
+  const response = await todosApi.todos.$get();
   if (response.ok) return response.json();
   return throwApiError(response);
 }
 
 async function createTodo(title: string) {
-  const response = await todosApi.api.todos.$post({ json: { title } });
+  const response = await todosApi.todos.$post({ json: { title } });
   if (response.status === 201) return response.json();
   return throwApiError(response);
 }
 
 async function updateTodo(input: { readonly id: number; readonly completed: boolean }) {
-  const response = await todosApi.api.todos[":id"].$patch({
+  const response = await todosApi.todos[":id"].$patch({
     param: { id: input.id.toString() },
     json: { completed: input.completed },
   });
@@ -30,7 +30,7 @@ async function updateTodo(input: { readonly id: number; readonly completed: bool
 }
 
 async function deleteTodo(id: number) {
-  const response = await todosApi.api.todos[":id"].$delete({ param: { id: id.toString() } });
+  const response = await todosApi.todos[":id"].$delete({ param: { id: id.toString() } });
   if (response.status === 204) return;
   return throwApiError(response);
 }

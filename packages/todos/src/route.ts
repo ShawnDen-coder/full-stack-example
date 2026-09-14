@@ -1,5 +1,4 @@
 import type { Env, Hono, Schema } from "hono";
-import { Hono as HonoApp } from "hono";
 import { createFactory } from "hono/factory";
 import {
   createTodoHandlers,
@@ -20,15 +19,11 @@ function createTodoRoutes(options: SetupTodosAppOptions) {
     .delete("/todos/:id", ...deleteTodoHandlers(options));
 }
 
-function createMountedTodoRoutes(options: SetupTodosAppOptions) {
-  return new HonoApp().route("/api", createTodoRoutes(options));
-}
-
-export type TodosApiType = ReturnType<typeof createMountedTodoRoutes>;
+export type TodosApiType = ReturnType<typeof createTodoRoutes>;
 
 export function setupTodosApp<E extends Env, S extends Schema, BasePath extends string>(
   app: Hono<E, S, BasePath>,
   options: SetupTodosAppOptions,
 ) {
-  return app.route("/", createMountedTodoRoutes(options));
+  return app.route("/", createTodoRoutes(options));
 }

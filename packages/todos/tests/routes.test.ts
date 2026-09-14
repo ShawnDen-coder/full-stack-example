@@ -27,17 +27,17 @@ describe("Todo route integration", () => {
       getTenantId: () => "external-tenant",
     }).get("/dashboard", (c) => c.text("dashboard"));
     const client = hc<TodosApiType>("http://localhost", { fetch: app.request.bind(app) });
-    expect((await client.api.todos.$get()).status).toBe(200);
-    expect((await client.api.todos.$post({ json: { title: "new title" } })).status).toBe(201);
+    expect((await client.todos.$get()).status).toBe(200);
+    expect((await client.todos.$post({ json: { title: "new title" } })).status).toBe(201);
     expect(
       (
-        await client.api.todos[":id"].$patch({
+        await client.todos[":id"].$patch({
           param: { id: "1" },
           json: { completed: true },
         })
       ).status,
     ).toBe(200);
-    expect((await client.api.todos[":id"].$delete({ param: { id: "1" } })).status).toBe(204);
+    expect((await client.todos[":id"].$delete({ param: { id: "1" } })).status).toBe(204);
     expect(listTodos).toHaveBeenCalledWith("external-tenant");
     expect(createTodo).toHaveBeenCalledWith("external-tenant", { title: "new title" });
     expect(updateTodo).toHaveBeenCalledWith("external-tenant", { id: 1, completed: true });
