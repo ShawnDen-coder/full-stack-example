@@ -1,7 +1,7 @@
 import { configureLogging, getAppLogger } from "@full-stack-example/logging";
 import type { TenantTodoService } from "@full-stack-example/todos";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
+import { createApp } from "../src/app/create-app.js";
 
 let logger = getAppLogger("test");
 

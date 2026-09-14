@@ -3,7 +3,7 @@ import type { JobProducer, JobsBoardSource } from "@full-stack-example/jobs/cont
 import { configureLogging, createLogStream, getAppLogger } from "@full-stack-example/logging";
 import type { MiddlewareHandler } from "hono";
 import { beforeAll, describe, expect, it } from "vitest";
-import { type CreateAppOptions, createApp } from "../src/app.js";
+import { type CreateAppOptions, createApp } from "../src/app/create-app.js";
 
 const logger = getAppLogger("jobs-test");
 const logStream = createLogStream();

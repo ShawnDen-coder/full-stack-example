@@ -1,1 +1,1 @@
-export type { AppType } from "./app.js";
+export type { AppType } from "./app/create-app.js";

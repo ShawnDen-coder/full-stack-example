@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validate } from "@scalar/openapi-parser";
-import { createApp } from "../../apps/api/src/app.js";
+import { createApp } from "../../apps/api/src/app/create-app.js";
 import { createAuthModule } from "../../packages/auth/src/server.js";
 import { createDatabase } from "../../packages/database/src/index.js";
 import {
