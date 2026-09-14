@@ -26,3 +26,11 @@ description: 了解 API、Web、数据库、日志和 OpenTelemetry 的环境变
 初始管理员密码只用于一次性创建缺失账号；若同邮箱账号已经存在，provision 流程只确保其角色为 `platform-admin`，不会覆盖已有密码。生产流程应在数据库 migration 后运行独立 provisioning，并从密钥管理系统提供凭据。
 
 Compose 首次初始化 PostgreSQL data volume 时会创建固定数据库角色并设置 `POSTGRES_RUNTIME_PASSWORD`、`POSTGRES_MIGRATOR_PASSWORD`。之后修改 `.env` 不会自动更改现有 PostgreSQL 角色密码；需在数据库中更新密码并同步连接串。`just infra-reset` 会停止项目容器并删除 PostgreSQL data volume，其他命名卷会保留。
+
+## 常见启动故障恢复
+
+- **schema 过期或缺少 migration**：API 在创建 Auth、Jobs producer 和 HTTP listener 前校验 Drizzle migration journal。运行 `just provision`（或从基础设施启动时运行 `just infra-up`）后重启 API。不要让 API/Worker 执行 DDL。
+- **数据库密码不匹配**：Compose 只在首次创建 data volume 时应用角色密码。更新 `.env` 不会修改已有 PostgreSQL 角色；将数据库角色密码和对应的 `DATABASE_RUNTIME_URL` / `DATABASE_MIGRATOR_URL` 同步后重启进程。若只是本地空库且允许销毁全部数据库数据，可显式运行 `just infra-reset`，再 `just infra-up`。
+- **端口占用**：API 监听 `3000`、Web 监听 `5173`。停止占用端口的旧 API/Web/Worker 进程，再运行 `just dev`；若需要复用已经准备好的基础设施，使用 `just dev-only`。启动失败时不要误以为 API 已经成功监听。
+
+完整开发使用 `just dev`（基础设施、provision、API、Worker、Web）；`just infra-up` 只准备基础设施与数据库；`just dev-only` 仅启动宿主开发进程；`just stack-up` 使用生产形态 Compose 镜像启动整栈。

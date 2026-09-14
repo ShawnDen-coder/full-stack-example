@@ -1,8 +1,19 @@
 ---
 title: 模块概览
-description: 浏览 API、Web、认证、业务、数据库、客户端和日志模块的职责、入口与依赖边界。
+description: 对照各 workspace 模块的职责、所有者、消费者和禁止依赖。
 ---
 
 # 模块概览
 
-每个模块页面以调用者视角说明职责、公开入口、依赖方向、使用流程、错误行为和扩展位置。
+模块页面以调用者视角说明职责、公开入口、依赖方向、生命周期、运行配置、错误行为和扩展位置。更完整的文件归属规则见[仓库组织与模块边界](/architecture/package-design/)。
+
+| 模块 | 类型与所有权 | 主要消费者 | 禁止依赖 |
+| --- | --- | --- | --- |
+| API | 服务端应用与唯一组合根 | 本地启动、Compose、Web HTTP 请求 | 被 packages 反向依赖 |
+| Web | 浏览器应用 | 用户浏览器、生产 API 静态托管 | Auth server、Database、Drizzle |
+| Auth | 认证与租户授权能力 | API、Web client、业务模块 contracts | 具体业务查询、迁移职责 |
+| Database | PostgreSQL 基础设施 | API、Auth、业务 repository、migration 命令 | Auth、业务模块、应用进程 |
+| Jobs | BullMQ 队列基础设施 | API producer、Worker 组合根、Bull Board | API 的业务 HTTP 路由、隐式任务扫描 |
+| Logging | 进程日志与脱敏能力 | API、Worker、migration/provision 进程 | 业务数据访问 |
+| System | 健康响应与路由合同 | API、Web health client | Database client、业务模块 |
+| Todos | 租户 Todo 业务模块 | API、Web Todo feature | Better Auth server、应用 bootstrap |

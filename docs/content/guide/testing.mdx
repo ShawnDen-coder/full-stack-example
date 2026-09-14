@@ -1,13 +1,31 @@
 ---
 title: 测试与质量门禁
-description: 运行统一的 TypeScript 类型检查、Biome 检查、Vitest 测试和构建验证流程。
+description: 运行离线单元测试、显式 PostgreSQL 集成套件和 CI 质量门禁。
 ---
 
 # 测试与质量门禁
 
+## 命令矩阵
+
+| 命令 | 范围 | 必需连接配置 | 无配置时 |
+| --- | --- | --- | --- |
+| `just test` | 离线 Vitest 单元/模块测试 | 无；runner 会清除数据库变量并禁用 PostgreSQL 测试 | 正常运行，不连接数据库 |
+| `just db-test-integration` | Database + RLS PostgreSQL suite | `DATABASE_URL`、`DATABASE_RUNTIME_URL` | 在启动 Vitest 前失败 |
+| `just auth-test-integration` | Better Auth PostgreSQL suite | `DATABASE_RUNTIME_URL` | 在启动 Vitest 前失败 |
+| `just jobs-test-integration` | BullMQ PostgreSQL suite | `DATABASE_RUNTIME_URL`、`DATABASE_MIGRATOR_URL` | 在启动 Vitest 前失败 |
+| `just check` | lint、typecheck、离线测试 | 无 | 任一质量步骤失败即停止 |
+| `just verify` | `check`、build、Rspress build | 无 | 任一质量步骤失败即停止 |
+
+PostgreSQL suite 必须显式指定单一 suite；runner 根据 suite 选定固定测试文件，并只向 Vitest 传递所需的数据库 URL。未提供 URL、未知 suite 或参数错误都会非零退出，不会出现“集成测试全跳过但命令成功”的假绿。测试要求数据库已由 CI 或 `just infra-up` 准备，并已执行 migration；CI 先创建 runtime/migrator 角色并执行迁移与管理员 provisioning，再依次运行 Database、Auth、Jobs suites。
+
+## 本地质量门禁
+
 ```bash
-just check
-just verify
+just lint-check
+just typecheck
+just test
+just build
+pnpm docs:build
 ```
 
-`check` 运行源码质量门禁；`verify` 还会验证编译产物和文档构建。
+真实 PostgreSQL 测试不会包含在普通 `just test` 中；需要验证数据库权限、RLS 或 BullMQ migration 时，单独运行相应 suite。完整提交前也可运行 `just check`，产物与文档都需要验证时运行 `just verify`。

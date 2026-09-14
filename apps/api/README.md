@@ -20,12 +20,20 @@ API 不持有数据库 schema 或 Todo 业务规则，这些能力通过包接�
 - `AppType` 是完整 API 的 RPC 类型合同；Web 按需使用 System/Todos 子路由类型，避免在消费端实例化整棵路由类型。
 - `src/bootstrap.ts` 创建运行时依赖，`src/server.ts` 启动 Node 进程。
 
-## 依赖与启动流程
+## 依赖关系
 
 ```text
-独立 migrator 执行迁移 → API 创建 runtime Database → 配置日志/遥测
-→ 创建 Auth 和 Todo Service → createApp 组合路由 → 开始监听
+应用 server → API bootstrap → Auth/Database/Jobs/Logging/业务模块
+API → Todos、System、可选 Jobs 管理路由
 ```
+
+## 生命周期
+
+启动时先配置日志和遥测，创建 runtime Database 并验证 Drizzle migration journal，再创建 Auth、Jobs producer 和业务 service，最后组合 Hono app 并等待 HTTP server 的 `listening` 事件。关闭时按 HTTP、Jobs、Database、遥测、日志的顺序释放资源；端口冲突会使启动失败并清理已创建资源。迁移和管理员 provisioning 在独立的一次性命令中完成。
+
+## 配置与运行资源
+
+API 要求 `DATABASE_RUNTIME_URL`、`BETTER_AUTH_SECRET` 和 Web/API origin 配置。生产 API 不接收 `DATABASE_MIGRATOR_URL` 或 `PLATFORM_ADMIN_PASSWORD`。可选资源包括 Jobs producer、Bull Board、日志 SSE、OpenAPI 和生产 Web 静态目录；具体开关见[配置指南](/guide/configuration/)。
 
 ## 使用流程
 
