@@ -35,10 +35,10 @@ function createTestApp(boardEnabled = false, producer: JobProducer = jobProducer
     services: {
       system: { checkDatabase: async () => undefined },
       todos: {
-          listTodos: async () => [],
-          createTodo: async () => ({ id: 1, title: "", completed: false }),
-          updateTodo: async () => undefined,
-          deleteTodo: async () => false,
+        listTodos: async () => [],
+        createTodo: async () => ({ id: 1, title: "", completed: false }),
+        updateTodo: async () => undefined,
+        deleteTodo: async () => false,
       },
       auth: {
         require: {
@@ -261,5 +261,4 @@ describe("jobs API composition", () => {
       jobId: "job-1",
     });
   });
-
 });

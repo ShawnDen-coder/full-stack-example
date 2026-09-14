@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { setupAuthApp } from "../src/route.js";
 
 describe("auth app setup", () => {
-  it("exposes a deterministic health endpoint", async () => {
+  it("mounts auth and platform routes relative to the host app", async () => {
     const createOrganization = vi.fn(async () => ({ id: "organization" }));
     const noop: MiddlewareHandler = async (context, next) => {
       context.set("sessionPrincipal", {
@@ -27,9 +27,9 @@ describe("auth app setup", () => {
       },
     } as unknown as Parameters<typeof setupAuthApp>[1]["auth"];
     const app = setupAuthApp(new Hono(), { auth });
-    const response = await app.request("http://localhost/api/auth/ok");
+    const response = await app.request("http://localhost/auth/ok");
     expect(response.status).toBe(404);
-    const resetResponse = await app.request("http://localhost/api/auth/request-password-reset", {
+    const resetResponse = await app.request("http://localhost/auth/request-password-reset", {
       method: "POST",
     });
     expect(resetResponse.status).toBe(410);
@@ -38,11 +38,11 @@ describe("auth app setup", () => {
       code: "EMAIL_DISABLED",
     });
     const verificationResponse = await app.request(
-      "http://localhost/api/auth/send-verification-email",
+      "http://localhost/auth/send-verification-email",
       { method: "POST" },
     );
     expect(verificationResponse.status).toBe(410);
-    const platformResponse = await app.request("http://localhost/api/platform/users", {
+    const platformResponse = await app.request("http://localhost/platform/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "user@example.com", name: "User" }),

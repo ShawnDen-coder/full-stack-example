@@ -4,10 +4,10 @@ import type { Logger, LogStream } from "@full-stack-example/logging";
 import { setupSystemApp } from "@full-stack-example/system";
 import { setupTodosApp, type TenantTodoService } from "@full-stack-example/todos";
 import type { ApplyGlobalResponse } from "hono/client";
-import { appFactory } from "./env.js";
 import { setupLogStreamApp } from "../features/diagnostics/log-stream.js";
 import { setupJobsBoardApp } from "../features/jobs-admin/board.js";
 import { setupJobsAdminApp } from "../features/jobs-admin/setup.js";
+import { appFactory } from "./env.js";
 import { createHttpApp } from "./http.js";
 import { setupApiDocs } from "./openapi.js";
 import { createAppPolicies } from "./policies.js";
@@ -103,18 +103,17 @@ export function createApp(options: CreateAppOptions) {
         .warn("Database health check failed", { event: "system.health.degraded" }),
   });
 
-  const withJobsBoard =
-    options.features.jobsBoard
-      ? setupJobsBoardApp(withSystem, {
-          logger: options.logger,
-          policies,
-          board: options.features.jobsBoard.source,
-          basePath: options.features.jobsBoard.basePath,
-          environment: options.features.jobsBoard.environment,
-          csrfSecret: options.features.jobsBoard.csrfSecret,
-          allowedOrigins: options.features.jobsBoard.allowedOrigins,
-        })
-      : withSystem;
+  const withJobsBoard = options.features.jobsBoard
+    ? setupJobsBoardApp(withSystem, {
+        logger: options.logger,
+        policies,
+        board: options.features.jobsBoard.source,
+        basePath: options.features.jobsBoard.basePath,
+        environment: options.features.jobsBoard.environment,
+        csrfSecret: options.features.jobsBoard.csrfSecret,
+        allowedOrigins: options.features.jobsBoard.allowedOrigins,
+      })
+    : withSystem;
   const withApi = withJobsBoard.route("/api", apiRoutes);
   const withApiDocs = setupApiDocs(withApi, {
     ...options.features.documentation,
