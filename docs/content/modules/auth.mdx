@@ -54,6 +54,8 @@ const auth = createAuthModule({
 const appWithAuth = setupAuthApp(app, { auth });
 ```
 
+`setupAuthApp()` 在传入的 Hono app 上挂载相对 `/auth/*` 和 `/platform/*` 路由。API 组合根把认证子应用与 Todos、Jobs Admin、Diagnostics 一起挂载到 `/api`，所以公开 URL 仍是 `/api/auth/*` 和 `/api/platform/*`。
+
 Auth 不发送邮件。邮箱密码注册和登录可用，但依赖邮件的验证、重置密码端点明确返回 `410`；组织邀请被禁用并返回稳定的 `403` 错误。生产部署不需要 Mailer 配置。数据库迁移由独立 migrator 命令/Compose service 执行，API 使用 runtime 连接。
 
 ## 客户端接入
@@ -83,7 +85,7 @@ await authClient.signOut();
 ```ts
 const auth = createAuthModule(authOptions);
 const todos = createTodoService({ database: runtimeDatabase });
-setupTodosApp(app, {
+setupTodosApp(apiApp, {
   service: todos,
   getTenantId: (context) => context.get("tenantPrincipal")?.tenantId,
   authorization: {

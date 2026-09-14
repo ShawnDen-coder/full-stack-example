@@ -11,10 +11,10 @@
 - `todoSchema`、`todoListSchema`、`createTodoSchema`、`updateTodoSchema`、`todoIdSchema` 定义运行时校验。
 - `TenantTodoService` 描述路由所需的租户业务操作。
 - `createTodoService({ database })` 创建一次可复用的租户 Service。
-- `setupTodosApp(app, options)` 把 `/api/todos` 路由挂载到现有 Hono 应用。
+- `setupTodosApp(app, options)` 把相对 `/todos` 路由挂载到现有 Hono 应用；API 宿主负责 `/api` 前缀。
 - `TodosApiType` 描述独立的 Todos 子路由，供 Web 创建只覆盖 Todo 端点的 Hono RPC client。
 
-路由实现按复杂度分层：`route.desc.ts` 保存 OpenAPI 配置，`route.handler.ts` 使用模块自己的 `createFactory().createHandlers()` 组合 validator、授权和 handler，`route.ts` 链式定义带完整 API 路径的子应用。`setupTodosApp()` 将同一子应用挂载到宿主并导出其路由类型，消费者可独立创建小范围 RPC client。
+路由实现按复杂度分层：`route.desc.ts` 保存 OpenAPI 配置，`route.handler.ts` 使用模块自己的 `createFactory().createHandlers()` 组合 validator、授权和 handler，`route.ts` 链式定义相对资源路径的子应用。`setupTodosApp()` 将同一子应用挂载到宿主并导出其路由类型，消费者可独立创建小范围 RPC client。
 
 Repository 由 Service 内部按请求创建，路由永远不直接访问 Drizzle。模块固定使用 PostgreSQL，schema 和迁移由 Database 统一维护；不单独拆分适配器包。getTenantId 在授权之后执行，返回已验证的租户 ID。
 
@@ -58,8 +58,8 @@ Web 按功能使用 Todo 路由类型创建独立 client；服务端路由合同
 import { hc } from "hono/client";
 import type { TodosApiType } from "@full-stack-example/todos";
 
-const todosApi = hc<TodosApiType>("http://localhost:3000", { init: { credentials: "include" } });
-const response = await todosApi.api.todos.$get();
+const todosApi = hc<TodosApiType>("http://localhost:3000/api", { init: { credentials: "include" } });
+const response = await todosApi.todos.$get();
 if (!response.ok) throw new Error(`Todo request failed: ${response.status}`);
 const { todos } = await response.json();
 ```

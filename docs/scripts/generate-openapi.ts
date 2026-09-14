@@ -31,14 +31,16 @@ const auth = createAuthModule({
 const app = createApp({
   logger: getAppLogger("docs.openapi"),
   http: { webOrigin: "http://localhost:5173" },
-  documentation: { enabled: true },
-  modules: {
-    system: { checkDatabase: async () => undefined },
-    todos: { service: todoService },
+  services: {
     auth,
+    system: { checkDatabase: async () => undefined },
+    todos: todoService,
+  },
+  features: {
+    documentation: { enabled: true },
+    web: {},
     logStream: { stream: createLogStream() },
   },
-  web: {},
 });
 const response = await app.request("http://localhost/openapi.json");
 if (response.status !== 200) throw new Error(`OpenAPI endpoint returned ${response.status}`);
