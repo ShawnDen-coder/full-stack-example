@@ -4,9 +4,11 @@ import { exampleJob } from "@full-stack-example/jobs";
 import { createJobsWorker } from "@full-stack-example/jobs/worker";
 import { configureLogging, getAppLogger, shutdownLogging } from "@full-stack-example/logging";
 import { parseJobsWorkerConfig } from "./config.js";
+import { discardPrivilegedEnvironment } from "./runtime-environment.js";
 
 const environmentFile = fileURLToPath(new URL("../../../.env", import.meta.url));
 if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
+discardPrivilegedEnvironment();
 
 const config = parseJobsWorkerConfig();
 await configureLogging({
@@ -37,7 +39,10 @@ try {
   await shutdownLogging().catch((closeError: unknown) => {
     process.stderr.write(`Jobs worker logging cleanup failed: ${String(closeError)}\n`);
   });
-  throw error;
+  throw new Error(
+    "Could not initialize the Jobs Worker. Run `just infra-up` to provision database and jobs schemas.",
+    { cause: error },
+  );
 }
 let closing = false;
 const shutdown = async () => {

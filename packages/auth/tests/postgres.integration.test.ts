@@ -12,9 +12,13 @@ import { describe, expect, it } from "vitest";
 import { createSessionPrincipal } from "../src/middleware.js";
 import { createAuthModule } from "../src/server.js";
 
-describe.skipIf(!process.env.DATABASE_URL)("Better Auth PostgreSQL integration", () => {
+const databaseUrl = process.env.DATABASE_RUNTIME_URL ?? process.env.DATABASE_URL;
+const runPostgresIntegration = process.env.RUN_POSTGRES_INTEGRATION === "true";
+const skipPostgresIntegration = !runPostgresIntegration || !databaseUrl;
+
+describe.skipIf(skipPostgresIntegration)("Better Auth PostgreSQL integration", () => {
   it("provisions a user and organization on behalf of the owner", async () => {
-    const database = createDatabase({ databaseUrl: process.env.DATABASE_URL as string });
+    const database = createDatabase({ databaseUrl: databaseUrl as string });
     const suffix = Date.now().toString();
     const email = `owner-${suffix}@example.test`;
     const slug = `org-${suffix}`;
@@ -63,7 +67,7 @@ describe.skipIf(!process.env.DATABASE_URL)("Better Auth PostgreSQL integration",
   });
 
   it("supports password sign-in and session lookup", async () => {
-    const database = createDatabase({ databaseUrl: process.env.DATABASE_URL as string });
+    const database = createDatabase({ databaseUrl: databaseUrl as string });
     const email = `login-${Date.now()}@example.test`;
     const password = "correct-horse-battery-staple";
     const securityEvents: Array<{ readonly event: string; readonly actorUserId?: string }> = [];
@@ -95,6 +99,43 @@ describe.skipIf(!process.env.DATABASE_URL)("Better Auth PostgreSQL integration",
           (event) => event.event === "auth.session.created" && event.actorUserId === userId,
         ),
       ).toBe(true);
+    } finally {
+      if (userId) {
+        await database.db.delete(session).where(eq(session.userId, userId));
+        await database.db.delete(account).where(eq(account.userId, userId));
+        await database.db.delete(user).where(eq(user.id, userId));
+      }
+      await database.close();
+    }
+  });
+
+  it("provisions the platform admin idempotently without resetting an existing password", async () => {
+    const database = createDatabase({ databaseUrl: databaseUrl as string });
+    const email = `platform-admin-${Date.now()}@example.test`;
+    const password = "initial-password-123";
+    const auth = createAuthModule({
+      database: database.db,
+      baseURL: "http://localhost:3000",
+      secret: "test-secret-that-is-at-least-32-characters-long",
+      trustedOrigins: ["http://localhost:5173"],
+    });
+    let userId: string | undefined;
+    try {
+      const first = await auth.ensurePlatformAdmin({ email, name: "Platform Admin", password });
+      userId = first.id;
+      expect(first.created).toBe(true);
+      const second = await auth.ensurePlatformAdmin({
+        email,
+        name: "Platform Admin",
+        password: "replacement-password-456",
+      });
+      expect(second).toEqual({ id: first.id, created: false });
+
+      const signIn = await (auth.auth as any).api.signInEmail({
+        body: { email, password },
+        headers: new Headers(),
+      });
+      expect(signIn.user.id).toBe(first.id);
     } finally {
       if (userId) {
         await database.db.delete(session).where(eq(session.userId, userId));
