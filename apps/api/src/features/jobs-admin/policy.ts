@@ -1,6 +1,6 @@
-import type { AuthModule } from "@full-stack-example/auth/server";
 import type { Logger } from "@full-stack-example/logging";
-import type { Context, MiddlewareHandler, Next } from "hono";
+import type { MiddlewareHandler } from "hono";
+import type { AppPolicies } from "../../app/policies.js";
 
 const readMethods = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -11,17 +11,6 @@ function decodePathSegment(segment: string | undefined): string | undefined {
   } catch {
     return segment;
   }
-}
-
-function requireSameOrigin(webOrigin: string): MiddlewareHandler {
-  return async (context: Context, next: Next) => {
-    if (readMethods.has(context.req.method)) return next();
-    const origin = context.req.header("Origin");
-    const requestOrigin = new URL(context.req.url).origin;
-    if (!origin || (origin !== webOrigin && origin !== requestOrigin))
-      return context.json({ error: "CSRF validation failed" }, 403);
-    return next();
-  };
 }
 
 function auditMutation(logger: Logger): MiddlewareHandler {
@@ -58,26 +47,12 @@ function auditMutation(logger: Logger): MiddlewareHandler {
 }
 
 export function createJobsAdminPolicy(options: {
-  readonly auth: AuthModule;
   readonly logger: Logger;
-  readonly webOrigin: string;
+  readonly policies: AppPolicies;
 }) {
   return {
     beforeAuthorization: [auditMutation(options.logger)],
-    authorization: [
-      requireSameOrigin(options.webOrigin),
-      options.auth.require.requireSession,
-      options.auth.require.requirePlatformAdmin,
-      options.auth.require.requireFreshSession,
-    ],
-    boardAuthorization: [
-      requireSameOrigin(options.webOrigin),
-      options.auth.require.requireSession,
-      options.auth.require.requirePlatformAdmin,
-      async (context: Context, next: Next) => {
-        if (readMethods.has(context.req.method)) return next();
-        return options.auth.require.requireFreshSession(context, next);
-      },
-    ],
+    authorization: options.policies.platformAdminMutation,
+    boardAuthorization: options.policies.platformAdminBoard,
   } as const;
 }
