@@ -5,6 +5,7 @@
       "**",
       "!!**/dist",
       "!!**/coverage",
+      "!!**/storybook-static",
       "!!**/node_modules",
       "!!docs/doc_build",
       "!!docs/public/generated",
