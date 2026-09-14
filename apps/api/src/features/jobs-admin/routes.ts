@@ -30,5 +30,5 @@ export function setupExampleJobsApp<E extends Env, S extends Schema, BasePath ex
       return context.json({ error: "Job backend unavailable" }, 503);
     }
   });
-  return app.route("/api/admin/jobs", route);
+  return app.route("/admin/jobs", route);
 }

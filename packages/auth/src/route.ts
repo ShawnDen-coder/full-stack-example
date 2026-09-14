@@ -21,5 +21,5 @@ export function setupAuthApp<E extends Env, S extends Schema, BasePath extends s
   app: Hono<E, S, BasePath>,
   options: SetupAuthAppOptions,
 ) {
-  return app.route("/api", createAuthRoutes(options));
+  return app.route("/", createAuthRoutes(options));
 }

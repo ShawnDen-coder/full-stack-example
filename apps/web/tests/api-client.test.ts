@@ -9,7 +9,7 @@ describe("feature RPC clients", () => {
     const todosApi = createTodosApiClient("https://example.test", fetch);
 
     await systemApi.health.$get();
-    await todosApi.api.todos.$get();
+    await todosApi.todos.$get();
 
     expect(fetch).toHaveBeenNthCalledWith(
       1,

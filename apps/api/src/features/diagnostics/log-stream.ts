@@ -95,5 +95,5 @@ export function setupLogStreamApp<E extends Env, S extends Schema, BasePath exte
   app: Hono<E, S, BasePath>,
   options: LogStreamOptions,
 ) {
-  return app.route("/api/logs/stream", createLogStreamRoutes(options));
+  return app.route("/logs/stream", createLogStreamRoutes(options));
 }

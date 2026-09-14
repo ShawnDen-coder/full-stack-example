@@ -4,6 +4,7 @@ import type { Logger, LogStream } from "@full-stack-example/logging";
 import { setupSystemApp } from "@full-stack-example/system";
 import { setupTodosApp, type TenantTodoService } from "@full-stack-example/todos";
 import type { ApplyGlobalResponse } from "hono/client";
+import { appFactory } from "./env.js";
 import { setupLogStreamApp } from "../features/diagnostics/log-stream.js";
 import { setupJobsBoardApp } from "../features/jobs-admin/board.js";
 import { setupJobsAdminApp } from "../features/jobs-admin/setup.js";
@@ -63,16 +64,9 @@ export function createApp(options: CreateAppOptions) {
         500,
       );
     });
-  const withSystem = setupSystemApp(withErrors, {
-    checkDatabase: options.modules.system.checkDatabase,
-    onProbeFailure: () =>
-      options.logger
-        .getChild("system")
-        .warn("Database health check failed", { event: "system.health.degraded" }),
-  });
-
-  const withAuth = setupAuthApp(withSystem, { auth: options.modules.auth });
-  const withTodos = setupTodosApp(withAuth, {
+  const apiApp = appFactory.createApp();
+  const apiWithAuth = setupAuthApp(apiApp, { auth: options.modules.auth });
+  const apiWithTodos = setupTodosApp(apiWithAuth, {
     service: options.modules.todos.service,
     authorization: {
       read: policies.tenantPermission({ resource: "todos", action: "read" }),
@@ -81,16 +75,32 @@ export function createApp(options: CreateAppOptions) {
     },
     getTenantId: policies.resolveTenantId,
   });
-  const withJobs = options.modules.jobs
-    ? setupJobsAdminApp(withTodos, {
+  const apiWithJobs = options.modules.jobs
+    ? setupJobsAdminApp(apiWithTodos, {
         policies,
         logger: options.logger,
         producer: options.modules.jobs.producer,
       })
-    : withTodos;
+    : apiWithTodos;
+  const apiRoutes = options.modules.logStream
+    ? setupLogStreamApp(apiWithJobs, {
+        stream: options.modules.logStream.stream,
+        heartbeatMs: options.modules.logStream.heartbeatMs ?? 15_000,
+        authorization: policies.platformAdminFresh,
+      })
+    : apiWithJobs;
+
+  const withSystem = setupSystemApp(withErrors, {
+    checkDatabase: options.modules.system.checkDatabase,
+    onProbeFailure: () =>
+      options.logger
+        .getChild("system")
+        .warn("Database health check failed", { event: "system.health.degraded" }),
+  });
+
   const withJobsBoard =
     options.modules.jobs?.boardEnabled === true
-      ? setupJobsBoardApp(withJobs, {
+      ? setupJobsBoardApp(withSystem, {
           logger: options.logger,
           policies,
           board: options.modules.jobs.board,
@@ -101,15 +111,9 @@ export function createApp(options: CreateAppOptions) {
           csrfSecret: options.csrfSecret ?? "development-bull-board-csrf-secret-change-me",
           allowedOrigins: [options.http.webOrigin, options.http.apiOrigin ?? options.http.webOrigin],
         })
-      : withJobs;
-  const withLogStream = options.modules.logStream
-    ? setupLogStreamApp(withJobsBoard, {
-        stream: options.modules.logStream.stream,
-        heartbeatMs: options.modules.logStream.heartbeatMs ?? 15_000,
-        authorization: policies.platformAdminFresh,
-      })
-    : withJobsBoard;
-  const withApiDocs = setupApiDocs(withLogStream, {
+      : withSystem;
+  const withApi = withJobsBoard.route("/api", apiRoutes);
+  const withApiDocs = setupApiDocs(withApi, {
     ...options.documentation,
     auth: options.modules.auth,
   });
