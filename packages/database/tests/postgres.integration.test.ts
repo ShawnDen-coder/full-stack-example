@@ -27,8 +27,14 @@ describe.skipIf(skipPostgresIntegration)("PostgreSQL tenant isolation", () => {
   it("runtime role cannot perform DDL or switch to migrator", async () => {
     const database = createDatabase({ databaseUrl: runtimeDatabaseUrl as string });
     try {
+      await expect(assertDatabaseMigrations(database.db)).resolves.toBeUndefined();
       await expect(
         database.db.execute(sql`CREATE TABLE runtime_ddl_must_be_denied (id integer)`),
+      ).rejects.toMatchObject({ code: "42501" });
+      await expect(
+        database.db.execute(
+          sql`UPDATE drizzle.__drizzle_migrations SET created_at = created_at WHERE false`,
+        ),
       ).rejects.toMatchObject({ code: "42501" });
       await expect(database.db.execute(sql`SET ROLE app_migrator`)).rejects.toMatchObject({
         code: "42501",

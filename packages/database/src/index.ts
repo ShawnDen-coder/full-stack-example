@@ -1,5 +1,10 @@
 export { createDatabase, type Database, type DatabaseContext } from "./client.js";
-export { assertDatabaseMigrations, checkDatabase } from "./health.js";
+export {
+  assertDatabaseMigrations,
+  checkDatabase,
+  DatabaseMigrationRequiredError,
+  REQUIRED_DATABASE_MIGRATION_VERSION,
+} from "./health.js";
 export { defaultMigrationsFolder, migrateDatabase } from "./migrate.js";
 export {
   account,
