@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import {
+  assertDatabaseMigrations,
   createDatabase,
   organization,
   rateLimit,
@@ -9,8 +10,36 @@ import {
 } from "../src/index.js";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
+const hasRuntimeDatabase = Boolean(process.env.DATABASE_RUNTIME_URL);
+const runPostgresIntegration = process.env.RUN_POSTGRES_INTEGRATION === "true";
 
-describe.skipIf(!hasDatabase)("PostgreSQL tenant isolation", () => {
+describe.skipIf(!runPostgresIntegration || !hasDatabase)("PostgreSQL tenant isolation", () => {
+  it("recognizes the required application schema", async () => {
+    const database = createDatabase({ databaseUrl: process.env.DATABASE_URL as string });
+    try {
+      await expect(assertDatabaseMigrations(database.db)).resolves.toBeUndefined();
+    } finally {
+      await database.close();
+    }
+  });
+
+  it.skipIf(!hasRuntimeDatabase)(
+    "runtime role cannot perform DDL or switch to migrator",
+    async () => {
+      const database = createDatabase({ databaseUrl: process.env.DATABASE_RUNTIME_URL as string });
+      try {
+        await expect(
+          database.db.execute(sql`CREATE TABLE runtime_ddl_must_be_denied (id integer)`),
+        ).rejects.toMatchObject({ code: "42501" });
+        await expect(database.db.execute(sql`SET ROLE app_migrator`)).rejects.toMatchObject({
+          code: "42501",
+        });
+      } finally {
+        await database.close();
+      }
+    },
+  );
+
   it("keeps tenant context transaction-local", async () => {
     const database = createDatabase({ databaseUrl: process.env.DATABASE_URL as string });
     try {

@@ -1,29 +1,43 @@
 import { isAbsolute } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseConfig, parseJobsMigrationConfig } from "../src/config.js";
+import {
+  parseAdminProvisionConfig,
+  parseConfig,
+  parseJobsMigrationConfig,
+  parseJobsWorkerConfig,
+  parseMigrationConfig,
+} from "../src/config.js";
+
+const runtimeUrl = "postgres://app_runtime:runtime@localhost:5432/app";
+const migratorUrl = "postgres://app_migrator:migrator@localhost:5432/app";
+const authSecret = "test-secret-that-is-at-least-32-characters-long";
 
 describe("API configuration", () => {
-  it("uses the configured runtime role for BullMQ migration grants", () => {
-    const config = parseJobsMigrationConfig({
-      DATABASE_MIGRATOR_URL: "postgres://migrator:migrator@localhost:5432/app",
-      DATABASE_RUNTIME_ROLE: "worker_runtime",
+  it("requires a migrator URL for all migration entrypoints", () => {
+    expect(parseMigrationConfig({ DATABASE_MIGRATOR_URL: migratorUrl })).toEqual({
+      databaseUrl: migratorUrl,
     });
-    expect(config).toEqual({
-      databaseUrl: "postgres://migrator:migrator@localhost:5432/app",
-      runtimeRole: "worker_runtime",
+    expect(parseJobsMigrationConfig({ DATABASE_MIGRATOR_URL: migratorUrl })).toEqual({
+      databaseUrl: migratorUrl,
     });
+    expect(() => parseMigrationConfig({ DATABASE_URL: migratorUrl })).toThrow();
+    expect(() => parseJobsMigrationConfig({ DATABASE_URL: migratorUrl })).toThrow();
+  });
+
+  it("requires the runtime URL for API and Worker", () => {
     expect(() =>
-      parseJobsMigrationConfig({
-        DATABASE_URL: "postgres://migrator:migrator@localhost:5432/app",
-        DATABASE_RUNTIME_ROLE: "worker; DROP ROLE app_runtime",
-      }),
+      parseConfig({ DATABASE_URL: runtimeUrl, BETTER_AUTH_SECRET: authSecret }),
     ).toThrow();
+    expect(() => parseJobsWorkerConfig({ DATABASE_URL: runtimeUrl })).toThrow();
+    expect(parseJobsWorkerConfig({ DATABASE_RUNTIME_URL: runtimeUrl }).databaseUrl).toBe(
+      runtimeUrl,
+    );
   });
 
   it("resolves a relative log file from the workspace root", () => {
     const config = parseConfig({
-      DATABASE_URL: "postgres://app:app@localhost:5432/app",
-      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
+      DATABASE_RUNTIME_URL: runtimeUrl,
+      BETTER_AUTH_SECRET: authSecret,
       LOG_FILE: "logs/api.jsonl",
     });
 
@@ -34,8 +48,8 @@ describe("API configuration", () => {
 
   it("enables API docs outside production by default", () => {
     const config = parseConfig({
-      DATABASE_URL: "postgres://app:app@localhost:5432/app",
-      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
+      DATABASE_RUNTIME_URL: runtimeUrl,
+      BETTER_AUTH_SECRET: authSecret,
       NODE_ENV: "development",
     });
     expect(config.apiDocsEnabled).toBe(true);
@@ -44,19 +58,17 @@ describe("API configuration", () => {
 
   it("accepts a configured API database pool upper bound", () => {
     const config = parseConfig({
-      DATABASE_URL: "postgres://app:app@localhost:5432/app",
+      DATABASE_RUNTIME_URL: runtimeUrl,
       DATABASE_POOL_MAX: "24",
-      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
+      BETTER_AUTH_SECRET: authSecret,
     });
     expect(config.databasePoolMax).toBe(24);
   });
 
   it("disables API docs in production unless explicitly enabled", () => {
     const environment = {
-      DATABASE_URL: "postgres://app:app@localhost:5432/app",
-      DATABASE_RUNTIME_URL: "postgres://runtime:runtime@localhost:5432/app",
-      DATABASE_MIGRATOR_URL: "postgres://migrator:migrator@localhost:5432/app",
-      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
+      DATABASE_RUNTIME_URL: runtimeUrl,
+      BETTER_AUTH_SECRET: authSecret,
       NODE_ENV: "production" as const,
     };
     expect(parseConfig(environment).apiDocsEnabled).toBe(false);
@@ -65,27 +77,24 @@ describe("API configuration", () => {
   });
 
   it("allows an explicitly enabled production log stream", () => {
-    const environment = {
-      DATABASE_URL: "postgres://app:app@localhost:5432/app",
-      DATABASE_RUNTIME_URL: "postgres://runtime:runtime@localhost:5432/app",
-      DATABASE_MIGRATOR_URL: "postgres://migrator:migrator@localhost:5432/app",
-      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
-      NODE_ENV: "production" as const,
-      LOG_STREAM_ENABLED: "true" as const,
-    };
-
-    expect(parseConfig(environment).logStreamEnabled).toBe(true);
+    expect(
+      parseConfig({
+        DATABASE_RUNTIME_URL: runtimeUrl,
+        BETTER_AUTH_SECRET: authSecret,
+        NODE_ENV: "production",
+        LOG_STREAM_ENABLED: "true",
+      }).logStreamEnabled,
+    ).toBe(true);
   });
 
-  it("reads the initial platform admin bootstrap credentials", () => {
-    const config = parseConfig({
-      DATABASE_URL: "postgres://app:app@localhost:5432/app",
-      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
+  it("reads initial platform admin credentials in the provision config", () => {
+    const config = parseAdminProvisionConfig({
+      DATABASE_RUNTIME_URL: runtimeUrl,
+      BETTER_AUTH_SECRET: authSecret,
       PLATFORM_ADMIN_EMAIL: "admin@example.com",
       PLATFORM_ADMIN_NAME: "Platform Admin",
       PLATFORM_ADMIN_PASSWORD: "Admin123!",
     });
-
     expect(config.platformAdmin).toEqual({
       email: "admin@example.com",
       name: "Platform Admin",
@@ -93,13 +102,12 @@ describe("API configuration", () => {
     });
   });
 
-  it("rejects partial initial platform admin credentials", () => {
-    const base = {
-      DATABASE_URL: "postgres://app:app@localhost:5432/app",
-      BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
-    };
-    expect(() => parseConfig({ ...base, PLATFORM_ADMIN_EMAIL: "admin@example.com" })).toThrow(
-      "must be configured together",
-    );
+  it("requires complete admin provisioning credentials", () => {
+    expect(() =>
+      parseAdminProvisionConfig({
+        DATABASE_RUNTIME_URL: runtimeUrl,
+        BETTER_AUTH_SECRET: authSecret,
+      }),
+    ).toThrow();
   });
 });

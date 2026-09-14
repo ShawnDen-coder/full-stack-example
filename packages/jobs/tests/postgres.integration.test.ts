@@ -14,6 +14,8 @@ import { createJobsWorker } from "../src/worker.js";
 
 const runtimeUrl = process.env.DATABASE_RUNTIME_URL ?? process.env.DATABASE_URL;
 const migratorUrl = process.env.DATABASE_MIGRATOR_URL ?? process.env.DATABASE_URL;
+const runPostgresIntegration = process.env.RUN_POSTGRES_INTEGRATION === "true";
+const skipPostgresIntegration = !runPostgresIntegration || !runtimeUrl || !migratorUrl;
 
 function createQueue(databaseUrl: string) {
   return new Queue(
@@ -62,10 +64,10 @@ function waitForFailure(
   });
 }
 
-describe.skipIf(!runtimeUrl || !migratorUrl)("BullMQ PostgreSQL integration", () => {
+describe.skipIf(skipPostgresIntegration)("BullMQ PostgreSQL integration", () => {
   it("runs the official migration repeatedly", async () => {
-    await migrateJobs({ databaseUrl: migratorUrl as string, runtimeRole: "app_runtime" });
-    await migrateJobs({ databaseUrl: migratorUrl as string, runtimeRole: "app_runtime" });
+    await migrateJobs({ databaseUrl: migratorUrl as string });
+    await migrateJobs({ databaseUrl: migratorUrl as string });
   });
 
   it("persists progress and logs through completion", async () => {
