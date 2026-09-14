@@ -1,12 +1,9 @@
 import { isAbsolute } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  parseAdminProvisionConfig,
-  parseConfig,
-  parseJobsMigrationConfig,
-  parseJobsWorkerConfig,
-  parseMigrationConfig,
-} from "../src/config.js";
+import { parseAdminProvisionConfig } from "../src/config/admin-provision.js";
+import { parseApiConfig } from "../src/config/api.js";
+import { parseJobsWorkerConfig } from "../src/config/jobs-worker.js";
+import { parseMigrationConfig } from "../src/config/migration.js";
 
 const runtimeUrl = "postgres://app_runtime:runtime@localhost:5432/app";
 const migratorUrl = "postgres://app_migrator:migrator@localhost:5432/app";
@@ -17,16 +14,12 @@ describe("API configuration", () => {
     expect(parseMigrationConfig({ DATABASE_MIGRATOR_URL: migratorUrl })).toEqual({
       databaseUrl: migratorUrl,
     });
-    expect(parseJobsMigrationConfig({ DATABASE_MIGRATOR_URL: migratorUrl })).toEqual({
-      databaseUrl: migratorUrl,
-    });
     expect(() => parseMigrationConfig({ DATABASE_URL: migratorUrl })).toThrow();
-    expect(() => parseJobsMigrationConfig({ DATABASE_URL: migratorUrl })).toThrow();
   });
 
   it("requires the runtime URL for API and Worker", () => {
     expect(() =>
-      parseConfig({ DATABASE_URL: runtimeUrl, BETTER_AUTH_SECRET: authSecret }),
+      parseApiConfig({ DATABASE_URL: runtimeUrl, BETTER_AUTH_SECRET: authSecret }),
     ).toThrow();
     expect(() => parseJobsWorkerConfig({ DATABASE_URL: runtimeUrl })).toThrow();
     expect(parseJobsWorkerConfig({ DATABASE_RUNTIME_URL: runtimeUrl }).databaseUrl).toBe(
@@ -35,7 +28,7 @@ describe("API configuration", () => {
   });
 
   it("resolves a relative log file from the workspace root", () => {
-    const config = parseConfig({
+    const config = parseApiConfig({
       DATABASE_RUNTIME_URL: runtimeUrl,
       BETTER_AUTH_SECRET: authSecret,
       LOG_FILE: "logs/api.jsonl",
@@ -47,7 +40,7 @@ describe("API configuration", () => {
   });
 
   it("enables API docs outside production by default", () => {
-    const config = parseConfig({
+    const config = parseApiConfig({
       DATABASE_RUNTIME_URL: runtimeUrl,
       BETTER_AUTH_SECRET: authSecret,
       NODE_ENV: "development",
@@ -57,12 +50,21 @@ describe("API configuration", () => {
   });
 
   it("accepts a configured API database pool upper bound", () => {
-    const config = parseConfig({
+    const config = parseApiConfig({
       DATABASE_RUNTIME_URL: runtimeUrl,
       DATABASE_POOL_MAX: "24",
       BETTER_AUTH_SECRET: authSecret,
     });
     expect(config.databasePoolMax).toBe(24);
+  });
+
+  it("does not retain Worker-only configuration in API config", () => {
+    const config = parseApiConfig({
+      DATABASE_RUNTIME_URL: runtimeUrl,
+      BETTER_AUTH_SECRET: authSecret,
+      JOBS_WORKER_CONCURRENCY: "17",
+    });
+    expect(config).not.toHaveProperty("concurrency");
   });
 
   it("disables API docs in production unless explicitly enabled", () => {
@@ -71,14 +73,16 @@ describe("API configuration", () => {
       BETTER_AUTH_SECRET: authSecret,
       NODE_ENV: "production" as const,
     };
-    expect(parseConfig(environment).apiDocsEnabled).toBe(false);
-    expect(parseConfig({ ...environment, API_DOCS_ENABLED: "true" }).apiDocsEnabled).toBe(true);
-    expect(parseConfig({ ...environment, API_DOCS_ENABLED: "false" }).apiDocsEnabled).toBe(false);
+    expect(parseApiConfig(environment).apiDocsEnabled).toBe(false);
+    expect(parseApiConfig({ ...environment, API_DOCS_ENABLED: "true" }).apiDocsEnabled).toBe(true);
+    expect(parseApiConfig({ ...environment, API_DOCS_ENABLED: "false" }).apiDocsEnabled).toBe(
+      false,
+    );
   });
 
   it("allows an explicitly enabled production log stream", () => {
     expect(
-      parseConfig({
+      parseApiConfig({
         DATABASE_RUNTIME_URL: runtimeUrl,
         BETTER_AUTH_SECRET: authSecret,
         NODE_ENV: "production",

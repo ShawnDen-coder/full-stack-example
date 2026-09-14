@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
-import { waitForListening } from "../src/wait-for-listening.js";
+import { waitForListening } from "../src/runtime/listen.js";
 
 describe("waitForListening", () => {
   let occupiedServer: ReturnType<typeof createServer> | undefined;

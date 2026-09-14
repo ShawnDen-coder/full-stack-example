@@ -1,13 +1,10 @@
-import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { exampleJob } from "@full-stack-example/jobs";
 import { createJobsWorker } from "@full-stack-example/jobs/worker";
 import { configureLogging, getAppLogger, shutdownLogging } from "@full-stack-example/logging";
-import { parseJobsWorkerConfig } from "./config.js";
-import { discardPrivilegedEnvironment } from "./runtime-environment.js";
+import { parseJobsWorkerConfig } from "../config/jobs-worker.js";
+import { discardPrivilegedEnvironment, loadWorkspaceEnvironment } from "../runtime/environment.js";
 
-const environmentFile = fileURLToPath(new URL("../../../.env", import.meta.url));
-if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
+loadWorkspaceEnvironment();
 discardPrivilegedEnvironment();
 
 const config = parseJobsWorkerConfig();

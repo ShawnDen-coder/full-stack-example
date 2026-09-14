@@ -13,13 +13,17 @@ import {
 } from "@full-stack-example/logging";
 import { createTodoService } from "@full-stack-example/todos";
 import { serve } from "@hono/node-server";
-import { createApp } from "./app.js";
-import { parseConfig } from "./config.js";
+import { createApp } from "../app/create-app.js";
+import { parseApiConfig } from "../config/api.js";
+import { waitForListening } from "./listen.js";
 import { startTelemetry } from "./telemetry.js";
-import { waitForListening } from "./wait-for-listening.js";
 
-export async function bootstrap(): Promise<() => Promise<void>> {
-  const config = parseConfig();
+export interface ApiServerRuntime {
+  close(): Promise<void>;
+}
+
+export async function startApiServer(): Promise<ApiServerRuntime> {
+  const config = parseApiConfig();
   const logStream = createLogStream({ capacity: config.logStreamBufferSize });
   await configureLogging({
     service: "api",
@@ -29,7 +33,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
     stream: logStream,
     ...(config.logFile ? { filePath: config.logFile } : {}),
   });
-  const logger = getAppLogger(["api", "bootstrap"]);
+  const logger = getAppLogger(["api", "server"]);
   let telemetry: Awaited<ReturnType<typeof startTelemetry>> | undefined;
   let database: ReturnType<typeof createDatabase> | undefined;
   let server: ReturnType<typeof serve> | undefined;
@@ -161,7 +165,7 @@ export async function bootstrap(): Promise<() => Promise<void>> {
       host: config.host,
       port: config.port,
     });
-    return cleanup;
+    return { close: cleanup };
   } catch (error) {
     try {
       await cleanup();

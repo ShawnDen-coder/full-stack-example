@@ -1,12 +1,10 @@
-import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { createAuthModule } from "@full-stack-example/auth/server";
 import { createDatabase } from "@full-stack-example/database";
 import { configureLogging, getAppLogger, shutdownLogging } from "@full-stack-example/logging";
-import { parseAdminProvisionConfig } from "./config.js";
+import { parseAdminProvisionConfig } from "../config/admin-provision.js";
+import { loadWorkspaceEnvironment } from "../runtime/environment.js";
 
-const environmentFile = fileURLToPath(new URL("../../../.env", import.meta.url));
-if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
+loadWorkspaceEnvironment();
 
 const config = parseAdminProvisionConfig();
 await configureLogging({
