@@ -16,35 +16,40 @@ import { setupWebApp } from "./web-assets.js";
 interface CreateAppBaseOptions {
   readonly logger: Logger;
   readonly http: { readonly webOrigin: string; readonly apiOrigin?: string };
-  readonly environment?: string;
-  readonly csrfSecret?: string;
-  readonly documentation: { readonly enabled: boolean };
-  readonly web: { readonly assetsDirectory?: string };
 }
 
-interface JobsAppModule {
+interface JobsAdminFeature {
   readonly producer: JobProducer;
-  readonly board: JobsBoardSource;
-  readonly boardEnabled?: boolean;
-  readonly boardBasePath?: string;
 }
 
-type BaseModules = {
+interface JobsBoardFeature {
+  readonly source: JobsBoardSource;
+  readonly basePath: string;
+  readonly environment: string;
+  readonly csrfSecret: string;
+  readonly allowedOrigins: readonly string[];
+}
+
+type AppServices = {
+  readonly auth: AuthModule;
   readonly system: { readonly checkDatabase: () => Promise<void> };
-  readonly todos: { readonly service: TenantTodoService };
+  readonly todos: TenantTodoService;
 };
 
 export type CreateAppOptions = CreateAppBaseOptions & {
-  readonly modules: BaseModules & {
-    readonly auth: AuthModule;
-    readonly jobs?: JobsAppModule;
+  readonly services: AppServices;
+  readonly features: {
+    readonly jobsAdmin?: JobsAdminFeature;
+    readonly jobsBoard?: JobsBoardFeature;
     readonly logStream?: { readonly stream: LogStream; readonly heartbeatMs?: number };
+    readonly documentation: { readonly enabled: boolean };
+    readonly web: { readonly assetsDirectory?: string };
   };
 };
 
 export function createApp(options: CreateAppOptions) {
   const policies = createAppPolicies({
-    auth: options.modules.auth,
+    auth: options.services.auth,
     webOrigin: options.http.webOrigin,
   });
   const withErrors = createHttpApp({ logger: options.logger, webOrigin: options.http.webOrigin })
@@ -65,9 +70,9 @@ export function createApp(options: CreateAppOptions) {
       );
     });
   const apiApp = appFactory.createApp();
-  const apiWithAuth = setupAuthApp(apiApp, { auth: options.modules.auth });
+  const apiWithAuth = setupAuthApp(apiApp, { auth: options.services.auth });
   const apiWithTodos = setupTodosApp(apiWithAuth, {
-    service: options.modules.todos.service,
+    service: options.services.todos,
     authorization: {
       read: policies.tenantPermission({ resource: "todos", action: "read" }),
       write: policies.tenantPermission({ resource: "todos", action: "write" }),
@@ -75,23 +80,23 @@ export function createApp(options: CreateAppOptions) {
     },
     getTenantId: policies.resolveTenantId,
   });
-  const apiWithJobs = options.modules.jobs
+  const apiWithJobs = options.features.jobsAdmin
     ? setupJobsAdminApp(apiWithTodos, {
         policies,
         logger: options.logger,
-        producer: options.modules.jobs.producer,
+        producer: options.features.jobsAdmin.producer,
       })
     : apiWithTodos;
-  const apiRoutes = options.modules.logStream
+  const apiRoutes = options.features.logStream
     ? setupLogStreamApp(apiWithJobs, {
-        stream: options.modules.logStream.stream,
-        heartbeatMs: options.modules.logStream.heartbeatMs ?? 15_000,
+        stream: options.features.logStream.stream,
+        heartbeatMs: options.features.logStream.heartbeatMs ?? 15_000,
         authorization: policies.platformAdminFresh,
       })
     : apiWithJobs;
 
   const withSystem = setupSystemApp(withErrors, {
-    checkDatabase: options.modules.system.checkDatabase,
+    checkDatabase: options.services.system.checkDatabase,
     onProbeFailure: () =>
       options.logger
         .getChild("system")
@@ -99,25 +104,23 @@ export function createApp(options: CreateAppOptions) {
   });
 
   const withJobsBoard =
-    options.modules.jobs?.boardEnabled === true
+    options.features.jobsBoard
       ? setupJobsBoardApp(withSystem, {
           logger: options.logger,
           policies,
-          board: options.modules.jobs.board,
-          ...(options.modules.jobs.boardBasePath
-            ? { basePath: options.modules.jobs.boardBasePath }
-            : {}),
-          environment: options.environment ?? "development",
-          csrfSecret: options.csrfSecret ?? "development-bull-board-csrf-secret-change-me",
-          allowedOrigins: [options.http.webOrigin, options.http.apiOrigin ?? options.http.webOrigin],
+          board: options.features.jobsBoard.source,
+          basePath: options.features.jobsBoard.basePath,
+          environment: options.features.jobsBoard.environment,
+          csrfSecret: options.features.jobsBoard.csrfSecret,
+          allowedOrigins: options.features.jobsBoard.allowedOrigins,
         })
       : withSystem;
   const withApi = withJobsBoard.route("/api", apiRoutes);
   const withApiDocs = setupApiDocs(withApi, {
-    ...options.documentation,
-    auth: options.modules.auth,
+    ...options.features.documentation,
+    auth: options.services.auth,
   });
-  return setupWebApp(withApiDocs, options.web);
+  return setupWebApp(withApiDocs, options.features.web);
 }
 
 export type AppType = ApplyGlobalResponse<

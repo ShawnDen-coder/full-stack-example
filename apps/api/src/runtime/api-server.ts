@@ -130,29 +130,31 @@ export async function startApiServer(environment: ApiEnvironment): Promise<ApiSe
     const app = createApp({
       logger,
       http: { webOrigin: environment.WEB_ORIGIN, apiOrigin: environment.BETTER_AUTH_URL },
-      environment: environment.NODE_ENV,
-      csrfSecret: environment.BULL_BOARD_CSRF_SECRET,
-      documentation: { enabled: environment.API_DOCS_ENABLED },
-      modules: {
-        system: { checkDatabase: () => checkDatabase(databaseContext.db) },
-        todos: { service: todoService },
+      services: {
         auth,
+        system: { checkDatabase: () => checkDatabase(databaseContext.db) },
+        todos: todoService,
+      },
+      features: {
+        documentation: { enabled: environment.API_DOCS_ENABLED },
+        web: {
+          ...(environment.WEB_ASSETS_DIR ? { assetsDirectory: environment.WEB_ASSETS_DIR } : {}),
+        },
         ...(environment.LOG_STREAM_ENABLED
           ? { logStream: { stream: logStream, heartbeatMs: environment.LOG_STREAM_HEARTBEAT_MS } }
           : {}),
-        ...(jobs
+        ...(jobs ? { jobsAdmin: { producer: jobs.producer } } : {}),
+        ...(jobs && environment.BULL_BOARD_ENABLED
           ? {
-              jobs: {
-                producer: jobs.producer,
-                board: jobs.board,
-                boardEnabled: environment.BULL_BOARD_ENABLED,
-                boardBasePath: environment.BULL_BOARD_BASE_PATH,
+              jobsBoard: {
+                source: jobs.board,
+                basePath: environment.BULL_BOARD_BASE_PATH,
+                environment: environment.NODE_ENV,
+                csrfSecret: environment.BULL_BOARD_CSRF_SECRET,
+                allowedOrigins: [environment.WEB_ORIGIN, environment.BETTER_AUTH_URL],
               },
             }
           : {}),
-      },
-      web: {
-        ...(environment.WEB_ASSETS_DIR ? { assetsDirectory: environment.WEB_ASSETS_DIR } : {}),
       },
     });
     server = serve({ fetch: app.fetch, hostname: environment.HOST, port: environment.PORT });

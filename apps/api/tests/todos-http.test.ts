@@ -36,10 +36,9 @@ function createTestApp() {
   return createApp({
     logger,
     http: { webOrigin: "http://localhost:5173" },
-    documentation: { enabled: true },
-    modules: {
+    services: {
       system: { checkDatabase: async () => undefined },
-      todos: { service: createService() },
+      todos: createService(),
       auth: {
         require: {
           requireTenant,
@@ -56,7 +55,7 @@ function createTestApp() {
         },
       },
     } as any,
-    web: {},
+    features: { documentation: { enabled: true }, web: {} },
   });
 }
 

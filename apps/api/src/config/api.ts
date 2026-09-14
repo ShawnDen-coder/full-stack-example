@@ -41,6 +41,13 @@ export const apiEnvironmentSchema = z
     BULL_BOARD_CSRF_SECRET: z.string().min(32).optional(),
   })
   .superRefine((environment, context) => {
+    if (environment.BULL_BOARD_ENABLED && environment.JOBS_ENABLED === false) {
+      context.addIssue({
+        code: "custom",
+        path: ["BULL_BOARD_ENABLED"],
+        message: "requires JOBS_ENABLED=true",
+      });
+    }
     if (
       environment.BULL_BOARD_ENABLED &&
       environment.NODE_ENV === "production" &&
