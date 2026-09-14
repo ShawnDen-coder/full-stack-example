@@ -15,7 +15,7 @@ const defaultAuth = {
   },
   platform: {},
   getOpenApiDocument: async () => ({ paths: {}, components: {} }),
-} as unknown as NonNullable<CreateAppOptions["modules"]["auth"]>;
+} as unknown as CreateAppOptions["services"]["auth"];
 const todoService: TenantTodoService = {
   listTodos: async () => [],
   createTodo: async (_tenantId: string, input: { title: string }) => ({
@@ -36,27 +36,25 @@ function createApp(options: {
   readonly logger: typeof logger;
   readonly todoService: TenantTodoService;
   readonly webOrigin: string;
-  readonly auth?: CreateAppOptions["modules"]["auth"];
+  readonly auth?: CreateAppOptions["services"]["auth"];
   readonly webAssetsDirectory?: string;
   readonly documentationEnabled?: boolean;
   readonly logStream?: boolean;
 }) {
   const auth = options.auth;
-  const base = {
-    system: { checkDatabase: options.checkDatabase },
-    todos: { service: options.todoService },
-  };
-  const modules = {
-    ...base,
-    auth: auth ?? defaultAuth,
-    ...(options.logStream ? { logStream: { stream: createLogStream(), heartbeatMs: 10 } } : {}),
-  };
   return createComposedApp({
     logger: options.logger,
     http: { webOrigin: options.webOrigin },
-    documentation: { enabled: options.documentationEnabled ?? true },
-    modules,
-    web: { ...(options.webAssetsDirectory ? { assetsDirectory: options.webAssetsDirectory } : {}) },
+    services: {
+      system: { checkDatabase: options.checkDatabase },
+      todos: options.todoService,
+      auth: auth ?? defaultAuth,
+    },
+    features: {
+      documentation: { enabled: options.documentationEnabled ?? true },
+      web: { ...(options.webAssetsDirectory ? { assetsDirectory: options.webAssetsDirectory } : {}) },
+      ...(options.logStream ? { logStream: { stream: createLogStream(), heartbeatMs: 10 } } : {}),
+    },
   });
 }
 

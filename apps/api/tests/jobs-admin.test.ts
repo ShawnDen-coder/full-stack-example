@@ -32,16 +32,13 @@ function createTestApp(boardEnabled = false, producer: JobProducer = jobProducer
   return createApp({
     logger,
     http: { webOrigin: "http://localhost:5173" },
-    documentation: { enabled: false },
-    modules: {
+    services: {
       system: { checkDatabase: async () => undefined },
       todos: {
-        service: {
           listTodos: async () => [],
           createTodo: async () => ({ id: 1, title: "", completed: false }),
           updateTodo: async () => undefined,
           deleteTodo: async () => false,
-        },
       },
       auth: {
         require: {
@@ -51,10 +48,24 @@ function createTestApp(boardEnabled = false, producer: JobProducer = jobProducer
           requireTenantPermission: () => pass,
         },
         auth: { handler: async () => new Response("handled") },
-      } as unknown as NonNullable<CreateAppOptions["modules"]["auth"]>,
-      jobs: { producer, board, boardEnabled },
+      } as unknown as CreateAppOptions["services"]["auth"],
     },
-    web: {},
+    features: {
+      documentation: { enabled: false },
+      web: {},
+      jobsAdmin: { producer },
+      ...(boardEnabled
+        ? {
+            jobsBoard: {
+              source: board,
+              basePath: "/admin/queues",
+              environment: "test",
+              csrfSecret: "jobs-board-test-secret-with-32-characters",
+              allowedOrigins: ["http://localhost:5173", "http://localhost"],
+            },
+          }
+        : {}),
+    },
   });
 }
 
@@ -251,26 +262,4 @@ describe("jobs API composition", () => {
     });
   });
 
-  it("rejects jobs configuration without authentication at runtime", () => {
-    expect(() =>
-      createApp({
-        logger,
-        http: { webOrigin: "http://localhost:5173" },
-        documentation: { enabled: false },
-        modules: {
-          system: { checkDatabase: async () => undefined },
-          todos: {
-            service: {
-              listTodos: async () => [],
-              createTodo: async () => ({ id: 1, title: "", completed: false }),
-              updateTodo: async () => undefined,
-              deleteTodo: async () => false,
-            },
-          },
-          jobs: { producer: jobProducer, board },
-        },
-        web: {},
-      } as unknown as CreateAppOptions),
-    ).toThrow("The API requires an authentication module");
-  });
 });

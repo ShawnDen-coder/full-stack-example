@@ -120,6 +120,16 @@ describe("process environment schemas", () => {
     ).toBe("a-secure-csrf-secret-with-at-least-32-chars");
   });
 
+  it("requires Jobs to be enabled when Bull Board is enabled", () => {
+    expect(() =>
+      parseApiEnvironment({ ...apiEnvironment, JOBS_ENABLED: "false", BULL_BOARD_ENABLED: "true" }),
+    ).toThrow(/BULL_BOARD_ENABLED: requires JOBS_ENABLED=true/);
+    expect(
+      parseApiEnvironment({ ...apiEnvironment, JOBS_ENABLED: "true", BULL_BOARD_ENABLED: "true" })
+        .BULL_BOARD_ENABLED,
+    ).toBe(true);
+  });
+
   it("reports invalid variable names without exposing their values", () => {
     let message = "";
     try {
