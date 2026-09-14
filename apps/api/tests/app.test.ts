@@ -1,7 +1,7 @@
 import { configureLogging, createLogStream, getAppLogger } from "@full-stack-example/logging";
 import type { TenantTodoService } from "@full-stack-example/todos";
 import { beforeAll, describe, expect, it } from "vitest";
-import { type CreateAppOptions, createApp as createComposedApp } from "../src/app.js";
+import { type CreateAppOptions, createApp as createComposedApp } from "../src/app/create-app.js";
 
 let logger = getAppLogger("test");
 const pass = async (_context: import("hono").Context, next: import("hono").Next) => next();

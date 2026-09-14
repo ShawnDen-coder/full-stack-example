@@ -7,7 +7,7 @@ import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 import { timeout } from "hono/timeout";
-import { appFactory } from "./factory.js";
+import { appFactory } from "./env.js";
 
 export interface HttpOptions {
   readonly logger: Logger;

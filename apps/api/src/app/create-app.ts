@@ -1,16 +1,14 @@
 import { type AuthModule, setupAuthApp } from "@full-stack-example/auth/server";
 import type { JobProducer, JobsBoardSource } from "@full-stack-example/jobs/contracts";
-import { setupJobsBoard } from "@full-stack-example/jobs/server";
 import type { Logger, LogStream } from "@full-stack-example/logging";
 import { setupSystemApp } from "@full-stack-example/system";
 import { setupTodosApp, type TenantTodoService } from "@full-stack-example/todos";
 import type { ApplyGlobalResponse } from "hono/client";
-import { setupApiDocs } from "./api-docs.js";
+import { setupLogStreamApp } from "../features/diagnostics/log-stream.js";
+import { setupJobsAdminApp } from "../features/jobs-admin/setup.js";
 import { createHttpApp } from "./http.js";
-import { createJobsAdminPolicy } from "./jobs-admin.js";
-import { setupExampleJobsApp } from "./jobs-api.js";
-import { setupLogStreamApp } from "./log-stream.js";
-import { setupWebApp } from "./web-app.js";
+import { setupApiDocs } from "./openapi.js";
+import { setupWebApp } from "./web-assets.js";
 
 interface CreateAppBaseOptions {
   readonly logger: Logger;
@@ -87,37 +85,26 @@ export function createApp(options: CreateAppOptions) {
     },
     getTenantId: (context) => context.get("tenantPrincipal")?.tenantId,
   });
-  const jobsPolicy = createJobsAdminPolicy({
-    auth: options.modules.auth,
-    logger: options.logger,
-    webOrigin: options.http.webOrigin,
-  });
   const withJobs = options.modules.jobs
-    ? setupExampleJobsApp(withTodos, {
+    ? setupJobsAdminApp(withTodos, {
+        auth: options.modules.auth,
+        logger: options.logger,
+        webOrigin: options.http.webOrigin,
         producer: options.modules.jobs.producer,
-        beforeAuthorization: jobsPolicy.beforeAuthorization,
-        authorization: jobsPolicy.authorization,
+        board: options.modules.jobs.board,
+        ...(options.modules.jobs.boardEnabled !== undefined
+          ? { boardEnabled: options.modules.jobs.boardEnabled }
+          : {}),
+        ...(options.modules.jobs.boardBasePath
+          ? { boardBasePath: options.modules.jobs.boardBasePath }
+          : {}),
+        environment: options.environment ?? "development",
+        csrfSecret: options.csrfSecret ?? "development-bull-board-csrf-secret-change-me",
+        allowedOrigins: [options.http.webOrigin, options.http.apiOrigin ?? options.http.webOrigin],
       })
     : withTodos;
-  const withBoard =
-    options.modules.jobs?.boardEnabled && options.modules.auth
-      ? setupJobsBoard(withJobs, {
-          board: options.modules.jobs.board,
-          environment: options.environment ?? "development",
-          ...(options.modules.jobs.boardBasePath
-            ? { basePath: options.modules.jobs.boardBasePath }
-            : {}),
-          authorization: jobsPolicy.boardAuthorization,
-          beforeMiddleware: jobsPolicy.beforeAuthorization,
-          csrfSecret: options.csrfSecret ?? "development-bull-board-csrf-secret-change-me",
-          allowedOrigins: [
-            options.http.webOrigin,
-            options.http.apiOrigin ?? options.http.webOrigin,
-          ],
-        })
-      : withJobs;
   const withLogStream = options.modules.logStream
-    ? setupLogStreamApp(withBoard, {
+    ? setupLogStreamApp(withJobs, {
         stream: options.modules.logStream.stream,
         heartbeatMs: options.modules.logStream.heartbeatMs ?? 15_000,
         authorization: [
@@ -126,7 +113,7 @@ export function createApp(options: CreateAppOptions) {
           options.modules.auth.require.requireFreshSession,
         ],
       })
-    : withBoard;
+    : withJobs;
   const withApiDocs = setupApiDocs(withLogStream, {
     ...options.documentation,
     auth: options.modules.auth,

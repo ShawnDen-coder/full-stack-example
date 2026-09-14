@@ -2,7 +2,7 @@ import type { LogStream } from "@full-stack-example/logging";
 import type { Env, Hono, MiddlewareHandler, Schema } from "hono";
 import { streamSSE } from "hono/streaming";
 import { type DescribeRouteOptions, describeRoute } from "hono-openapi";
-import { appFactory } from "./factory.js";
+import { appFactory } from "../../app/env.js";
 
 const logStreamDescription: DescribeRouteOptions = {
   operationId: "streamLogs",
