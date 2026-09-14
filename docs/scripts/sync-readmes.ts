@@ -69,12 +69,20 @@ async function readModule(module: Module) {
   if (!packageJson.description) throw new Error(`Missing package description: ${module.directory}`);
   const sourcePath = path.join(rootDirectory, module.source);
   const markdown = await readFile(sourcePath, "utf8");
-  const requiredSections = ["## 开发与验证", "## 扩展规则"];
+  const requiredSections = [
+    "## 职责边界",
+    "## 依赖关系",
+    "## 生命周期",
+    "## 配置与运行资源",
+    "## 错误与边界行为",
+    "## 开发与验证",
+    "## 扩展规则",
+  ];
   for (const section of requiredSections) {
     if (!markdown.includes(section)) throw new Error(`${module.source} is missing ${section}`);
   }
-  if (!markdown.includes("## 职责边界") && !markdown.includes("## 对外接口")) {
-    throw new Error(`${module.source} is missing ## 职责边界 or ## 对外接口`);
+  if (!markdown.includes("## 公开入口") && !markdown.includes("## 对外接口")) {
+    throw new Error(`${module.source} is missing ## 公开入口 or ## 对外接口`);
   }
   return `---\ntitle: ${module.title}\ndescription: ${packageJson.description}\n---\n\n> 内容来源：[${module.source}](${sourceLink(module.source)})。\n\n${stripHeading(markdown)}\n`;
 }

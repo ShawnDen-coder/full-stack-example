@@ -16,12 +16,20 @@ Web 没有供服务端调用的运行时 API；它消费 System/Todos 的 Hono �
 
 `src/routes/` 是路由入口：`__root.tsx` 提供根布局与 404，`_authenticated.tsx` 在 `beforeLoad` 校验 Session，`_authenticated/todos.tsx` 继续校验活动工作区。`src/routeTree.gen.ts` 由 TanStack Router 插件生成，不手工编辑；新增或移动路由后可运行 `just routes-generate`。
 
-## 依赖与页面流程
+## 依赖关系
 
 ```text
 页面 → TanStack Query hook → System/Todos RPC client → Hono API
 登录/组织切换 → Auth Client → Better Auth endpoint
 ```
+
+## 生命周期
+
+TanStack Router 在导航时运行 session/tenant guard 与 loader；页面通过 feature hooks 读取同一 QueryClient 缓存。登录、退出或切换组织时清理或失效租户相关缓存，避免跨组织展示旧数据。
+
+## 配置与运行资源
+
+开发环境通过 `VITE_API_BASE_URL` 定位 API；生产环境使用 same-origin。所有 RPC 请求携带 Cookie credentials。Router、QueryClient 和 Auth client 在应用入口创建并复用；route tree 由 TanStack Router 插件生成，不手动改写。
 
 ## 使用流程
 

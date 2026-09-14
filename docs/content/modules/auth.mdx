@@ -106,11 +106,17 @@ Todo Service 只创建一次；每个请求从 `tenantPrincipal` 取得租户，
 - `/api/auth/admin/*` 管理变更端点不对外暴露，统一使用 `PlatformAuthService`。
 - 日志不得写入密码、Cookie、Session token 或完整邀请 URL。
 
-## 环境变量
+## 配置与运行资源
 
 `BETTER_AUTH_URL`（API/Auth 地址）、`WEB_ORIGIN`（浏览器跳转地址）、`BETTER_AUTH_SECRET`（至少 32 字符）和 `DATABASE_RUNTIME_URL`（运行时连接）。Auth 不使用 migrator 连接；本地与生产均应显式提供 runtime URL。
 
 初始化管理员由独立的一次性 `admin-provision` 进程执行。它使用 `DATABASE_RUNTIME_URL` 与 `PLATFORM_ADMIN_EMAIL`、`PLATFORM_ADMIN_NAME`、`PLATFORM_ADMIN_PASSWORD`；缺失账号会被创建，同邮箱账号会被幂等提升为 `platform-admin`，现有密码不会被覆盖。API 长期运行时不接收这些管理员初始化凭据。
+
+Auth server 运行在 API 和 provisioning 进程中，共用注入的 runtime Database 与 `BETTER_AUTH_SECRET`；浏览器只加载 Auth client。Auth 不创建连接池，也不持有 migrator 凭据。
+
+## 生命周期
+
+登录创建 Better Auth Session；每个租户请求由服务端检查 Session、活动组织、成员关系、组织状态和资源权限，再把已验证的 tenant principal 交给业务路由。平台管理员初始化只在 provisioning 命令运行时执行；平台管理员身份本身不会授予任何组织内的业务权限。
 
 ## 平台管理流程
 

@@ -70,7 +70,7 @@ const { todos } = await response.json();
 
 `GET` 按最新优先列出当前租户 Todo；`POST` 创建 1–200 字符标题；`PATCH` 修改完成状态；`DELETE` 删除 Todo。输入错误为 `400`，跨租户或不存在资源为 `404`，member 删除为 `403`。
 
-## 数据访问流程
+## 生命周期
 
 ```text
 HTTP 请求
@@ -83,6 +83,14 @@ HTTP 请求
 ```
 
 Service 在每次操作中开启租户事务并创建短生命周期 Repository，调用方只创建一个长期复用的 Service。
+
+## 配置与运行资源
+
+Todos 不读取环境变量、不创建连接池，也不持有跨请求状态。API 组合根注入 runtime Database 创建的长期 Service；租户 ID 由已授权请求提供，事务结束后租户上下文自动清理。
+
+## 错误与边界行为
+
+请求输入由 Zod validator 校验；缺少登录态或租户授权时由 Auth middleware 拒绝。Service 对不存在或不属于当前租户的资源返回统一 not-found 语义，数据库 RLS 违规作为纵深防御，不向客户端暴露 SQL 错误。路由负责把领域结果映射成稳定 HTTP 状态码，不捕获并吞掉未知基础设施异常。
 
 ## 开发与验证
 

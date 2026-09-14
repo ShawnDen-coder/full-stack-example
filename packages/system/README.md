@@ -24,6 +24,14 @@ API → Database（创建探针）
 
 System 不直接依赖 Database，因此测试可以传入确定性的探针。
 
+## 生命周期
+
+API 组合根把一个数据库探针和失败回调注入健康路由。每次 `GET /health` 独立执行探针；请求结束后不保留连接或应用状态，底层资源由 API 进程持有。
+
+## 配置与运行资源
+
+System 不创建连接池。探针超时默认为 5 秒，可通过 `timeoutMs` 调整；API 注入 Database 查询和 Logger 行为，健康 endpoint 不需要额外的 System 环境变量。
+
 ## 用法
 
 在组合根挂载健康路由，并注入已有数据库探针和子 logger：

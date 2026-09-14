@@ -1,26 +1,74 @@
-# 模板模块设计：直接接入，按真实复用拆分
+---
+title: 仓库组织与模块边界
+description: 说明 apps、packages、container、scripts 与 docs 的所有权、依赖方向和文件归属规则。
+---
 
-本项目采用 Hono、PostgreSQL/Drizzle、Better Auth 的固定组合。packages 是应用内职责边界，保持 private；不以独立发布通用库为当前验收目标。
+# 仓库组织与模块边界
 
-## 参考依据
+本仓库是 pnpm workspace 中的模块化单体。workspace package 是代码所有权和依赖边界，不是独立部署的微服务；API 与 Web 是应用进程，Packages 由应用组合根装配。
 
-- [Create T3 App 设计理念](https://create.t3.gg/en/introduction)：简洁、模块化和端到端类型安全；按应用需求选用组件。
-- [Create T3 App 目录结构](https://create.t3.gg/en/folder-structure-app)：数据库客户端和 schema 集中管理，子路由在 root 组合并导出类型。
-- [create-t3-turbo](https://github.com/t3-oss/create-t3-turbo)：多应用共享 api、auth、db 等职责包。
+## 顶层目录的职责
 
-这些结构说明模板可以直接依赖所选技术栈；以下规则是本项目的取舍，不是 T3 对所有项目的要求。
+| 目录 | 放什么 | 不放什么 |
+| --- | --- | --- |
+| `apps/api` | Hono 宿主、HTTP 中间件、组合根、进程启动、迁移和一次性 provisioning 入口 | 领域规则、重复的 schema 或通用包注册器 |
+| `apps/web` | 浏览器路由、页面、feature、Query hooks、浏览器 RPC client | Better Auth server、Drizzle 查询、数据库连接 |
+| `packages` | Auth、Database、Jobs、Logging、System、Todos 等可复用能力与领域边界 | 进程级部署编排、跨模块组合根 |
+| `container` | 应用镜像、Compose 服务、PostgreSQL 初始化脚本 | 本地开发进程逻辑、业务代码 |
+| `scripts` | 开发命令编排、测试 runner、文档生成工具 | 领域 service、运行时业务 API |
+| `docs` | 架构、指南、测试与部署文档、API reference 生成配置 | 第二份模块 README 正文 |
 
-## 本项目的边界
+## 模块依赖方向
 
-- Database 统一持有连接、schema、迁移和租户事务；保留现有 SQL 历史及 RLS。
-- Todos 内部包含 routes、service、repository。组合根调用 `createTodoService({ database })`；不增加 PostgreSQL 适配器包、通用 Repository 工厂或可配置路由前缀。
-- `TenantTodoService` 保留为 HTTP 测试和业务调用的实际边界；`getTenantId` 显式注入，避免隐藏的认证上下文要求。
-- Auth 继续直接使用 Better Auth；其 server/client 入口用于防止服务器代码进入浏览器，具有实际隔离价值。
-- Web 在本地创建 Hono RPC client；功能模块导出独立子路由类型，避免 Web 对完整 API `AppType` 做大规模类型实例化，也不复制接口合同。
-- System 提供单一数据库探针及失败回调；Logging 保留进程级配置，修复资源生命周期，不新增日志后端抽象。
+| 所有者 | 可以依赖 | 不应依赖 |
+| --- | --- | --- |
+| Web | 浏览器端 Auth client、业务模块导出的 route type、Hono client | API 完整 `AppType`、Auth server、Database、Drizzle、Node-only adapter |
+| API | Auth server、Database、Jobs adapter、Logging、业务模块 | 由下层包反向依赖 API |
+| Auth | Better Auth、Database schema/connection、共享 contracts | Todos 等具体业务查询、HTTP 组合根 |
+| Todos | Auth contracts、Database schema/租户事务、Hono/Zod | Better Auth server、API bootstrap、浏览器代码 |
+| Jobs | BullMQ adapter、Zod task contracts、Logger port | API 业务路由、所有业务任务的隐式发现 |
+| System | Hono、Zod、Logger port 和注入的探针 | 创建 Database client、依赖具体业务模块 |
+| Logging | LogTape 和进程级输出能力 | Auth、Todos、Jobs 等业务实现 |
+| Database | Drizzle、PostgreSQL、schema 和 migration | Auth、Todos、API 等上层模块 |
 
-只在出现第二个真实消费者、不同部署边界或实际需要替换实现时，再讨论拆包和抽象。新增入口应解决明确的运行环境隔离问题；不为每个内部文件增加公开入口。
+依赖总体从应用流向能力包，再流向基础设施。Auth contracts 可供业务包使用类型，但不把认证实现或数据库访问反向塞进业务层。API 是唯一服务端 HTTP 组合根；子模块通过具体的 `setupXxxApp(app, options)` 注入宿主并返回链式 Hono app。
 
-## 收缩结果
+## 新代码放在哪里
 
-移除上一轮新增的 `todos-postgres`、Todos/System 的重复 `./hono` 入口、Repository 工厂接口和通用路径参数。保留新鲜会话、运行时依赖、日志释放、Todo 返回字段、显式租户获取和错误函数命名的修复。健康检查超时必须清理计时器。
+| 变化 | 放置位置 | 示例 |
+| --- | --- | --- |
+| HTTP 中间件、路由挂载顺序、跨模块权限策略 | `apps/api/src/app.ts` | CORS、request ID、Todos 权限 policy |
+| 数据库、Auth、Jobs 等进程资源的创建/关闭 | `apps/api/src/bootstrap.ts` 或专用启动入口 | API bootstrap、`migrate.ts`、`admin-provision.ts` |
+| 可复用业务规则和输入合同 | `packages/<domain>` | Todos schema、service、repository |
+| 表结构、RLS、角色权限和正式迁移 | `packages/database` | Drizzle schema 与 SQL migration |
+| 业务 Job 定义 | 拥有该业务的领域模块；当前示例在 Jobs 合同入口 | Zod 输入、processor、依赖工厂 |
+| 队列连接、worker 生命周期、Bull Board 和 BullMQ migration | `packages/jobs` | server/worker/migration 子路径 |
+| 路由配置和页面组合 | `apps/web/src/routes` | 路由入口、loader、route guard |
+| 用户流程和服务端状态访问 | `apps/web/src/features/<feature>` | 登录/Todo hooks、表单行为 |
+| Web 共享基础 client 和错误解析 | `apps/web/src/lib` | Hono client、API error |
+| 被多个 UI 功能复用的纯展示组件 | `apps/web/src/components` | 不持有租户查询或路由副作用的组件 |
+
+只有存在真实的复用边界或独立所有权时才新增 workspace package。单一消费者的页面逻辑留在 Web feature；HTTP 组合留在 API；数据库 adapter 不因一个业务表而额外拆包。复杂度增加时，再按现有职责把 schema、service、repository 和 route 分开。
+
+## Package 入口与文件结构
+
+```text
+apps/
+  api/src/       HTTP composition、bootstrap、server、migration/provision commands
+  web/src/       routes、features、components、lib
+packages/
+  <module>/src/  module public entry、contracts、implementation、tests
+container/       Dockerfiles、Compose、PostgreSQL initialization
+scripts/         launch/test/documentation tooling
+docs/content/    hand-authored architecture and guide pages
+```
+
+公共入口只暴露消费者需要的能力。Auth 使用 `./server` 和 `./client` 分离运行环境；Jobs 使用 `./server`、`./worker`、`./migration` 分离 adapter；Web 只导入 System/Todos 等功能自己的 route type。不要从模块根入口泄漏 `pg`、BullMQ 或服务端实现类型，也不要为了内部文件建立大量 export subpath。
+
+## 文档归属
+
+根 `README.md` 负责仓库入口和快速启动；每个 app/package 的 `README.md` 是模块唯一正文来源；Rspress 的 `docs/content/modules/*.mdx` 和项目概览由同步脚本生成。架构、配置、测试、部署指南由 `docs/content/architecture` 和 `docs/content/guide` 手工维护。修改模块职责时更新对应 README，再运行 `pnpm docs:generate`，不要直接编辑生成页面。
+
+## 运行时边界
+
+本地完整开发使用 `just dev`；基础设施和 schema 已准备好时使用 `just dev-only`；`just launch*` 是旧入口兼容别名。生产形态 Compose 使用同一应用镜像运行 API、Worker、迁移和一次性管理员 provisioning。API/Worker/provision 使用 `DATABASE_RUNTIME_URL`，迁移使用 `DATABASE_MIGRATOR_URL`；应用 runtime 不持有 DDL 或初始管理员密码。数据库与模块行为详见各自 README 和[配置指南](/guide/configuration/)。

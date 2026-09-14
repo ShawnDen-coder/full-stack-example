@@ -34,6 +34,10 @@ await database.close();
 
 迁移命令结束后释放 migrator 连接；API 进程只持有 runtime 连接。不要在 API bootstrap 中调用 `migrateDatabase()`。
 
+## 生命周期
+
+部署先由 `app_migrator` 执行 Drizzle migration，再由 API、Auth 和 Repository 使用 `app_runtime`。API 启动会读取 `drizzle.__drizzle_migrations` 中最新 `created_at`，低于代码要求的 migration 版本时拒绝启动。runtime 只可读取 journal，不能修改迁移历史；迁移未执行、版本过旧或 journal 权限缺失时使用 `just infra-up` / `just provision` 修复。
+
 ## 表和字段语义
 
 | 表 | 关键字段 | 语义 |
@@ -87,13 +91,15 @@ await withTenantTransaction(databaseContext.db, tenantId, async (tx) => {
 
 `set_config(..., true)` 只在当前事务有效，连接池复用不会泄漏租户；没有租户上下文时 RLS 默认拒绝访问。
 
-## 连接串与 Migration
+## 配置与运行资源
 
 运行时和迁移必须使用不同数据库账号：
 
 - `DATABASE_RUNTIME_URL`：API、Better Auth、业务 Repository 使用，只能执行允许的 DML，并受业务表 RLS 保护。
 - `DATABASE_MIGRATOR_URL`：只由 migration 使用，拥有 DDL/schema 权限。
-- `DATABASE_URL`：仅供 PostgreSQL 集成测试或明确的维护命令使用；API、Worker、migration 和 Drizzle Kit 都不从它回退。
+- `DATABASE_URL`：仅供 Database 集成测试或明确的维护命令使用；API、Worker、migration 和 Drizzle Kit 都不从它回退。
+
+本地连接池由各进程分别创建并在退出时关闭；不要跨进程共享 client。`just provision` 依次运行 Database migration、BullMQ migration 和管理员 provisioning。Drizzle journal 的只读授权由新的前向 SQL migration 管理，不回写已应用的历史 migration。
 
 ```bash
 pnpm --filter @full-stack-example/database db:generate
