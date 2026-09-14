@@ -30,7 +30,7 @@ Web 没有供服务端调用的运行时 API；它消费 System/Todos 的 Hono �
 ```bash
 just init
 Copy-Item .env.example .env
-just launch
+just dev
 ```
 
 打开 [http://localhost:5173/](http://localhost:5173/)。Todo 页面通过类型客户端访问 [http://localhost:3000/](http://localhost:3000/)。API 已启动时可单独运行 Vite：
@@ -56,7 +56,7 @@ pnpm --filter @full-stack-example/web typecheck
 pnpm --filter @full-stack-example/web build
 ```
 
-Vite 默认运行在 `http://localhost:5173`；`just launch` 会同时启动 API。
+Vite 默认运行在 `http://localhost:5173`；`just dev` 会一并启动基础设施、API、Jobs Worker 和 Web。
 
 ## 扩展规则
 

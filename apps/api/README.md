@@ -10,7 +10,7 @@
 - 统一处理 404 和未捕获异常。
 - 在生产容器中提供构建后的 Web 应用。
 
-配置 `PLATFORM_ADMIN_EMAIL`、`PLATFORM_ADMIN_NAME` 和 `PLATFORM_ADMIN_PASSWORD` 后，数据库 migration 完成时 API 会幂等创建或提升该账号为 `platform-admin`；已存在账号的密码不会在 API 启动时重置。不要把示例密码用于真实部署。邮件依赖的 Auth 能力暂不启用。
+API 只接收 `DATABASE_RUNTIME_URL`，不持有 migrator 凭据或管理员初始密码。数据库 migration 和平台管理员初始化由短生命周期的 `migrate`、`admin-provision` 进程完成；本地通过 `just provision` 一次执行。邮件依赖的 Auth 能力暂不启用。
 
 API 不持有数据库 schema 或 Todo 业务规则，这些能力通过包接口注入。
 
@@ -34,7 +34,7 @@ API 不持有数据库 schema 或 Todo 业务规则，这些能力通过包接�
 ```bash
 just init
 Copy-Item .env.example .env
-just launch
+just dev
 ```
 
 测试组合应用时应注入 Auth 和确定性的依赖，不需要监听端口：
@@ -71,7 +71,7 @@ pnpm --filter @full-stack-example/api typecheck
 pnpm --filter @full-stack-example/api build
 ```
 
-常规本地流程使用 `just launch`，它会启动基础设施以及 API/Web watch 进程。API 监听 `http://localhost:3000`。
+常规本地流程使用 `just dev`，它先完成基础设施、migration 和管理员 provisioning，再以 watch 模式启动 API、Worker 和 Web。API 只有在 HTTP 端口实际监听后才记录启动成功，监听失败时会关闭已创建资源。API 监听 `http://localhost:3000`。
 
 ## 扩展规则
 

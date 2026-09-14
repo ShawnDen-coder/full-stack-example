@@ -1,6 +1,6 @@
 ---
 title: 快速开始
-description: 使用 pnpm 安装依赖并启动 API 与 Web，完成全栈示例项目的第一次本地运行。
+description: 使用 pnpm 安装依赖并启动 API、Worker、Web 和本地基础设施。
 ---
 
 # 快速开始
@@ -10,10 +10,9 @@ description: 使用 pnpm 安装依赖并启动 API 与 Web，完成全栈示例�
 ```bash
 pnpm install
 Copy-Item .env.example .env
-just launch-doctor
-just launch
+just dev
 ```
 
-`just launch` 会启动 PostgreSQL 和使用官方镜像的 OpenTelemetry Collector，等待基础设施就绪，再启动 API 与 Web 开发服务器。API 在迁移完成后根据 `PLATFORM_ADMIN_*` 幂等创建初始运维账号；示例账号是 `admin@example.com` / `Admin123!`，真实环境必须修改密码。
+`just dev` 会检查依赖，启动 PostgreSQL 和 OpenTelemetry Collector，等待健康后执行 Drizzle、BullMQ migration 与一次性管理员 provisioning，再启动 API、Jobs Worker 和 Web watch 服务。示例管理员是 `admin@example.com` / `Admin123!`，本地可直接使用；真实环境必须替换凭据。长期运行的 API 和 Worker 不会收到管理员初始密码或 migrator 连接串。
 
-基础设施已经运行时，可以使用 `just dev` 只启动 API 与 Web。Swagger UI 位于 `http://localhost:3000/docs`，Web 位于 `http://localhost:5173`。
+基础设施及 provisioning 已经完成时，使用 `just dev-only` 只启动宿主机进程。单独启动基础设施与 provisioning 使用 `just infra-up`；生产形态 Compose 验证使用 `just stack-up`。Swagger UI 位于 `http://localhost:3000/docs`，Web 位于 `http://localhost:5173`。

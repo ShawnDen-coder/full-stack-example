@@ -91,7 +91,7 @@ HTTP 路由不会自动为任意任务生成接口。当前示例 `POST /api/adm
 - `@full-stack-example/jobs/worker`：显式 definitions 的 Worker factory。
 - `@full-stack-example/jobs/migration`：官方 BullMQ PostgreSQL migration。
 
-管理员页面默认为 `/admin/queues`，要求平台管理员、fresh session、CSRF 和 same-origin 保护。Bull Board 展示前会递归脱敏 payload (`data`) 和返回值 (`returnValue`)；日志与错误文本不经过这些 formatter，任务代码不得在其中写入敏感信息。Jobs migration 授予 `DATABASE_RUNTIME_ROLE`（默认为 `app_runtime`）访问 BullMQ schema 的权限；该值必须与 Worker/API 使用的 runtime 数据库角色相符。
+管理员页面默认为 `/admin/queues`，要求平台管理员、fresh session、CSRF 和 same-origin 保护。Bull Board 展示前会递归脱敏 payload (`data`) 和返回值 (`returnValue`)；日志与错误文本不经过这些 formatter，任务代码不得在其中写入敏感信息。BullMQ migration 固定授予 `app_runtime` 对 BullMQ schema 的运行权限，与 API 和 Worker 使用的 runtime 角色一致；角色名不可配置。
 
 ## 职责边界
 
@@ -105,7 +105,7 @@ just jobs-worker
 just jobs-test-integration
 ```
 
-`just dev` 和 `just launch` 使用 `tsx watch` 启动 Worker 开发进程；`just jobs-worker` 用于启动构建后的 Worker。没有 PostgreSQL 时，普通 `just test` 会跳过真实数据库测试；完整验证仍应执行 `just typecheck`、`just test`、`just build` 和 `just container-build`。
+`just jobs-migrate` 直接用 `tsx` 执行 migration 源码，不会构建整个 API workspace；常规完整开发环境由 `just dev` 管理，已 provision 的基础设施可用 `just dev-only`。`just jobs-worker` 用于启动构建后的 Worker。PostgreSQL 集成测试不会被普通 `just test` 自动触发；启动数据库后用 `just jobs-test-integration` 显式运行。完整验证仍应执行 `just typecheck`、`just test`、`just build` 和 `just container-build`。
 
 ## 扩展规则
 
