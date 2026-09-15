@@ -1,8 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { throwApiError } from "../../lib/api-error.js";
-import { todosApi } from "./client.js";
+import type { TodosApiType } from "@full-stack-example/todos";
+import { hc } from "hono/client";
+import { createApiClientOptions, getApiBaseUrl } from "../../lib/api-client-options.js";
+export function createTodosApiClient(baseUrl: string, fetchImplementation?: typeof fetch) { return hc<TodosApiType>(`${baseUrl.replace(/\/$/, "")}/api`, createApiClientOptions(fetchImplementation)); }
+export const todosApi = createTodosApiClient(getApiBaseUrl());
 
 export const todosQueryOptions = (organizationId: string) => ({
+  // 组织 ID 必须进入 query key，避免租户切换时串用 Todo 缓存。
   queryKey: ["todos", organizationId] as const,
   queryFn: listTodos,
   staleTime: 30_000,
@@ -62,3 +67,6 @@ export function useDeleteTodo() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 }
+
+
+

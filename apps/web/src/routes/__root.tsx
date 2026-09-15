@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Link, Outlet } from "@tanstack/react-router";
-import { Button } from "../components/ui/button.js";
+import { Button } from "@mui/material";
 import type { AppSession } from "../features/auth/client.js";
 
 export type RouterContext = {
@@ -11,7 +11,7 @@ export type RouterContext = {
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: () => <Outlet />,
   notFoundComponent: () => (
-    <main className="grid min-h-screen place-items-center bg-background px-6 text-center text-foreground">
+    <main className="grid min-h-screen place-items-center px-6 text-center">
       <div>
         <h1 className="text-4xl font-bold tracking-tight">页面不存在</h1>
         <Link to="/">
@@ -21,3 +21,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     </main>
   ),
 });
+
+
+
+
+
+

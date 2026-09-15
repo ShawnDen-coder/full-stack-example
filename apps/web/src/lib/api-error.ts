@@ -32,3 +32,6 @@ export async function throwApiError(response: Response): Promise<never> {
   const requestId = response.headers.get("X-Request-ID");
   throw new ApiError({ status: response.status, message, ...(requestId ? { requestId } : {}) });
 }
+
+
+

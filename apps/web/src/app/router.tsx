@@ -1,6 +1,6 @@
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { PageLoading } from "../components/feedback/page-loading.js";
+import { PageLoading } from "../components/shared/page-loading.js";
 import { authClient } from "../features/auth/client.js";
 import { queryClient } from "../lib/query-client.js";
 import { routeTree } from "../routeTree.gen.js";
@@ -24,3 +24,8 @@ export function AppRouter() {
   if (!hasResolvedSession) return <PageLoading label="正在验证登录状态" />;
   return <RouterProvider router={router} context={{ session: session.data, queryClient }} />;
 }
+
+
+
+
+

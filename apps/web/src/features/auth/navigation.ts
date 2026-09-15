@@ -1,6 +1,7 @@
 import type { AppSession } from "./client.js";
 
 export function safeReturnTo(value: string | null): string {
+  // 仅允许站内路径，避免登录后跳转到外部地址。
   if (
     !value?.startsWith("/") ||
     value.startsWith("//") ||
@@ -18,3 +19,6 @@ export function validateReturnToSearch(search: Record<string, unknown>) {
 export function activeOrganizationId(session: AppSession | null): string | undefined {
   return session?.session.activeOrganizationId ?? undefined;
 }
+
+
+

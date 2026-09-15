@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { activeOrganizationId, validateReturnToSearch } from "../features/auth/navigation.js";
-import { RegisterPage } from "../features/auth/pages/register-page.js";
+import { RegisterPage } from "../components/auth/register-page.js";
 
 export const Route = createFileRoute("/register")({
   validateSearch: validateReturnToSearch,
@@ -18,3 +18,9 @@ function RegisterRoutePage() {
   const { returnTo } = Route.useSearch();
   return <RegisterPage returnTo={returnTo} />;
 }
+
+
+
+
+
+

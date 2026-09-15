@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { todosQueryOptions } from "../../features/todos/api.js";
-import { TodosPage } from "../../features/todos/pages/todos-page.js";
+import { TodosPage } from "../../components/todos/todos-page.js";
 
 export const Route = createFileRoute("/_authenticated/todos")({
   beforeLoad: ({ context, location }) => {
@@ -17,3 +17,9 @@ function TodosRoutePage() {
   const { organizationId } = Route.useRouteContext();
   return <TodosPage organizationId={organizationId} />;
 }
+
+
+
+
+
+
