@@ -46,3 +46,4 @@ describe("application routes", () => {
     expect((screen.getByLabelText("邮箱") as HTMLInputElement).value).toBe("admin@example.com");
   });
 });
+

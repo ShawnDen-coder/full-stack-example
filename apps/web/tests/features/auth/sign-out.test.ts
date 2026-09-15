@@ -53,3 +53,4 @@ describe("performSignOut", () => {
     expect(actions.navigateToLogin).not.toHaveBeenCalled();
   });
 });
+

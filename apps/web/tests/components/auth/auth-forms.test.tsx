@@ -3,8 +3,8 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LoginForm } from "../../../src/features/auth/components/login-form.js";
-import { RegisterForm } from "../../../src/features/auth/components/register-form.js";
+import { LoginForm } from "../../../src/components/auth/login-form.js";
+import { RegisterForm } from "../../../src/components/auth/register-form.js";
 
 describe("authentication forms", () => {
   afterEach(cleanup);
@@ -87,3 +87,4 @@ describe("authentication forms", () => {
     );
   });
 });
+

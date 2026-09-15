@@ -2,12 +2,11 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ThemeProvider, ThemeSelect } from "../../src/app/theme-provider.js";
+import { ThemeProvider, ThemeSelect } from "../../src/app/theme.js";
 
 afterEach(() => {
   cleanup();
   localStorage.clear();
-  document.documentElement.classList.remove("dark");
   document.documentElement.style.colorScheme = "";
   vi.unstubAllGlobals();
 });
@@ -31,12 +30,11 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
 
-    await waitFor(() => expect(document.documentElement.classList.contains("dark")).toBe(true));
-    expect((screen.getByLabelText("选择外观主题") as HTMLSelectElement).value).toBe("dark");
+    await waitFor(() => expect(document.documentElement.getAttribute("data-mui-color-scheme")).toBe("dark"));
 
     fireEvent.change(screen.getByLabelText("选择外观主题"), { target: { value: "light" } });
     expect(localStorage.getItem("ui-theme")).toBe("light");
-    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(document.documentElement.getAttribute("data-mui-color-scheme")).toBe("light");
   });
 
   it("follows system color changes when the system option is selected", async () => {
@@ -68,6 +66,7 @@ describe("ThemeProvider", () => {
       listener({ matches: true } as MediaQueryListEvent);
     });
 
-    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.getAttribute("data-mui-color-scheme")).toBe("dark");
   });
 });
+

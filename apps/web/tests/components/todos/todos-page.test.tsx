@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TodosPage } from "../../src/features/todos/pages/todos-page.js";
+import { TodosPage } from "../../../src/components/todos/todos-page.js";
 
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (config: unknown) => config,
@@ -16,7 +16,7 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => () => undefined,
 }));
 
-vi.mock("../../src/features/auth/client.js", () => ({
+vi.mock("../../../src/features/auth/client.js", () => ({
   authClient: {
     signOut: vi.fn(),
     useActiveMemberRole: () => ({ data: { role: "owner" } }),
@@ -131,3 +131,5 @@ describe("TodosPage", () => {
     expect(await screen.findByText("无法加载待办事项。")).toBeTruthy();
   });
 });
+
+

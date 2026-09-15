@@ -9,3 +9,4 @@ describe("safeReturnTo", () => {
     expect(safeReturnTo(null)).toBe("/todos");
   });
 });
+

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HomePage } from "../../src/features/system/pages/home-page.js";
+import { HomePage } from "../../../src/components/system/home-page.js";
 
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (config: unknown) => config,
@@ -15,7 +15,7 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
-vi.mock("../../src/features/auth/client.js", () => ({
+vi.mock("../../../src/features/auth/client.js", () => ({
   authClient: { useSession: () => ({ data: { user: { email: "user@example.test" } } }) },
 }));
 
@@ -48,3 +48,5 @@ describe("HomePage", () => {
     expect(link instanceof HTMLAnchorElement && link.pathname).toBe("/todos");
   });
 });
+
+

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { createSystemApiClient } from "../src/features/system/client.js";
-import { createTodosApiClient } from "../src/features/todos/client.js";
+import { createSystemApiClient } from "../src/features/system/api.js";
+import { createTodosApiClient } from "../src/features/todos/api.js";
 
 describe("feature RPC clients", () => {
   it("creates feature-scoped clients that include browser credentials", async () => {
@@ -23,3 +23,4 @@ describe("feature RPC clients", () => {
     );
   });
 });
+
