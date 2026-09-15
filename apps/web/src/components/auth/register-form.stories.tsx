@@ -11,9 +11,9 @@ const meta = {
     (Story) => (
       <AuthCard description="创建账号，开始管理你的工作空间。" title="创建账号">
         <Story />
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-sm">
           已有账号？{" "}
-          <a className="font-medium text-primary underline-offset-4 hover:underline" href="#login">
+          <a className="font-medium underline-offset-4 hover:underline" href="#login">
             登录
           </a>
         </p>
@@ -67,3 +67,4 @@ export const Desktop1440: Story = {
     ),
   ],
 };
+

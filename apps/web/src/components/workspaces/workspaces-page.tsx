@@ -1,13 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { PageLoading } from "../../../components/feedback/page-loading.js";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card.js";
-import { Separator } from "../../../components/ui/separator.js";
-import { Skeleton } from "../../../components/ui/skeleton.js";
-import { authClient } from "../../auth/client.js";
-import { WorkspaceForm } from "../components/workspace-form.js";
-import { WorkspaceList } from "../components/workspace-list.js";
+import { PageLoading } from "../../components/shared/page-loading.js";
+import { Card, CardContent, CardHeader } from "@mui/material";
+import { Divider as Separator } from "@mui/material";
+import { Skeleton } from "@mui/material";
+import { authClient } from "../../features/auth/client.js";
+import { WorkspaceForm } from "./workspace-form.js";
+import { WorkspaceList } from "./workspace-list.js";
 export function WorkspacesPage({ returnTo }: { readonly returnTo: string }) {
   const session = authClient.useSession();
   const router = useRouter();
@@ -54,15 +54,10 @@ export function WorkspacesPage({ returnTo }: { readonly returnTo: string }) {
   return (
     <main
       id="main-content"
-      className="min-h-[calc(100vh-4rem)] bg-muted/40 px-4 py-8 text-foreground sm:px-6"
+      className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6"
     >
       <Card className="mx-auto max-w-xl">
-        <CardHeader>
-          <div>
-            <CardTitle>选择工作区</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Todo 数据会按当前工作区隔离。</p>
-          </div>
-        </CardHeader>
+        <CardHeader title="选择工作区" subheader="Todo 数据会按当前工作区隔离。" />
         <CardContent className="grid gap-5">
           {organizations.isPending ? (
             <div aria-label="正在加载工作区列表" className="grid gap-3" role="status">
@@ -75,7 +70,7 @@ export function WorkspacesPage({ returnTo }: { readonly returnTo: string }) {
             onSelect={(id) => void activate(id)}
             organizations={organizations.data ?? []}
           />
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 text-xs">
             <Separator className="flex-1" />
             <span>或创建一个工作区</span>
             <Separator className="flex-1" />
@@ -90,3 +85,14 @@ export function WorkspacesPage({ returnTo }: { readonly returnTo: string }) {
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
+

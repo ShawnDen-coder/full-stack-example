@@ -1,8 +1,8 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { authClient } from "../client.js";
-import { AuthCard } from "../components/auth-card.js";
-import { RegisterForm } from "../components/register-form.js";
+import { authClient } from "../../features/auth/client.js";
+import { AuthCard } from "./auth-card.js";
+import { RegisterForm } from "./register-form.js";
 
 export function RegisterPage({ returnTo }: { readonly returnTo: string }) {
   const session = authClient.useSession();
@@ -34,10 +34,10 @@ export function RegisterPage({ returnTo }: { readonly returnTo: string }) {
   return (
     <AuthCard description="创建账号，开始管理你的工作空间。" title="创建账号">
       <RegisterForm error={error} onSubmit={submit} />
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm">
         已有账号？{" "}
         <Link
-          className="font-medium text-primary underline-offset-4 hover:underline"
+          className="font-medium underline-offset-4 hover:underline"
           to="/login"
           search={{ returnTo }}
         >
@@ -47,3 +47,12 @@ export function RegisterPage({ returnTo }: { readonly returnTo: string }) {
     </AuthCard>
   );
 }
+
+
+
+
+
+
+
+
+

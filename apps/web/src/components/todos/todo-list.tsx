@@ -1,5 +1,5 @@
-import { Button } from "../../../components/ui/button.js";
-import { Checkbox } from "../../../components/ui/checkbox.js";
+import { Button } from "@mui/material";
+import { Checkbox } from "@mui/material";
 
 export type TodoListItem = {
   readonly id: number;
@@ -23,19 +23,19 @@ export function TodoList({
   if (todos.length === 0) return <p>还没有待办事项。</p>;
 
   return (
-    <ul className="divide-y divide-border rounded-lg border bg-background">
+    <ul className="divide-y rounded-lg border">
       {todos.map((todo) => (
         <li className="flex items-center gap-3 p-4" key={todo.id}>
           <Checkbox
             aria-label={`完成 ${todo.title}`}
             checked={todo.completed}
             disabled={disabled}
-            onCheckedChange={(checked) => onToggle(todo, checked)}
+            onChange={(event) => onToggle(todo, event.target.checked)}
           />
           <span
             className={
               todo.completed
-                ? "min-w-0 flex-1 break-words text-muted-foreground line-through"
+                ? "min-w-0 flex-1 break-words line-through"
                 : "min-w-0 flex-1 break-words"
             }
           >
@@ -46,9 +46,9 @@ export function TodoList({
               aria-label={`删除 ${todo.title}`}
               disabled={disabled}
               onClick={() => onDelete(todo.id)}
-              size="sm"
+              size="small"
               type="button"
-              variant="destructive"
+              variant="outlined"
             >
               删除
             </Button>
@@ -58,3 +58,13 @@ export function TodoList({
     </ul>
   );
 }
+
+
+
+
+
+
+
+
+
+

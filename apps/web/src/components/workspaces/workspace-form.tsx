@@ -1,8 +1,8 @@
 import { useForm } from "react-hook-form";
-import { Alert } from "../../../components/ui/alert.js";
-import { Button } from "../../../components/ui/button.js";
-import { Input } from "../../../components/ui/input.js";
-import { Label } from "../../../components/ui/label.js";
+import { Alert } from "@mui/material";
+import { Button, Typography } from "@mui/material";
+import { TextField as Input } from "@mui/material";
+
 
 type Values = { name: string; slug: string };
 export function WorkspaceForm({
@@ -17,6 +17,7 @@ export function WorkspaceForm({
   const form = useForm<Values>({ defaultValues: { name: "", slug: "" } });
   const name = form.watch("name");
   const slug = form.watch("slug");
+  // 标识默认从名称生成，但用户手动修改后不再覆盖。
   if (name && (!slug || slug === slugify(name)))
     form.setValue("slug", slugify(name), { shouldValidate: true });
   return (
@@ -28,14 +29,14 @@ export function WorkspaceForm({
     >
       <fieldset className="grid gap-4">
         <legend className="text-base font-medium">创建工作区</legend>
-        <Label htmlFor="workspace-name">名称</Label>
+        <Typography component="label" htmlFor="workspace-name">名称</Typography>
         <Input
           autoComplete="organization"
           disabled={disabled}
           id="workspace-name"
           {...form.register("name", { required: "请输入名称" })}
         />
-        <Label htmlFor="workspace-slug">标识</Label>
+        <Typography component="label" htmlFor="workspace-slug">标识</Typography>
         <Input
           autoComplete="off"
           disabled={disabled}
@@ -52,7 +53,7 @@ export function WorkspaceForm({
         />
       </fieldset>
       {error ? (
-        <Alert className="border-destructive/40 text-destructive" role="alert">
+        <Alert role="alert">
           {error}
         </Alert>
       ) : null}
@@ -70,3 +71,12 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 100);
 }
+
+
+
+
+
+
+
+
+

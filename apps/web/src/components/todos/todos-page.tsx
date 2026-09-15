@@ -1,10 +1,10 @@
-import { Alert } from "../../../components/ui/alert.js";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card.js";
-import { Skeleton } from "../../../components/ui/skeleton.js";
-import { authClient } from "../../auth/client.js";
-import { useCreateTodo, useDeleteTodo, useTodos, useUpdateTodo } from "../api.js";
-import { TodoComposer } from "../components/todo-composer.js";
-import { TodoList } from "../components/todo-list.js";
+import { Alert } from "@mui/material";
+import { Card, CardContent, CardHeader, Typography } from "@mui/material";
+import { Skeleton } from "@mui/material";
+import { authClient } from "../../features/auth/client.js";
+import { useCreateTodo, useDeleteTodo, useTodos, useUpdateTodo } from "../../features/todos/api.js";
+import { TodoComposer } from "./todo-composer.js";
+import { TodoList } from "./todo-list.js";
 
 export function TodosPage({ organizationId }: { readonly organizationId: string }) {
   const memberRole = authClient.useActiveMemberRole();
@@ -22,16 +22,14 @@ export function TodosPage({ organizationId }: { readonly organizationId: string 
   return (
     <main
       id="main-content"
-      className="min-h-[calc(100vh-4rem)] bg-muted/40 px-4 py-8 text-foreground sm:px-6"
+      className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6"
     >
       <Card className="mx-auto max-w-3xl">
-        <CardHeader>
-          <CardTitle>Todos</CardTitle>
-        </CardHeader>
+        <CardHeader title={<Typography variant="h5">Todos</Typography>} />
         <CardContent className="grid gap-5">
           <TodoComposer disabled={isMutating} onSubmit={handleSubmit} />
           {createTodo.isError || updateTodo.isError || deleteTodo.isError ? (
-            <Alert className="border-destructive/40 text-destructive" role="alert">
+            <Alert role="alert">
               操作失败，请稍后重试。
             </Alert>
           ) : null}
@@ -43,7 +41,7 @@ export function TodosPage({ organizationId }: { readonly organizationId: string 
             </div>
           ) : null}
           {todos.isError ? (
-            <Alert className="border-destructive/40 text-destructive" role="alert">
+            <Alert role="alert">
               无法加载待办事项。
             </Alert>
           ) : null}
@@ -61,3 +59,13 @@ export function TodosPage({ organizationId }: { readonly organizationId: string 
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
