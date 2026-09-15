@@ -6,6 +6,7 @@ import { PageLoading } from "../../components/shared/page-loading.js";
 import { authClient } from "../../features/auth/client.js";
 import { WorkspaceForm } from "./workspace-form.js";
 import { WorkspaceList } from "./workspace-list.js";
+
 export function WorkspacesPage({ returnTo }: { readonly returnTo: string }) {
   const session = authClient.useSession();
   const router = useRouter();

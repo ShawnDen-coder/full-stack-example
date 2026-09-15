@@ -1,7 +1,10 @@
 import { Alert, Button, Stack, TextField } from "@mui/material";
 import { useForm } from "react-hook-form";
+
 export type AuthFormStatus = "idle" | "submitting" | "error";
+
 export type LoginValues = { email: string; password: string };
+
 export function LoginForm({
   error,
   status = "idle",

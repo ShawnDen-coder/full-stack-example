@@ -10,6 +10,7 @@ import {
 } from "@mui/material/styles";
 import type { PropsWithChildren } from "react";
 import { createContext, useContext } from "react";
+
 export type ThemeMode = "light" | "dark" | "system";
 const STORAGE_KEY = "ui-theme";
 const theme = createTheme({ colorSchemes: { dark: true } });
@@ -36,6 +37,7 @@ function Inner({ children }: PropsWithChildren) {
     </ThemeContext.Provider>
   );
 }
+
 export function ThemeProvider({
   children,
   initialTheme = "system",
@@ -59,6 +61,7 @@ export function ThemeProvider({
     </MuiThemeProvider>
   );
 }
+
 export function ThemeSelect({
   className = "",
   sx,
@@ -83,6 +86,7 @@ export function ThemeSelect({
     </FormControl>
   );
 }
+
 export function useTheme() {
   return useContext(ThemeContext);
 }

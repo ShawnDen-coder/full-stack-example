@@ -1,12 +1,14 @@
 import { Alert, Button, Stack, TextField } from "@mui/material";
 import { useForm } from "react-hook-form";
 import type { AuthFormStatus } from "./login-form.js";
+
 export type RegisterValues = {
   name: string;
   email: string;
   password: string;
   confirmation: string;
 };
+
 export function RegisterForm({
   error,
   status = "idle",

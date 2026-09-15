@@ -26,7 +26,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
 export const ServiceError: Story = { args: { error: "无法完成注册，请检查输入后重试。" } };
+
 export const FieldErrors: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "创建账号" }));

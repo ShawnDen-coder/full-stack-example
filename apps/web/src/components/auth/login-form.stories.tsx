@@ -26,12 +26,15 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
 export const InvalidCredentials: Story = { args: { error: "邮箱或密码不正确，请重试。" } };
+
 export const FieldErrors: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "登录" }));
   },
 };
+
 export const Submitting: Story = { args: { status: "submitting" } };
 
 export const Mobile390: Story = {

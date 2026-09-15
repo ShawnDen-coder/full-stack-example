@@ -14,6 +14,9 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 const openMenu = async ({ canvasElement }: { canvasElement: HTMLElement }) =>
   userEvent.click(within(canvasElement).getByLabelText("打开账户菜单"));
+
 export const Expanded: Story = { play: openMenu };
+
 export const SigningOut: Story = { args: { signingOut: true }, play: openMenu };
+
 export const SignOutFailed: Story = { args: { signOutError: true }, play: openMenu };

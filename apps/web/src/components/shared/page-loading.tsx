@@ -1,4 +1,5 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
+
 export function PageLoading({ label = "正在加载" }: { readonly label?: string }) {
   return (
     <Box

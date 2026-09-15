@@ -12,6 +12,12 @@ node_modules
 dist
 dist-ssr
 storybook-static
+**/storybook-static
+coverage
+**/coverage
+.vite
+**/.vite
+*.tsbuildinfo
 *.local
 
 # Editor directories and files
@@ -25,6 +31,11 @@ storybook-static
 *.sw?
 
 .env
+.env.*
+!.env.example
+
+# Codex local state (project MCP config remains tracked explicitly)
+.codex/*.local.toml
 # Rspress generated documentation
 docs/doc_build/
 docs/content/reference/typescript/**/*.md

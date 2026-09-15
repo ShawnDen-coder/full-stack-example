@@ -3,6 +3,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { authClient } from "./client.js";
 import { performSignOut } from "./sign-out.js";
+
 export function useSignOut() {
   const queryClient = useQueryClient();
   const router = useRouter();

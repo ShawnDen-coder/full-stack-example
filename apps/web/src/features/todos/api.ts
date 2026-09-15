@@ -3,12 +3,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { hc } from "hono/client";
 import { createApiClientOptions, getApiBaseUrl } from "../../lib/api-client-options.js";
 import { throwApiError } from "../../lib/api-error.js";
+
 export function createTodosApiClient(baseUrl: string, fetchImplementation?: typeof fetch) {
   return hc<TodosApiType>(
     `${baseUrl.replace(/\/$/, "")}/api`,
     createApiClientOptions(fetchImplementation),
   );
 }
+
 export const todosApi = createTodosApiClient(getApiBaseUrl());
 
 export const todosQueryOptions = (organizationId: string) => ({
