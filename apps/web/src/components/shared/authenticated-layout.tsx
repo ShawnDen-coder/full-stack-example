@@ -1,8 +1,8 @@
-import { Link, Outlet } from "@tanstack/react-router";
-import { AccountMenu } from "./account-menu.js";
 import { Button } from "@mui/material";
+import { Link, Outlet } from "@tanstack/react-router";
 import { authClient } from "../../features/auth/client.js";
 import { useSignOut } from "../../features/auth/use-sign-out.js";
+import { AccountMenu } from "./account-menu.js";
 
 export function AuthenticatedLayout() {
   const session = authClient.useSession();
@@ -22,9 +22,7 @@ export function AuthenticatedLayout() {
           <Link className="font-semibold tracking-tight" to="/">
             Full Stack Example
           </Link>
-          <span className="hidden text-sm sm:inline">
-            {organization.data?.name ?? "工作区"}
-          </span>
+          <span className="hidden text-sm sm:inline">{organization.data?.name ?? "工作区"}</span>
           <nav aria-label="账户导航" className="ml-auto flex items-center gap-2">
             <Link search={{ returnTo: "/todos" }} to="/workspaces">
               <Button size="small" variant="text">
@@ -44,12 +42,3 @@ export function AuthenticatedLayout() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-

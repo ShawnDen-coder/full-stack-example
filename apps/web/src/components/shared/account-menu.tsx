@@ -78,11 +78,3 @@ export function AccountMenu({
 function themeLabel(theme: "system" | "light" | "dark") {
   return { system: "跟随系统", light: "浅色", dark: "深色" }[theme];
 }
-
-
-
-
-
-
-
-

@@ -1,3 +1,12 @@
 @layer theme, base, mui, components, utilities;
 @import "tailwindcss";
-@layer base { html, body, #root { min-height: 100%; } body { margin: 0; } }
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+  body {
+    margin: 0;
+  }
+}

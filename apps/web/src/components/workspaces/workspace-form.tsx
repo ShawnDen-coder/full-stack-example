@@ -1,8 +1,5 @@
+import { Alert, Button, TextField as Input, Typography } from "@mui/material";
 import { useForm } from "react-hook-form";
-import { Alert } from "@mui/material";
-import { Button, Typography } from "@mui/material";
-import { TextField as Input } from "@mui/material";
-
 
 type Values = { name: string; slug: string };
 export function WorkspaceForm({
@@ -29,14 +26,18 @@ export function WorkspaceForm({
     >
       <fieldset className="grid gap-4">
         <legend className="text-base font-medium">创建工作区</legend>
-        <Typography component="label" htmlFor="workspace-name">名称</Typography>
+        <Typography component="label" htmlFor="workspace-name">
+          名称
+        </Typography>
         <Input
           autoComplete="organization"
           disabled={disabled}
           id="workspace-name"
           {...form.register("name", { required: "请输入名称" })}
         />
-        <Typography component="label" htmlFor="workspace-slug">标识</Typography>
+        <Typography component="label" htmlFor="workspace-slug">
+          标识
+        </Typography>
         <Input
           autoComplete="off"
           disabled={disabled}
@@ -52,11 +53,7 @@ export function WorkspaceForm({
           }}
         />
       </fieldset>
-      {error ? (
-        <Alert role="alert">
-          {error}
-        </Alert>
-      ) : null}
+      {error ? <Alert role="alert">{error}</Alert> : null}
       <Button className="w-full" disabled={disabled || form.formState.isSubmitting} type="submit">
         创建并继续
       </Button>
@@ -71,12 +68,3 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 100);
 }
-
-
-
-
-
-
-
-
-

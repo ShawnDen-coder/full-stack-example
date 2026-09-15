@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
 import { Box, Card, CardContent, CardHeader } from "@mui/material";
+import type { ReactNode } from "react";
 import { ThemeSelect } from "../../app/theme.js";
 
 export function AuthCard({
@@ -12,7 +12,16 @@ export function AuthCard({
   readonly title: string;
 }) {
   return (
-    <Box component="main" sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 3, bgcolor: "background.default" }}>
+    <Box
+      component="main"
+      sx={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        p: 3,
+        bgcolor: "background.default",
+      }}
+    >
       <ThemeSelect sx={{ position: "fixed", top: 16, right: 16 }} />
       <Card sx={{ width: "100%", maxWidth: 448 }}>
         <CardHeader title={title} subheader={description} />
@@ -21,11 +30,3 @@ export function AuthCard({
     </Box>
   );
 }
-
-
-
-
-
-
-
-

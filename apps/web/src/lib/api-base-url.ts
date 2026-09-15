@@ -2,6 +2,3 @@ export function resolveApiBaseUrl(value: string | undefined, fallbackOrigin: str
   if (!value) return fallbackOrigin;
   return value.replace(/\/$/, "");
 }
-
-
-

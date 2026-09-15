@@ -10,6 +10,3 @@ export const authClient = createAppAuthClient({
 });
 
 export type AppSession = NonNullable<ReturnType<typeof authClient.useSession>["data"]>;
-
-
-

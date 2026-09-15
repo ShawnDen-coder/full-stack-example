@@ -1,10 +1,8 @@
+import { Card, CardContent, CardHeader, Divider as Separator, Skeleton } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageLoading } from "../../components/shared/page-loading.js";
-import { Card, CardContent, CardHeader } from "@mui/material";
-import { Divider as Separator } from "@mui/material";
-import { Skeleton } from "@mui/material";
 import { authClient } from "../../features/auth/client.js";
 import { WorkspaceForm } from "./workspace-form.js";
 import { WorkspaceList } from "./workspace-list.js";
@@ -52,10 +50,7 @@ export function WorkspacesPage({ returnTo }: { readonly returnTo: string }) {
     await router.navigate({ to: returnTo });
   }
   return (
-    <main
-      id="main-content"
-      className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6"
-    >
+    <main id="main-content" className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6">
       <Card className="mx-auto max-w-xl">
         <CardHeader title="选择工作区" subheader="Todo 数据会按当前工作区隔离。" />
         <CardContent className="grid gap-5">
@@ -85,14 +80,3 @@ export function WorkspacesPage({ returnTo }: { readonly returnTo: string }) {
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-
-

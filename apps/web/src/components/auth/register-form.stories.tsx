@@ -67,4 +67,3 @@ export const Desktop1440: Story = {
     ),
   ],
 };
-

@@ -10,4 +10,3 @@ createRoot(root).render(
     <AppRouter />
   </AppProviders>,
 );
-

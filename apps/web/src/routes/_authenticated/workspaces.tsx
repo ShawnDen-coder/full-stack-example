@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { validateReturnToSearch } from "../../features/auth/navigation.js";
 import { WorkspacesPage } from "../../components/workspaces/workspaces-page.js";
+import { validateReturnToSearch } from "../../features/auth/navigation.js";
 
 export const Route = createFileRoute("/_authenticated/workspaces")({
   validateSearch: validateReturnToSearch,
@@ -11,9 +11,3 @@ function WorkspacesRoutePage() {
   const { returnTo } = Route.useSearch();
   return <WorkspacesPage returnTo={returnTo} />;
 }
-
-
-
-
-
-

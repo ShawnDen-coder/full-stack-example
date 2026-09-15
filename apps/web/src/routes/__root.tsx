@@ -1,6 +1,6 @@
+import { Button } from "@mui/material";
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Link, Outlet } from "@tanstack/react-router";
-import { Button } from "@mui/material";
 import type { AppSession } from "../features/auth/client.js";
 
 export type RouterContext = {
@@ -21,9 +21,3 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     </main>
   ),
 });
-
-
-
-
-
-

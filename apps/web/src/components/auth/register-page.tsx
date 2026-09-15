@@ -47,12 +47,3 @@ export function RegisterPage({ returnTo }: { readonly returnTo: string }) {
     </AuthCard>
   );
 }
-
-
-
-
-
-
-
-
-

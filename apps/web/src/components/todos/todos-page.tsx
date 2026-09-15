@@ -1,6 +1,4 @@
-import { Alert } from "@mui/material";
-import { Card, CardContent, CardHeader, Typography } from "@mui/material";
-import { Skeleton } from "@mui/material";
+import { Alert, Card, CardContent, CardHeader, Skeleton, Typography } from "@mui/material";
 import { authClient } from "../../features/auth/client.js";
 import { useCreateTodo, useDeleteTodo, useTodos, useUpdateTodo } from "../../features/todos/api.js";
 import { TodoComposer } from "./todo-composer.js";
@@ -20,18 +18,13 @@ export function TodosPage({ organizationId }: { readonly organizationId: string 
   }
 
   return (
-    <main
-      id="main-content"
-      className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6"
-    >
+    <main id="main-content" className="min-h-[calc(100vh-4rem)] px-4 py-8 sm:px-6">
       <Card className="mx-auto max-w-3xl">
         <CardHeader title={<Typography variant="h5">Todos</Typography>} />
         <CardContent className="grid gap-5">
           <TodoComposer disabled={isMutating} onSubmit={handleSubmit} />
           {createTodo.isError || updateTodo.isError || deleteTodo.isError ? (
-            <Alert role="alert">
-              操作失败，请稍后重试。
-            </Alert>
+            <Alert role="alert">操作失败，请稍后重试。</Alert>
           ) : null}
           {todos.isLoading ? (
             <div aria-label="正在加载待办事项" className="grid gap-3" role="status">
@@ -40,11 +33,7 @@ export function TodosPage({ organizationId }: { readonly organizationId: string 
               <Skeleton className="h-14 w-full" />
             </div>
           ) : null}
-          {todos.isError ? (
-            <Alert role="alert">
-              无法加载待办事项。
-            </Alert>
-          ) : null}
+          {todos.isError ? <Alert role="alert">无法加载待办事项。</Alert> : null}
           {todos.data ? (
             <TodoList
               canDelete={canDelete}
@@ -59,13 +48,3 @@ export function TodosPage({ organizationId }: { readonly organizationId: string 
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-

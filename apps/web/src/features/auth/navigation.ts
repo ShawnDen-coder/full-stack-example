@@ -19,6 +19,3 @@ export function validateReturnToSearch(search: Record<string, unknown>) {
 export function activeOrganizationId(session: AppSession | null): string | undefined {
   return session?.session.activeOrganizationId ?? undefined;
 }
-
-
-

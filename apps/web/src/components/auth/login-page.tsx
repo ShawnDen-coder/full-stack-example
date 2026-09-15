@@ -38,12 +38,3 @@ export function LoginPage({ returnTo }: { readonly returnTo: string }) {
     </AuthCard>
   );
 }
-
-
-
-
-
-
-
-
-

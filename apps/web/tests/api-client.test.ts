@@ -23,4 +23,3 @@ describe("feature RPC clients", () => {
     );
   });
 });
-

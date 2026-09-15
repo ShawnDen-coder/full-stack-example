@@ -48,5 +48,3 @@ describe("HomePage", () => {
     expect(link instanceof HTMLAnchorElement && link.pathname).toBe("/todos");
   });
 });
-
-

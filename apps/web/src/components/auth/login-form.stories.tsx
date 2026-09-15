@@ -13,10 +13,7 @@ const meta = {
         <Story />
         <p className="text-center text-sm">
           还没有账号？{" "}
-          <a
-            className="font-medium underline-offset-4 hover:underline"
-            href="#register"
-          >
+          <a className="font-medium underline-offset-4 hover:underline" href="#register">
             注册
           </a>
         </p>
@@ -58,11 +55,3 @@ export const Desktop1440: Story = {
     ),
   ],
 };
-
-
-
-
-
-
-
-

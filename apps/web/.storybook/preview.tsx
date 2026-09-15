@@ -1,8 +1,8 @@
+import CssBaseline from "@mui/material/CssBaseline";
+import GlobalStyles from "@mui/material/GlobalStyles";
+import { StyledEngineProvider } from "@mui/material/styles";
 import type { Preview } from "@storybook/react-vite";
 import { ThemeProvider } from "../src/app/theme.js";
-import { StyledEngineProvider } from "@mui/material/styles";
-import GlobalStyles from "@mui/material/GlobalStyles";
-import CssBaseline from "@mui/material/CssBaseline";
 import "../src/styles/index.css";
 
 const preview: Preview = {
@@ -43,4 +43,3 @@ const preview: Preview = {
 };
 
 export default preview;
-

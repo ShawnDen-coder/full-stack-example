@@ -1,5 +1,4 @@
-import { Button } from "@mui/material";
-import { Checkbox } from "@mui/material";
+import { Button, Checkbox } from "@mui/material";
 
 export type TodoListItem = {
   readonly id: number;
@@ -58,13 +57,3 @@ export function TodoList({
     </ul>
   );
 }
-
-
-
-
-
-
-
-
-
-

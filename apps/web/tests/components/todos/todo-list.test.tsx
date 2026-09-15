@@ -26,4 +26,3 @@ describe("TodoList", () => {
     expect(onDelete).toHaveBeenCalledWith(1);
   });
 });
-

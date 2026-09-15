@@ -1,13 +1,10 @@
+import { Alert, Button, Card, CardContent, CardHeader, Skeleton, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ThemeSelect } from "../../app/theme.js";
-import { Alert } from "@mui/material";
-import { Button } from "@mui/material";
-import { Card, CardContent, CardHeader, Typography } from "@mui/material";
-import { Skeleton } from "@mui/material";
-import { resolveApiBaseUrl } from "../../lib/api-base-url.js";
 import { authClient } from "../../features/auth/client.js";
 import { getHealth } from "../../features/system/api.js";
+import { resolveApiBaseUrl } from "../../lib/api-base-url.js";
 
 export function HomePage() {
   const health = useQuery({ queryKey: ["health"], queryFn: getHealth });
@@ -37,11 +34,7 @@ export function HomePage() {
               <Skeleton className="h-4 w-48" />
             </div>
           ) : null}
-          {health.isError ? (
-            <Alert role="alert">
-              无法连接 API，请稍后重试。
-            </Alert>
-          ) : null}
+          {health.isError ? <Alert role="alert">无法连接 API，请稍后重试。</Alert> : null}
           {health.data ? (
             <Alert severity={health.data.status === "ok" ? "success" : "error"} role="status">
               <span>API：{health.data.status}</span>
@@ -69,14 +62,3 @@ export function HomePage() {
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-
-

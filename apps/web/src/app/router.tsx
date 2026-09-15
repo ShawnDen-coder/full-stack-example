@@ -24,8 +24,3 @@ export function AppRouter() {
   if (!hasResolvedSession) return <PageLoading label="正在验证登录状态" />;
   return <RouterProvider router={router} context={{ session: session.data, queryClient }} />;
 }
-
-
-
-
-

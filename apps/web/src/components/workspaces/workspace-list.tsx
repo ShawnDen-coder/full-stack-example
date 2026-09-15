@@ -13,8 +13,7 @@ export function WorkspaceList({
   readonly onSelect: (organizationId: string) => void;
   readonly organizations: readonly WorkspaceListItem[];
 }) {
-  if (organizations.length === 0)
-    return <p className="text-sm">还没有工作区。</p>;
+  if (organizations.length === 0) return <p className="text-sm">还没有工作区。</p>;
 
   return (
     <ul className="divide-y rounded-lg border">
@@ -41,11 +40,3 @@ export function WorkspaceList({
 }
 
 import { Button } from "@mui/material";
-
-
-
-
-
-
-
-

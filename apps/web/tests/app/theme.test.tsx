@@ -30,7 +30,9 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
 
-    await waitFor(() => expect(document.documentElement.getAttribute("data-mui-color-scheme")).toBe("dark"));
+    await waitFor(() =>
+      expect(document.documentElement.getAttribute("data-mui-color-scheme")).toBe("dark"),
+    );
 
     fireEvent.change(screen.getByLabelText("选择外观主题"), { target: { value: "light" } });
     expect(localStorage.getItem("ui-theme")).toBe("light");
@@ -69,4 +71,3 @@ describe("ThemeProvider", () => {
     expect(document.documentElement.getAttribute("data-mui-color-scheme")).toBe("dark");
   });
 });
-

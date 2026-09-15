@@ -89,5 +89,3 @@ export function useTheme() {
 function themeLabel(value: ThemeMode) {
   return { system: "跟随系统", light: "浅色", dark: "深色" }[value];
 }
-
-
