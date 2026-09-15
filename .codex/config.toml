@@ -1,0 +1,3 @@
+[mcp_servers.mui]
+command = "npx"
+args = ["-y", "@mui/mcp@latest"]

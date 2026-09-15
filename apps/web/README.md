@@ -68,7 +68,7 @@ pnpm --filter @full-stack-example/web storybook:build
 
 Vite 默认运行在 `http://localhost:5173`；`just dev` 会一并启动基础设施、API、Jobs Worker 和 Web。
 
-Storybook 使用 `apps/web/.storybook/` 配置，只展示不依赖服务端的 UI。共享基础样式和组件源码位于 `src/styles/` 与 `src/components/ui/`；认证表单将界面与 Better Auth 导航行为分开，因此可以在 Storybook 中单独检查校验、提交中和服务端错误状态。Web 样式以 Tailwind CSS 4 utilities、语义 CSS variables 和本地 shadcn 风格组件为基础，Base UI 提供菜单等无样式交互原语。颜色主题支持系统、浅色和深色，默认跟随系统。
+Storybook 使用 `apps/web/.storybook/` 配置，只展示不依赖服务端的 UI。认证表单将界面与 Better Auth 导航行为分开，因此可以在 Storybook 中单独检查校验、提交中和服务端错误状态。Web 使用 MUI 9 组件与 Emotion 主题，Tailwind CSS 4 仅负责布局和响应式 utilities；颜色主题由 MUI colorSchemes 管理，支持系统、浅色和深色，默认跟随系统。
 
 ## 扩展规则
 

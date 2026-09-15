@@ -1,5 +1,8 @@
 import type { Preview } from "@storybook/react-vite";
-import { ThemeProvider } from "../src/app/theme-provider.js";
+import { ThemeProvider } from "../src/app/theme.js";
+import { StyledEngineProvider } from "@mui/material/styles";
+import GlobalStyles from "@mui/material/GlobalStyles";
+import CssBaseline from "@mui/material/CssBaseline";
 import "../src/styles/index.css";
 
 const preview: Preview = {
@@ -24,9 +27,11 @@ const preview: Preview = {
         initialTheme={context.globals.colorMode === "dark" ? "dark" : "light"}
         persist={false}
       >
-        <div className="min-h-screen bg-background text-foreground">
+        <StyledEngineProvider enableCssLayer>
+          <GlobalStyles styles="@layer theme, base, mui, components, utilities;" />
+          <CssBaseline />
           <Story />
-        </div>
+        </StyledEngineProvider>
       </ThemeProvider>
     ),
   ],
@@ -38,3 +43,4 @@ const preview: Preview = {
 };
 
 export default preview;
+
