@@ -36,6 +36,8 @@ export function LoginForm({
           error={Boolean(form.formState.errors.email)}
           helperText={form.formState.errors.email?.message}
           fullWidth
+          id="login-email"
+          slotProps={{ htmlInput: { "aria-describedby": "login-email-error" } }}
         />
         <TextField
           {...password}
@@ -46,6 +48,8 @@ export function LoginForm({
           error={Boolean(form.formState.errors.password)}
           helperText={form.formState.errors.password?.message}
           fullWidth
+          id="login-password"
+          slotProps={{ htmlInput: { "aria-describedby": "login-password-error" } }}
         />
         {error ? <Alert severity="error">{error}</Alert> : null}
         <Button

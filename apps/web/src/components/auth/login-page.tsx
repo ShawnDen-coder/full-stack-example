@@ -23,7 +23,7 @@ export function LoginPage({ returnTo }: { readonly returnTo: string }) {
   }
 
   return (
-    <AuthCard description="登录以继续使用你的工作空间。" title="欢迎回来">
+    <AuthCard description="欢迎回来。登录以继续进入你的工作区。" title="登录">
       <LoginForm error={error} onSubmit={submit} />
       <p className="text-center text-sm">
         还没有账号？{" "}

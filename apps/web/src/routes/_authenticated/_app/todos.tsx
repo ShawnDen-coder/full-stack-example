@@ -1,8 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { TodosPage } from "../../components/todos/todos-page.js";
-import { todosQueryOptions } from "../../features/todos/api.js";
+import { TodosPage } from "../../../components/todos/todos-page.js";
+import { todosQueryOptions } from "../../../features/todos/api.js";
 
-export const Route = createFileRoute("/_authenticated/todos")({
+export const Route = createFileRoute("/_authenticated/_app/todos")({
   beforeLoad: ({ context, location }) => {
     const organizationId = context.session?.session.activeOrganizationId;
     if (!organizationId) throw redirect({ to: "/workspaces", search: { returnTo: location.href } });

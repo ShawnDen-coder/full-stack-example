@@ -32,7 +32,7 @@ export function RegisterPage({ returnTo }: { readonly returnTo: string }) {
   }
 
   return (
-    <AuthCard description="创建账号，开始管理你的工作空间。" title="创建账号">
+    <AuthCard description="为你和团队创建一个账号。" title="创建账号">
       <RegisterForm error={error} onSubmit={submit} />
       <p className="text-center text-sm">
         已有账号？{" "}
