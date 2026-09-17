@@ -1,5 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "outDir": "dist", "declaration": true, "noEmit": false },
+  "compilerOptions": {
+    "outDir": "dist",
+    "declaration": true,
+    "noEmit": false,
+    "types": ["node"],
+    "lib": ["ES2022", "ESNext.Disposable"]
+  },
   "include": ["src"]
 }

@@ -22,5 +22,8 @@
     "@logtape/logtape": "^2.3.3",
     "@logtape/pretty": "^2.3.3",
     "@logtape/redaction": "^2.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.3"
   }
 }

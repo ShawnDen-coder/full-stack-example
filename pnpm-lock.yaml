@@ -340,6 +340,10 @@ importers:
       '@logtape/redaction':
         specifier: ^2.3.3
         version: 2.3.3(@logtape/logtape@2.3.3)
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.3
+        version: 22.20.3
 
   packages/system:
     dependencies:
@@ -2879,6 +2883,9 @@ packages:
 
   '@types/node@22.20.1':
     resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}
+
+  '@types/node@22.20.3':
+    resolution: {integrity: sha512-DZmzkmwHzXrLPAXPyKNDzlIwMMUZCVacoD25ywdy5YTKGbOx/2ld+Q38Im2zJ0vBuZP5Prd3VZutKZyXwkOS8A==}
 
   '@types/node@24.13.3':
     resolution: {integrity: sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q==}
@@ -7995,6 +8002,10 @@ snapshots:
   '@types/ms@2.1.0': {}
 
   '@types/node@22.20.1':
+    dependencies:
+      undici-types: 6.21.0
+
+  '@types/node@22.20.3':
     dependencies:
       undici-types: 6.21.0
 
