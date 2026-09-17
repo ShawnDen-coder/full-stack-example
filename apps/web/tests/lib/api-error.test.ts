@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type ApiError, throwApiError } from "../src/lib/api-error.js";
+import { type ApiError, throwApiError } from "../../src/lib/api-error.js";
 
 describe("throwApiError", () => {
   it("preserves a safe message and request ID from the API response", async () => {

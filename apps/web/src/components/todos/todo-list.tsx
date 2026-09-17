@@ -26,9 +26,14 @@ export function TodoList({
       {todos.map((todo) => (
         <li className="flex items-center gap-3 p-4" key={todo.id}>
           <Checkbox
-            aria-label={`完成 ${todo.title}`}
             checked={todo.completed}
             disabled={disabled}
+            slotProps={{
+              input: {
+                "aria-label": `完成 ${todo.title}`,
+                "aria-checked": todo.completed,
+              },
+            }}
             onChange={(event) => onToggle(todo, event.target.checked)}
           />
           <span
