@@ -10,11 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedRouteImport } from './routes/_authenticated/route'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
-import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/_app/route'
-import { Route as AuthenticatedWorkspacesRouteImport } from './routes/_authenticated/workspaces/route'
+import { Route as AuthenticatedAppRouteRouteImport } from './routes/_authenticated/_app/route'
 import { Route as AuthenticatedAppTodosRouteImport } from './routes/_authenticated/_app/todos'
 import { Route as AuthenticatedWorkspacesIndexRouteImport } from './routes/_authenticated/workspaces/index'
 import { Route as AuthenticatedWorkspacesNewRouteImport } from './routes/_authenticated/workspaces/new'
@@ -24,7 +23,7 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRoute = AuthenticatedRouteImport.update({
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
@@ -38,38 +37,32 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
+const AuthenticatedAppRouteRoute = AuthenticatedAppRouteRouteImport.update({
   id: '/_app',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedWorkspacesRoute = AuthenticatedWorkspacesRouteImport.update({
-  id: '/workspaces',
-  path: '/workspaces',
-  getParentRoute: () => AuthenticatedRoute,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAppTodosRoute = AuthenticatedAppTodosRouteImport.update({
   id: '/todos',
   path: '/todos',
-  getParentRoute: () => AuthenticatedAppRoute,
+  getParentRoute: () => AuthenticatedAppRouteRoute,
 } as any)
 const AuthenticatedWorkspacesIndexRoute =
   AuthenticatedWorkspacesIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedWorkspacesRoute,
+    id: '/workspaces/',
+    path: '/workspaces/',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedWorkspacesNewRoute =
   AuthenticatedWorkspacesNewRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => AuthenticatedWorkspacesRoute,
+    id: '/workspaces/new',
+    path: '/workspaces/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/workspaces': typeof AuthenticatedWorkspacesRouteWithChildren
   '/todos': typeof AuthenticatedAppTodosRoute
   '/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/workspaces/': typeof AuthenticatedWorkspacesIndexRoute
@@ -85,11 +78,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/_authenticated/_app': typeof AuthenticatedAppRouteWithChildren
-  '/_authenticated/workspaces': typeof AuthenticatedWorkspacesRouteWithChildren
+  '/_authenticated/_app': typeof AuthenticatedAppRouteRouteWithChildren
   '/_authenticated/_app/todos': typeof AuthenticatedAppTodosRoute
   '/_authenticated/workspaces/new': typeof AuthenticatedWorkspacesNewRoute
   '/_authenticated/workspaces/': typeof AuthenticatedWorkspacesIndexRoute
@@ -97,13 +89,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/login'
-    | '/register'
-    | '/workspaces'
-    | '/todos'
-    | '/workspaces/new'
-    | '/workspaces/'
+    '/' | '/login' | '/register' | '/todos' | '/workspaces/new' | '/workspaces/'
   fileRoutesByTo: FileRoutesByTo
   to:
     '/' | '/login' | '/register' | '/todos' | '/workspaces/new' | '/workspaces'
@@ -114,7 +100,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/_authenticated/_app'
-    | '/_authenticated/workspaces'
     | '/_authenticated/_app/todos'
     | '/_authenticated/workspaces/new'
     | '/_authenticated/workspaces/'
@@ -122,7 +107,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
 }
@@ -140,7 +125,7 @@ declare module '@tanstack/react-router' {
       id: '/_authenticated'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteImport
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -161,84 +146,64 @@ declare module '@tanstack/react-router' {
       id: '/_authenticated/_app'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedAppRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/workspaces': {
-      id: '/_authenticated/workspaces'
-      path: '/workspaces'
-      fullPath: '/workspaces'
-      preLoaderRoute: typeof AuthenticatedWorkspacesRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      preLoaderRoute: typeof AuthenticatedAppRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/_app/todos': {
       id: '/_authenticated/_app/todos'
       path: '/todos'
       fullPath: '/todos'
       preLoaderRoute: typeof AuthenticatedAppTodosRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
+      parentRoute: typeof AuthenticatedAppRouteRoute
     }
     '/_authenticated/workspaces/': {
       id: '/_authenticated/workspaces/'
-      path: '/'
+      path: '/workspaces'
       fullPath: '/workspaces/'
       preLoaderRoute: typeof AuthenticatedWorkspacesIndexRouteImport
-      parentRoute: typeof AuthenticatedWorkspacesRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/workspaces/new': {
       id: '/_authenticated/workspaces/new'
-      path: '/new'
+      path: '/workspaces/new'
       fullPath: '/workspaces/new'
       preLoaderRoute: typeof AuthenticatedWorkspacesNewRouteImport
-      parentRoute: typeof AuthenticatedWorkspacesRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
-interface AuthenticatedAppRouteChildren {
+interface AuthenticatedAppRouteRouteChildren {
   AuthenticatedAppTodosRoute: typeof AuthenticatedAppTodosRoute
 }
 
-const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+const AuthenticatedAppRouteRouteChildren: AuthenticatedAppRouteRouteChildren = {
   AuthenticatedAppTodosRoute: AuthenticatedAppTodosRoute,
 }
 
-const AuthenticatedAppRouteWithChildren =
-  AuthenticatedAppRoute._addFileChildren(AuthenticatedAppRouteChildren)
+const AuthenticatedAppRouteRouteWithChildren =
+  AuthenticatedAppRouteRoute._addFileChildren(
+    AuthenticatedAppRouteRouteChildren,
+  )
 
-interface AuthenticatedWorkspacesRouteChildren {
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAppRouteRoute: typeof AuthenticatedAppRouteRouteWithChildren
   AuthenticatedWorkspacesNewRoute: typeof AuthenticatedWorkspacesNewRoute
   AuthenticatedWorkspacesIndexRoute: typeof AuthenticatedWorkspacesIndexRoute
 }
 
-const AuthenticatedWorkspacesRouteChildren: AuthenticatedWorkspacesRouteChildren =
-  {
-    AuthenticatedWorkspacesNewRoute: AuthenticatedWorkspacesNewRoute,
-    AuthenticatedWorkspacesIndexRoute: AuthenticatedWorkspacesIndexRoute,
-  }
-
-const AuthenticatedWorkspacesRouteWithChildren =
-  AuthenticatedWorkspacesRoute._addFileChildren(
-    AuthenticatedWorkspacesRouteChildren,
-  )
-
-interface AuthenticatedRouteChildren {
-  AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
-  AuthenticatedWorkspacesRoute: typeof AuthenticatedWorkspacesRouteWithChildren
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAppRouteRoute: AuthenticatedAppRouteRouteWithChildren,
+  AuthenticatedWorkspacesNewRoute: AuthenticatedWorkspacesNewRoute,
+  AuthenticatedWorkspacesIndexRoute: AuthenticatedWorkspacesIndexRoute,
 }
 
-const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
-  AuthenticatedWorkspacesRoute: AuthenticatedWorkspacesRouteWithChildren,
-}
-
-const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
-  AuthenticatedRouteChildren,
-)
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
 }
