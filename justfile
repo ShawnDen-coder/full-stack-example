@@ -27,9 +27,6 @@ dev-only:
 dev-web:
     node scripts/run-dev-component.mjs web
 
-routes-generate:
-    pnpm --filter @full-stack-example/web routes:generate
-
 dev-api:
     node scripts/run-dev-component.mjs api
 
