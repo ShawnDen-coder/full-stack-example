@@ -12,12 +12,12 @@ import ListItemText from "@mui/material/ListItemText";
 import Popover from "@mui/material/Popover";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import { useQueryClient } from "@tanstack/react-query";
-import { Link, Outlet, useRouter } from "@tanstack/react-router";
+import { Link, Outlet } from "@tanstack/react-router";
 import { useState } from "react";
 import { appShellColors, ThemeSelect } from "../../app/theme.js";
 import { authClient } from "../../features/auth/client.js";
 import { useSignOut } from "../../features/auth/use-sign-out.js";
+import { useWorkspaceTransition } from "../../features/workspaces/use-workspace-transition.js";
 import { AccountMenu } from "./account-menu.js";
 import { appNavigation, filterNavigation, normalizeNavigationRole } from "./app-navigation.js";
 import { Brand } from "./brand.js";
@@ -30,11 +30,9 @@ export function AuthenticatedLayout() {
   const organization = authClient.useActiveOrganization();
   const memberRole = authClient.useActiveMemberRole();
   const organizations = authClient.useListOrganizations();
-  const router = useRouter();
-  const queryClient = useQueryClient();
   const { signOut, signingOut, signOutError } = useSignOut();
   const [workspaceAnchor, setWorkspaceAnchor] = useState<HTMLElement | null>(null);
-  const [workspaceError, setWorkspaceError] = useState<string>();
+  const { activate, switching, error: workspaceError } = useWorkspaceTransition();
   const navigation = filterNavigation(
     appNavigation,
     normalizeNavigationRole(memberRole.data?.role),
@@ -46,16 +44,7 @@ export function AuthenticatedLayout() {
       setWorkspaceAnchor(null);
       return;
     }
-    setWorkspaceError(undefined);
-    const result = await authClient.organization.setActive({ organizationId });
-    if (result.error) {
-      setWorkspaceError("无法切换工作区，请重试。");
-      return;
-    }
-    await session.refetch();
-    await queryClient.removeQueries({ queryKey: ["todos"] });
-    await router.invalidate();
-    setWorkspaceAnchor(null);
+    if (await activate(organizationId)) setWorkspaceAnchor(null);
   }
 
   return (
@@ -198,6 +187,7 @@ export function AuthenticatedLayout() {
           <ListItemButton
             key={item.id}
             selected={item.id === organization.data?.id}
+            disabled={switching}
             onClick={() => void selectWorkspace(item.id)}
             sx={{ borderRadius: "0.5rem", minHeight: "2.5rem" }}
           >

@@ -1,31 +1,20 @@
 import { Card, CardContent, CardHeader, Skeleton } from "@mui/material";
-import { useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
 import { PageLoading } from "../../../components/shared/page-loading.js";
 import { WorkspaceFlowLayout } from "../../../components/shared/workspace-flow-layout.js";
 import { authClient } from "../../auth/client.js";
+import { useWorkspaceTransition } from "../use-workspace-transition.js";
 import { WorkspaceList } from "./workspace-list.js";
 
 export function WorkspacesPage({ returnTo }: { readonly returnTo: string }) {
   const session = authClient.useSession();
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const [error, setError] = useState<string>();
-  const [submitting, setSubmitting] = useState(false);
+  const { activate: activateWorkspace, switching: submitting, error } = useWorkspaceTransition();
   const organizations = authClient.useListOrganizations();
   if (session.isPending) return <PageLoading label="正在加载工作区" />;
   if (!session.data) return null;
   async function activate(organizationId: string) {
-    setError(undefined);
-    setSubmitting(true);
-    const result = await authClient.organization.setActive({ organizationId });
-    setSubmitting(false);
-    if (result.error) return setError("无法切换工作区，请重试。");
-    await session.refetch();
-    await queryClient.removeQueries({ queryKey: ["todos"] });
-    await router.invalidate();
-    await router.navigate({ to: returnTo });
+    if (await activateWorkspace(organizationId)) await router.navigate({ to: returnTo });
   }
   return (
     <WorkspaceFlowLayout account={session.data.user?.name ?? session.data.user?.email}>

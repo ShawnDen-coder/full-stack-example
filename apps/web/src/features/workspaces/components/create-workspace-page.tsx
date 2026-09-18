@@ -2,6 +2,7 @@ import { Alert, Button, Card, CardContent, CardHeader } from "@mui/material";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { authClient } from "../../auth/client.js";
+import { useWorkspaceTransition } from "../use-workspace-transition.js";
 import { WorkspaceFlowLayout } from "../../../components/shared/workspace-flow-layout.js";
 import { WorkspaceForm } from "./workspace-form.js";
 
@@ -10,6 +11,8 @@ export function CreateWorkspacePage({ returnTo }: { readonly returnTo: string })
   const router = useRouter();
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
+  const [pendingActivationId, setPendingActivationId] = useState<string>();
+  const { activate, switching, error: transitionError } = useWorkspaceTransition();
 
   if (session.isPending || !session.data) return null;
 
@@ -25,17 +28,26 @@ export function CreateWorkspacePage({ returnTo }: { readonly returnTo: string })
       setError("无法创建工作区；名称可能已被使用。");
       return;
     }
-    const active = await authClient.organization.setActive({ organizationId: result.data.id });
-    if (active.error) {
+    const activated = await activate(result.data.id);
+    if (!activated) {
+      setPendingActivationId(result.data.id);
       setSubmitting(false);
-      setError("无法切换工作区，请重试。");
       return;
     }
-    await session.refetch();
-    await router.invalidate();
+    setPendingActivationId(undefined);
     reset();
     setSubmitting(false);
     await router.navigate({ to: returnTo });
+  }
+
+  async function retryActivation() {
+    if (!pendingActivationId) return;
+    setSubmitting(true);
+    if (await activate(pendingActivationId)) {
+      setPendingActivationId(undefined);
+      await router.navigate({ to: returnTo });
+    }
+    setSubmitting(false);
   }
 
   return (
@@ -46,6 +58,16 @@ export function CreateWorkspacePage({ returnTo }: { readonly returnTo: string })
           {error ? (
             <Alert severity="error" role="alert" sx={{ mb: 2 }}>
               {error}
+            </Alert>
+          ) : null}
+          {transitionError ? (
+            <Alert severity="error" role="alert" sx={{ mb: 2 }}>
+              {transitionError}
+              {pendingActivationId ? (
+                <Button size="small" onClick={() => void retryActivation()} disabled={switching}>
+                  重试切换
+                </Button>
+              ) : null}
             </Alert>
           ) : null}
           <WorkspaceForm
