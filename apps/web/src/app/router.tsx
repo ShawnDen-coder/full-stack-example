@@ -1,9 +1,19 @@
-import { RouterProvider } from "@tanstack/react-router";
+import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { PageLoading } from "../components/shared/page-loading.js";
 import { authClient } from "../features/auth/client.js";
 import { queryClient } from "../lib/query-client.js";
-import { router } from "./router.js";
+import { routeTree } from "./routes.js";
+
+export const router = createRouter({ routeTree, context: { session: null, queryClient } });
+
+export type AppRoutePath = NonNullable<Parameters<typeof router.navigate>[0]["to"]>;
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
 
 export function AppRouter() {
   const session = authClient.useSession();
