@@ -26,6 +26,12 @@ describe("application routes", () => {
   it("matches the home, authentication, workspace, and Todo routes", () => {
     expect(routeTree).toBeDefined();
     expect(routeTree.children?.length).toBeGreaterThan(0);
+    expect(router.options.defaultPreload).toBe("intent");
+    expect(router.options.defaultPreloadStaleTime).toBe(0);
+    expect(router.options.scrollRestoration).toBe(true);
+    expect(router.options.defaultPendingComponent).toBeDefined();
+    expect(router.options.defaultErrorComponent).toBeDefined();
+    expect(router.options.defaultNotFoundComponent).toBeDefined();
   });
 
   it("redirects anonymous Todo navigation to login with a safe return target", async () => {

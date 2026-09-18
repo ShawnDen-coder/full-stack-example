@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createBrowserHistory, createRouter, type RouterHistory } from "@tanstack/react-router";
 import type { AppSession } from "../features/auth/client.js";
 import { queryClient as defaultQueryClient } from "../lib/query-client.js";
+import { RouteError, RouteNotFound, RoutePending } from "./routing/root-route.js";
 import { routeTree } from "./routing/route-tree.js";
 
 export type AppRouterOptions = {
@@ -18,6 +19,12 @@ export function createAppRouter(options: AppRouterOptions = {}) {
       session: options.session ?? null,
       queryClient: options.queryClient ?? defaultQueryClient,
     },
+    defaultPreload: "intent",
+    defaultPreloadStaleTime: 0,
+    scrollRestoration: true,
+    defaultPendingComponent: RoutePending,
+    defaultErrorComponent: RouteError,
+    defaultNotFoundComponent: RouteNotFound,
   });
 }
 

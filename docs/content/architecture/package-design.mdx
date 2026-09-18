@@ -46,7 +46,7 @@ description: 说明 apps、packages、container、scripts 与 docs 的所有权�
 | 表结构、RLS、角色权限和正式迁移 | `packages/database` | Drizzle schema 与 SQL migration |
 | 业务 Job 定义 | 拥有该业务的领域模块；当前示例在 Jobs 合同入口 | Zod 输入、processor、依赖工厂 |
 | 队列连接、worker 生命周期、Bull Board 和 BullMQ migration | `packages/jobs` | server/worker/migration 子路径 |
-| 路由配置和页面组合 | `apps/web/src/app/routes.tsx` | 集中式路由树、loader、route guard |
+| 路由配置和页面组合 | `apps/web/src/app/routing/` | 按公开、认证和工作台边界组织的路由、loader、route guard |
 | 用户流程和服务端状态访问 | `apps/web/src/features/<feature>` | 登录/Todo hooks、表单行为 |
 | Web 共享基础 client 和错误解析 | `apps/web/src/lib` | Hono client、API error |
 | 被多个 UI 功能复用的纯展示组件 | `apps/web/src/components` | 不持有租户查询或路由副作用的组件 |
