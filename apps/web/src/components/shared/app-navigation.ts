@@ -1,13 +1,13 @@
 import CheckBoxOutlinedIcon from "@mui/icons-material/CheckBoxOutlined";
 import { z } from "zod";
-import type { AppRoutePath } from "../../app/router.js";
+import type { FileRoutesByTo } from "../../routeTree.gen.js";
 
 export const navigationIconRegistry = {
   todos: CheckBoxOutlinedIcon,
 } as const;
 
 export type NavigationRole = "owner" | "admin" | "member";
-type NavigationTo = AppRoutePath;
+type NavigationTo = keyof FileRoutesByTo;
 
 export type NavigationPage = {
   readonly kind: "page";

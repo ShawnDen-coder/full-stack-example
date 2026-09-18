@@ -4,8 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppRouter, router } from "../../src/app/router.js";
-import { routeTree } from "../../src/app/routes.js";
 import { queryClient } from "../../src/lib/query-client.js";
+import { routeTree } from "../../src/routeTree.gen.js";
 
 const sessionState = vi.hoisted(() => ({
   current: { data: null, isPending: false },
