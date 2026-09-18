@@ -29,7 +29,7 @@ TanStack Router 在导航时运行 session/tenant guard 与 loader；页面通�
 
 ## 配置与运行资源
 
-开发环境通过 `VITE_API_BASE_URL` 定位 API；生产环境使用 same-origin。所有 RPC 请求携带 Cookie credentials。Router、QueryClient 和 Auth client 在应用入口创建并复用；路由树由 `src/app/routes.tsx` 集中维护，不依赖代码生成器。
+开发环境通过 `VITE_API_BASE_URL` 定位 API；生产环境使用 same-origin。所有 RPC 请求携带 Cookie credentials。Router、QueryClient 和 Auth client 在应用入口创建并复用；route tree 由 TanStack Router 插件生成，不手动改写。
 
 ## 使用流程
 
