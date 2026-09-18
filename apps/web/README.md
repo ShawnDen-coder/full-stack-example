@@ -14,7 +14,7 @@ Web 不重复定义 API schema，不导入 Auth server，也不直接访问 Post
 
 Web 没有供服务端调用的运行时 API；它消费 System/Todos 的 Hono 子路由类型和 `@full-stack-example/auth/client`，构建结果由 API 宿主提供。
 
-`src/app/routing/` 按边界维护 code-based 路由：公开页面、认证/工作区流程和工作台页面分别定义，`route-tree.ts` 只负责组装路由树；`src/app/router.ts` 创建 Router，`router-provider.tsx` 注入 Better Auth Session。新增页面时在对应边界文件创建 `createRoute`，再挂载到 `route-tree.ts` 的认证或工作台父路由。
+`src/app/routes.tsx` 是集中式路由入口：根路由提供布局与 404，认证路由在 `beforeLoad` 校验 Session，Todo 路由继续校验活动工作区。新增页面时在路由树中创建 `createRoute`，并将其挂载到对应的认证或工作台父路由。
 
 ## 依赖关系
 
@@ -29,7 +29,7 @@ TanStack Router 在导航时运行 session/tenant guard 与 loader；页面通�
 
 ## 配置与运行资源
 
-开发环境通过 `VITE_API_BASE_URL` 定位 API；生产环境使用 same-origin。所有 RPC 请求携带 Cookie credentials。Router、QueryClient 和 Auth client 在应用入口创建并复用；路由树由 `src/app/routing/` 集中维护，不依赖代码生成器。
+开发环境通过 `VITE_API_BASE_URL` 定位 API；生产环境使用 same-origin。所有 RPC 请求携带 Cookie credentials。Router、QueryClient 和 Auth client 在应用入口创建并复用；路由树由 `src/app/routes.tsx` 集中维护，不依赖代码生成器。
 
 ## 使用流程
 

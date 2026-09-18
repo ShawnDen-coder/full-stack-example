@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TodosPage } from "../../../src/components/todos/todos-page.js";
 
 vi.mock("@tanstack/react-router", () => ({
+  createFileRoute: () => (config: unknown) => config,
   Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => (
     <a href={to} {...props}>
       {children}
