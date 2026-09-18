@@ -4,7 +4,7 @@
 
 ## 职责边界
 
-- 使用 TanStack Router code-based 路由树渲染首页、登录、注册、工作区选择和 Todo 页面。
+- 使用 TanStack Router 文件路由渲染首页、登录、注册、工作区选择和 Todo 页面。
 - 使用 TanStack Query 管理服务端状态，通过按功能拆分的 Hono RPC 客户端发起类型安全请求。
 - 开发环境解析 API origin，生产环境保持同源请求。
 
@@ -14,7 +14,7 @@ Web 不重复定义 API schema，不导入 Auth server，也不直接访问 Post
 
 Web 没有供服务端调用的运行时 API；它消费 System/Todos 的 Hono 子路由类型和 `@full-stack-example/auth/client`，构建结果由 API 宿主提供。
 
-`src/app/routes.tsx` 是集中式路由入口：根路由提供布局与 404，认证路由在 `beforeLoad` 校验 Session，Todo 路由继续校验活动工作区。新增页面时在路由树中创建 `createRoute`，并将其挂载到对应的认证或工作台父路由。
+`src/routes/` 是路由入口：`__root.tsx` 提供根布局与 404，`_authenticated.tsx` 在 `beforeLoad` 校验 Session，`_authenticated/todos.tsx` 继续校验活动工作区。`src/routeTree.gen.ts` 由 TanStack Router 插件生成，不手工编辑；新增或移动路由后可运行 `just routes-generate`。
 
 ## 依赖关系
 

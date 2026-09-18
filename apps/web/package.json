@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "routes:generate": "tsr generate",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build"
   },
@@ -34,6 +35,8 @@
     "@full-stack-example/todos": "workspace:*",
     "@storybook/addon-a11y": "^10.6.0",
     "@storybook/react-vite": "^10.6.0",
+    "@tanstack/router-cli": "^1.167.35",
+    "@tanstack/router-plugin": "^1.132.0",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/react": "^19.2.7",
