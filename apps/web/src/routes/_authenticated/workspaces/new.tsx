@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CreateWorkspacePage } from "../../../components/workspaces/create-workspace-page.js";
+import { CreateWorkspacePage } from "../../../features/workspaces/components/create-workspace-page.js";
 import { validateReturnToSearch } from "../../../features/auth/navigation.js";
 
 export const Route = createFileRoute("/_authenticated/workspaces/new")({

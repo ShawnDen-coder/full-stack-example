@@ -10,9 +10,9 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { appShellColors } from "../../app/theme.js";
-import { authClient } from "../../features/auth/client.js";
-import { useCreateTodo, useDeleteTodo, useTodos, useUpdateTodo } from "../../features/todos/api.js";
+import { appShellColors } from "../../../app/theme.js";
+import { authClient } from "../../auth/client.js";
+import { useCreateTodo, useDeleteTodo, useTodos, useUpdateTodo } from "../api.js";
 import { TodoComposer } from "./todo-composer.js";
 import { TodoList } from "./todo-list.js";
 

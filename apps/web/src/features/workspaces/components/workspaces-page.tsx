@@ -2,9 +2,9 @@ import { Card, CardContent, CardHeader, Skeleton } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { PageLoading } from "../../components/shared/page-loading.js";
-import { WorkspaceFlowLayout } from "../../components/shared/workspace-flow-layout.js";
-import { authClient } from "../../features/auth/client.js";
+import { PageLoading } from "../../../components/shared/page-loading.js";
+import { WorkspaceFlowLayout } from "../../../components/shared/workspace-flow-layout.js";
+import { authClient } from "../../auth/client.js";
 import { WorkspaceList } from "./workspace-list.js";
 
 export function WorkspacesPage({ returnTo }: { readonly returnTo: string }) {

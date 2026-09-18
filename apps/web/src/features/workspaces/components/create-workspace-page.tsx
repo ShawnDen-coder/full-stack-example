@@ -1,8 +1,8 @@
 import { Alert, Button, Card, CardContent, CardHeader } from "@mui/material";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { authClient } from "../../features/auth/client.js";
-import { WorkspaceFlowLayout } from "../shared/workspace-flow-layout.js";
+import { authClient } from "../../auth/client.js";
+import { WorkspaceFlowLayout } from "../../../components/shared/workspace-flow-layout.js";
 import { WorkspaceForm } from "./workspace-form.js";
 
 export function CreateWorkspacePage({ returnTo }: { readonly returnTo: string }) {

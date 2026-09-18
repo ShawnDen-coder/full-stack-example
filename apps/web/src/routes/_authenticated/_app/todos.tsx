@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { TodosPage } from "../../../components/todos/todos-page.js";
+import { TodosPage } from "../../../features/todos/components/todos-page.js";
 import { todosQueryOptions } from "../../../features/todos/api.js";
 
 export const Route = createFileRoute("/_authenticated/_app/todos")({
