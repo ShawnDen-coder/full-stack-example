@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 
 import { QueryClientProvider } from "@tanstack/react-query";
+import { createMemoryHistory } from "@tanstack/react-router";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AppRouter, router } from "../../src/app/router.js";
-import { routeTree } from "../../src/app/routes.js";
+import { createAppRouter, router } from "../../src/app/router.js";
+import { AppRouter } from "../../src/app/router-provider.js";
+import { routeTree } from "../../src/app/routing/route-tree.js";
 import { queryClient } from "../../src/lib/query-client.js";
 
 const sessionState = vi.hoisted(() => ({
@@ -24,6 +26,40 @@ describe("application routes", () => {
   it("matches the home, authentication, workspace, and Todo routes", () => {
     expect(routeTree).toBeDefined();
     expect(routeTree.children?.length).toBeGreaterThan(0);
+  });
+
+  it("redirects anonymous Todo navigation to login with a safe return target", async () => {
+    const testRouter = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/todos"] }),
+    });
+
+    await testRouter.load();
+
+    expect(testRouter.state.location.pathname).toBe("/login");
+    expect(testRouter.state.location.search.returnTo).toBe("/todos");
+  });
+
+  it("uses the workspace flow when an authenticated session has no active organization", async () => {
+    const testRouter = createAppRouter({
+      session: { session: { activeOrganizationId: null } } as never,
+      history: createMemoryHistory({ initialEntries: ["/login?returnTo=%2Ftodos"] }),
+    });
+
+    await testRouter.load();
+
+    expect(testRouter.state.location.pathname).toBe("/workspaces");
+    expect(testRouter.state.location.search.returnTo).toBe("/todos");
+  });
+
+  it("renders the configured not-found state without changing the URL", async () => {
+    const testRouter = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/does-not-exist"] }),
+    });
+
+    await testRouter.load();
+
+    expect(testRouter.state.location.pathname).toBe("/does-not-exist");
+    expect(testRouter.options.defaultNotFoundComponent).toBeDefined();
   });
 
   it("keeps the current route mounted while the session refreshes", async () => {

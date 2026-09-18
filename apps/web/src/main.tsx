@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { AppProviders } from "./app/providers.js";
-import { AppRouter } from "./app/router.js";
+import { AppRouter } from "./app/router-provider.js";
 import "./styles/index.css";
 
 const root = document.getElementById("root");
