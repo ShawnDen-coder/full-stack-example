@@ -16,12 +16,14 @@ export const todosApi = createTodosApiClient(getApiBaseUrl());
 export const todosQueryOptions = (organizationId: string) => ({
   // 组织 ID 必须进入 query key，避免租户切换时串用 Todo 缓存。
   queryKey: ["todos", organizationId] as const,
-  queryFn: listTodos,
+  queryFn: ({ signal }: { readonly signal: AbortSignal }) => listTodos(signal),
   staleTime: 30_000,
 });
 
-async function listTodos() {
-  const response = await todosApi.todos.$get();
+async function listTodos(signal?: AbortSignal) {
+  const response = await todosApi.todos.$get(undefined, {
+    init: { credentials: "include", ...(signal ? { signal } : {}) },
+  });
   if (response.ok) return response.json();
   return throwApiError(response);
 }

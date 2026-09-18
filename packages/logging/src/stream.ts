@@ -27,8 +27,46 @@ export interface LogSubscription {
   readonly overflowed: () => boolean;
 }
 
+const MAX_SNAPSHOT_DEPTH = 8;
+
+function snapshotValue(value: unknown, seen: WeakSet<object>, depth: number): unknown {
+  if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+  if (typeof value === "bigint") return `${value}n`;
+  if (typeof value === "undefined") return "[Undefined]";
+  if (typeof value === "symbol") return String(value);
+  if (typeof value === "function") return "[Function]";
+  if (depth >= MAX_SNAPSHOT_DEPTH) return "[MaxDepth]";
+  if (seen.has(value)) return "[Circular]";
+  seen.add(value);
+  if (value instanceof Error) {
+    return { name: value.name, message: value.message };
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => snapshotValue(item, seen, depth + 1));
+  }
+  const result: Record<string, unknown> = {};
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== "string") continue;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    result[key] = descriptor && "value" in descriptor
+      ? snapshotValue(descriptor.value, seen, depth + 1)
+      : "[Unavailable]";
+  }
+  return result;
+}
+
+function safeSnapshot(value: unknown): Readonly<Record<string, unknown>> {
+  const snapshot = snapshotValue(value, new WeakSet<object>(), 0);
+  return snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)
+    ? snapshot as Record<string, unknown>
+    : { value: snapshot };
+}
+
 export function createLogStream(options: { readonly capacity?: number } = {}): LogStream {
   const capacity = options.capacity ?? 1000;
+  if (!Number.isSafeInteger(capacity) || capacity < 1) {
+    throw new Error("capacity must be a positive integer");
+  }
   const records: StreamLogRecord[] = [];
   const listeners = new Set<(record: StreamLogRecord) => void>();
   let sequence = 0;
@@ -40,7 +78,7 @@ export function createLogStream(options: { readonly capacity?: number } = {}): L
         severity: record.level,
         category: [...record.category],
         message: record.message.map((part) => String(part)).join(""),
-        properties: JSON.parse(JSON.stringify(record.properties)) as Record<string, unknown>,
+        properties: safeSnapshot(record.properties),
       };
       records.push(entry);
       if (records.length > capacity) records.shift();
