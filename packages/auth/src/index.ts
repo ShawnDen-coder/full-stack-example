@@ -13,3 +13,5 @@ export type {
   SessionPrincipal,
   TenantPrincipal,
 } from "./contracts.js";
+
+export { createSessionPrincipal, createTenantPrincipal } from "./principals.js";

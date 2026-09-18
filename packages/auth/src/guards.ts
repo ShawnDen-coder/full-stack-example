@@ -9,7 +9,7 @@ import type {
   PlatformRole,
   TenantPrincipal,
 } from "./contracts.js";
-import { createSessionPrincipal, createTenantPrincipal } from "./middleware.js";
+import { createSessionPrincipal, createTenantPrincipal } from "./principals.js";
 
 type SessionValue = {
   readonly user?: { readonly id: string; readonly role?: unknown };

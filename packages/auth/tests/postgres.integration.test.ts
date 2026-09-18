@@ -9,7 +9,7 @@ import {
 } from "@full-stack-example/database";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createSessionPrincipal } from "../src/middleware.js";
+import { createSessionPrincipal } from "../src/principals.js";
 import { createAuthModule } from "../src/server.js";
 
 const databaseUrl = process.env.DATABASE_RUNTIME_URL;

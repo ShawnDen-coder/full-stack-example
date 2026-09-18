@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSessionPrincipal, createTenantPrincipal } from "../src/middleware.js";
+import { createSessionPrincipal, createTenantPrincipal } from "../src/principals.js";
 
 describe("auth principals", () => {
   it("builds immutable session and tenant identity data", () => {
