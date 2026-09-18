@@ -67,6 +67,9 @@ lint:
 lint-check:
     node node_modules/@biomejs/biome/bin/biome check --config-path biome.json .
 
+boundaries:
+    pnpm exec tsx scripts/check-package-boundaries.ts
+
 format:
     node node_modules/@biomejs/biome/bin/biome format --config-path biome.json --write .
 
@@ -75,6 +78,7 @@ format-check:
 
 check:
     just lint-check
+    just boundaries
     just typecheck
     just test
 

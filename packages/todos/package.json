@@ -19,7 +19,6 @@
   },
   "type": "module",
   "dependencies": {
-    "@full-stack-example/auth": "workspace:*",
     "@full-stack-example/database": "workspace:*",
     "drizzle-orm": "^0.44.7",
     "hono": "catalog:",

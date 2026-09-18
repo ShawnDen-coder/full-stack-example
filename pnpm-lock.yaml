@@ -359,9 +359,6 @@ importers:
 
   packages/todos:
     dependencies:
-      '@full-stack-example/auth':
-        specifier: workspace:*
-        version: link:../auth
       '@full-stack-example/database':
         specifier: workspace:*
         version: link:../database
