@@ -1,1 +1,0 @@
-ALTER TABLE "organization" ADD CONSTRAINT "organization_status_check" CHECK ("organization"."status" in ('active', 'disabled'));

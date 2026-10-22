@@ -1,24 +1,63 @@
+import { Toaster } from "@my-better-t-app/ui/components/sonner";
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, Link, Outlet } from "@tanstack/react-router";
-import type { AppSession } from "../features/auth/client.js";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import {
+	createRootRouteWithContext,
+	HeadContent,
+	Outlet,
+} from "@tanstack/react-router";
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
-export type RouterContext = {
-  readonly session: AppSession | null;
-  readonly queryClient: QueryClient;
-};
+import Header from "@/components/header";
+import { ThemeProvider } from "@/components/theme-provider";
+import type { orpc } from "@/utils/orpc";
 
-export const Route = createRootRouteWithContext<RouterContext>()({
-  component: () => <Outlet />,
-  notFoundComponent: () => (
-    <main className="hero min-h-screen bg-base-200 text-base-content">
-      <div className="hero-content text-center">
-        <div>
-          <h1 className="text-4xl font-bold">页面不存在</h1>
-          <Link className="btn btn-primary mt-4" to="/">
-            返回首页
-          </Link>
-        </div>
-      </div>
-    </main>
-  ),
+import "../index.css";
+
+export interface RouterAppContext {
+	orpc: typeof orpc;
+	queryClient: QueryClient;
+}
+
+export const Route = createRootRouteWithContext<RouterAppContext>()({
+	component: RootComponent,
+	head: () => ({
+		meta: [
+			{
+				title: "my-better-t-app",
+			},
+			{
+				name: "description",
+				content: "my-better-t-app is a web application",
+			},
+		],
+		links: [
+			{
+				rel: "icon",
+				href: "/favicon.ico",
+			},
+		],
+	}),
 });
+
+function RootComponent() {
+	return (
+		<>
+			<HeadContent />
+			<ThemeProvider
+				attribute="class"
+				defaultTheme="dark"
+				disableTransitionOnChange
+				storageKey="vite-ui-theme"
+			>
+				<div className="grid h-svh grid-rows-[auto_1fr]">
+					<Header />
+					<Outlet />
+				</div>
+				<Toaster richColors />
+			</ThemeProvider>
+			<TanStackRouterDevtools position="bottom-left" />
+			<ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+		</>
+	);
+}

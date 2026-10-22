@@ -1,36 +1,57 @@
 {
-  "name": "full-stack-example",
-  "private": true,
-  "packageManager": "pnpm@11.24.0",
-  "description": "TypeScript modular monolith with a React web app, Hono API, PostgreSQL persistence, structured logging, and OpenTelemetry.",
-  "engines": {
-    "node": ">=22"
-  },
-  "scripts": {
-    "docs:generate": "pnpm --dir docs generate",
-    "docs:dev": "pnpm --dir docs dev",
-    "docs:build": "pnpm --dir docs build",
-    "docs:preview": "pnpm --dir docs preview"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.5",
-    "@tanstack/intent": "^0.4.0",
-    "@types/node": "^24.0.0",
-    "concurrently": "^9.2.1",
-    "tsx": "^4.20.6",
-    "typescript": "~5.9.3",
-    "vitest": "^4.1.5"
-  },
-  "dependencies": {
-    "@full-stack-example/logging": "workspace:*"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ShawnDen-coder/full-stack-example.git"
-  },
-  "intent": {
-    "skills": [
-      "@tanstack/router-core"
-    ]
-  }
+	"name": "my-better-t-app",
+	"private": true,
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"type": "module",
+	"scripts": {
+		"dev": "pnpm -r dev",
+		"build": "pnpm -r --if-present build",
+		"check-types": "pnpm -r check-types",
+		"dev:web": "pnpm --filter web dev",
+		"dev:server": "pnpm --filter server dev",
+		"db:push": "pnpm --filter @my-better-t-app/db db:push",
+		"db:studio": "pnpm --filter @my-better-t-app/db db:studio",
+		"db:generate": "pnpm --filter @my-better-t-app/db db:generate",
+		"db:migrate": "pnpm --filter @my-better-t-app/db db:migrate",
+		"db:start": "docker compose up -d postgres",
+		"db:watch": "docker compose up postgres",
+		"db:stop": "docker compose stop postgres",
+		"db:down": "docker compose down postgres",
+		"docker:build": "docker compose build",
+		"docker:up": "docker compose up -d --build",
+		"docker:down": "docker compose down",
+		"docker:logs": "docker compose logs -f",
+		"env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/ && varlock codegen --path ./apps/worker/",
+		"postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/ && varlock codegen --path ./apps/worker/",
+		"auth:generate": "cd apps/server && pnpm run auth:generate",
+		"check": "biome check --write .",
+		"prepare": "husky",
+		"test": "pnpm --filter server --filter worker test",
+		"infra:up": "docker compose up -d postgres redis",
+		"infra:down": "docker compose stop postgres redis",
+		"dev:worker": "pnpm --filter worker dev",
+		"start:worker": "pnpm --filter worker start"
+	},
+	"dependencies": {
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.15",
+		"@my-better-t-app/config": "workspace:*",
+		"@types/node": "^26.4.1",
+		"husky": "^9.1.7",
+		"lefthook": "^2.2.1",
+		"lint-staged": "^17.6.0",
+		"typescript": "catalog:",
+		"varlock": "catalog:"
+	},
+	"lint-staged": {
+		"*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}": [
+			"biome check --write ."
+		]
+	},
+	"packageManager": "pnpm@11.0.9"
 }

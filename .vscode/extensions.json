@@ -1,9 +1,0 @@
-{
-  "recommendations": [
-    "folke.vscode-monorepo-workspace",
-    "jacano.vscode-pnpm",
-    "biomejs.biome",
-    "formulahendry.code-runner",
-    "ms-azuretools.vscode-containers"
-  ]
-}

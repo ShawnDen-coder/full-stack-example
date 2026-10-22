@@ -1,0 +1,351 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { serve } from "@hono/node-server";
+import type { ContextDependencies } from "@my-better-t-app/api/context";
+import { createApi } from "@my-better-t-app/api/create-api";
+import type { AppRouterClient } from "@my-better-t-app/api/routers/index";
+import type { Session } from "@my-better-t-app/auth";
+import { createDb } from "@my-better-t-app/db";
+import { createQueueConnection } from "@my-better-t-app/queue";
+import { getUserProfileJob } from "@my-better-t-app/queue/user-profile-job";
+import { createUserProfileProcessor } from "@my-better-t-app/users/workers/user-profile.worker";
+import { createORPCClient } from "@orpc/client";
+import { RPCLink } from "@orpc/client/fetch";
+
+const now = new Date("2026-01-01T00:00:00Z");
+const profile = {
+	id: "user-1",
+	name: "Alice",
+	email: "alice@example.test",
+	emailVerified: true,
+	image: null,
+	createdAt: now,
+};
+const session: Session = {
+	user: { ...profile, updatedAt: now },
+	session: {
+		id: "session-1",
+		userId: profile.id,
+		token: "test-session",
+		createdAt: now,
+		updatedAt: now,
+		expiresAt: new Date("2099-01-01"),
+	},
+};
+
+async function fixture(currentSession: Session | null = session) {
+	const calls: string[] = [];
+	const sessionHeaders: Headers[] = [];
+	// Creating a pool is lazy; these HTTP tests never connect to PostgreSQL.
+	const db = createDb({ DATABASE_URL: "postgresql://localhost/unused" });
+	const deps: ContextDependencies = {
+		db,
+		auth: {
+			handler: async (request) => {
+				const headers = new Headers();
+				headers.append("Set-Cookie", "session=test; Path=/; HttpOnly");
+				headers.append("Set-Cookie", "csrf=test; Path=/");
+				return new Response(
+					request.method === "POST" ? await request.text() : "auth handler",
+					{ headers },
+				);
+			},
+		},
+		getSession: async (headers) => {
+			sessionHeaders.push(headers);
+			calls.push("session");
+			return currentSession;
+		},
+		services: {
+			usersService: {
+				getProfile: async (id) => {
+					calls.push(`profile:${id}`);
+					return profile;
+				},
+			},
+			queueClient: {
+				enqueueUserProfile: async (id) => {
+					calls.push(`enqueue:${id}`);
+					return { id: "job-1" };
+				},
+				getUserProfileJob: async (id, userId) => {
+					calls.push(`job:${id}:${userId}`);
+					return null;
+				},
+			},
+		},
+	};
+	const { app } = createApi({
+		...deps,
+		corsOrigin: "http://localhost:3001",
+	});
+	const server = serve({ fetch: app.fetch, port: 0, hostname: "127.0.0.1" });
+	try {
+		await new Promise<void>((resolve, reject) => {
+			server.once("error", reject);
+			if (server.listening) resolve();
+			else server.once("listening", resolve);
+		});
+	} catch (error) {
+		await db.$client.end();
+		throw error;
+	}
+	const address = server.address();
+	if (!address || typeof address === "string")
+		throw new Error("Missing server address");
+	const baseURL = `http://127.0.0.1:${address.port}`;
+	const request = (path: string, init?: RequestInit) =>
+		fetch(new URL(path, baseURL), init);
+	const client: AppRouterClient = createORPCClient(
+		new RPCLink({
+			url: `${baseURL}/rpc`,
+		}),
+	);
+	return {
+		request,
+		client,
+		calls,
+		deps,
+		sessionHeaders,
+		async close() {
+			try {
+				await new Promise<void>((resolve, reject) =>
+					server.close((error) => (error ? reject(error) : resolve())),
+				);
+			} finally {
+				await db.$client.end();
+			}
+		},
+	};
+}
+
+test("health and unknown routes do not resolve authentication or touch services", async () => {
+	const f = await fixture();
+	try {
+		assert.equal((await f.request("/health")).status, 200);
+		const head = await f.request("/health", { method: "HEAD" });
+		assert.equal(head.status, 200);
+		assert.equal(await head.text(), "");
+		assert.equal((await f.request("/missing")).status, 404);
+		assert.deepEqual(f.calls, []);
+	} finally {
+		await f.close();
+	}
+});
+
+test("auth requests are delegated to the injected Better Auth handler", async () => {
+	const f = await fixture();
+	try {
+		const response = await f.request("/api/auth/get-session");
+		assert.equal(await response.text(), "auth handler");
+		assert.deepEqual(f.calls, []);
+	} finally {
+		await f.close();
+	}
+});
+
+test("anonymous requests cannot read profiles or enqueue and inspect jobs", async () => {
+	const f = await fixture(null);
+	try {
+		for (const request of [
+			() => f.client.users.me(),
+			() => f.client.users.requestProfile(),
+			() => f.client.users.profileJob({ id: "job-1" }),
+		]) {
+			await assert.rejects(request, { code: "UNAUTHORIZED" });
+		}
+		assert.ok(f.calls.every((call) => call === "session"));
+	} finally {
+		await f.close();
+	}
+});
+
+test("profile and queue routes use the authenticated user ID", async () => {
+	const f = await fixture();
+	try {
+		assert.equal((await f.client.users.me()).id, profile.id);
+		assert.deepEqual(await f.client.users.requestProfile(), { id: "job-1" });
+		await assert.rejects(() => f.client.users.profileJob({ id: "job-1" }), {
+			code: "NOT_FOUND",
+		});
+		assert.ok(f.calls.includes("profile:user-1"));
+		assert.ok(f.calls.includes("enqueue:user-1"));
+		assert.ok(f.calls.includes("job:job-1:user-1"));
+	} finally {
+		await f.close();
+	}
+});
+
+test("job ownership prevents returning another user's result", async () => {
+	let stateRead = false;
+	const reader = {
+		getJob: async () => ({
+			id: "job-1",
+			data: { userId: "user-1" },
+			returnvalue: { id: "user-1", name: "Alice", emailVerified: true },
+			getState: async () => {
+				stateRead = true;
+				return "completed";
+			},
+		}),
+	};
+	assert.equal(await getUserProfileJob(reader, "job-1", "user-2"), null);
+	assert.equal(stateRead, false);
+	assert.equal(
+		(await getUserProfileJob(reader, "job-1", "user-1"))?.result?.name,
+		"Alice",
+	);
+	assert.equal(
+		await getUserProfileJob(
+			{ getJob: async () => undefined },
+			"missing",
+			"user-1",
+		),
+		null,
+	);
+});
+
+test("unfinished jobs hide stored results", async () => {
+	const result = await getUserProfileJob(
+		{
+			getJob: async () => ({
+				id: "job-1",
+				data: { userId: "user-1" },
+				returnvalue: { id: "user-1", name: "Alice", emailVerified: true },
+				getState: async () => "active",
+			}),
+		},
+		"job-1",
+		"user-1",
+	);
+	assert.equal(result?.result, null);
+});
+
+test("worker validates payloads and returns only the intended profile fields", async () => {
+	const f = await fixture();
+	try {
+		const process = createUserProfileProcessor(f.deps.services);
+		assert.deepEqual(await process({ userId: "user-1" }), {
+			id: "user-1",
+			name: "Alice",
+			emailVerified: true,
+		});
+		await assert.rejects(() => process({ userId: "" }));
+		const missing = createUserProfileProcessor({
+			usersService: { getProfile: async () => null },
+		});
+		assert.equal(await missing({ userId: "deleted" }), null);
+	} finally {
+		await f.close();
+	}
+});
+
+test("Redis connection supports TLS, database selection and rejects invalid protocols", () => {
+	const connection = createQueueConnection("rediss://localhost:6380/2");
+	assert.ok("host" in connection);
+	if ("host" in connection) {
+		assert.equal(connection.port, 6380);
+		assert.equal(connection.db, 2);
+		assert.deepEqual(connection.tls, {});
+	}
+	assert.throws(() => createQueueConnection("https://localhost"));
+	assert.throws(() =>
+		createQueueConnection("redis://localhost/not-a-database"),
+	);
+});
+
+test("CORS preflight returns before auth and service resolution", async () => {
+	const f = await fixture();
+	try {
+		const response = await f.request("/rpc/users/me", {
+			method: "OPTIONS",
+			headers: {
+				Origin: "http://localhost:3001",
+				"Access-Control-Request-Method": "POST",
+				"Access-Control-Request-Headers": "Content-Type",
+			},
+		});
+		assert.equal(response.status, 204);
+		assert.equal(
+			response.headers.get("Access-Control-Allow-Origin"),
+			"http://localhost:3001",
+		);
+		assert.equal(
+			response.headers.get("Access-Control-Allow-Credentials"),
+			"true",
+		);
+		assert.match(
+			response.headers.get("Access-Control-Allow-Headers") ?? "",
+			/Content-Type/,
+		);
+		assert.deepEqual(f.calls, []);
+		const foreign = await f.request("/health", {
+			headers: { Origin: "https://foreign.example.test" },
+		});
+		assert.equal(foreign.headers.get("Access-Control-Allow-Origin"), null);
+		assert.match(foreign.headers.get("Vary") ?? "", /Origin/);
+	} finally {
+		await f.close();
+	}
+});
+
+test("Hono auth mounting preserves POST bodies and multiple cookies", async () => {
+	const f = await fixture();
+	try {
+		const body = JSON.stringify({ email: "alice@example.test" });
+		const response = await f.request("/api/auth/sign-in/email", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Origin: "http://localhost:3001",
+			},
+			body,
+		});
+		assert.equal(await response.text(), body);
+		assert.equal(response.headers.getSetCookie().length, 2);
+		assert.equal(
+			response.headers.get("Access-Control-Allow-Origin"),
+			"http://localhost:3001",
+		);
+		assert.deepEqual(f.calls, []);
+	} finally {
+		await f.close();
+	}
+});
+
+test("Hono RPC adapter forwards session cookies and retains CORS headers", async () => {
+	const f = await fixture();
+	try {
+		const response = await f.request("/rpc/users/me", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: "session=test",
+				Origin: "http://localhost:3001",
+			},
+			body: JSON.stringify({ json: null }),
+		});
+		assert.equal(response.status, 200);
+		assert.equal(f.sessionHeaders[0]?.get("cookie"), "session=test");
+		assert.equal(
+			response.headers.get("Access-Control-Allow-Credentials"),
+			"true",
+		);
+	} finally {
+		await f.close();
+	}
+});
+
+test("OpenAPI reference remains available and similar prefixes do not match", async () => {
+	const f = await fixture();
+	try {
+		const response = await f.request("/api-reference");
+		assert.equal(response.status, 200);
+		assert.match(response.headers.get("Content-Type") ?? "", /text\/html/);
+		const before = f.calls.length;
+		assert.equal((await f.request("/rpc-other")).status, 404);
+		assert.equal(f.calls.length, before);
+	} finally {
+		await f.close();
+	}
+});

@@ -1,20 +1,19 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { activeOrganizationId, validateReturnToSearch } from "../features/auth/navigation.js";
-import { LoginPage } from "../features/auth/pages/login-page.js";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+
+import SignInForm from "@/components/sign-in-form";
+import SignUpForm from "@/components/sign-up-form";
 
 export const Route = createFileRoute("/login")({
-  validateSearch: validateReturnToSearch,
-  beforeLoad: ({ context, search }) => {
-    if (context.session)
-      throw redirect({
-        to: activeOrganizationId(context.session) ? search.returnTo : "/workspaces",
-        search: { returnTo: search.returnTo },
-      });
-  },
-  component: LoginRoutePage,
+	component: RouteComponent,
 });
 
-function LoginRoutePage() {
-  const { returnTo } = Route.useSearch();
-  return <LoginPage returnTo={returnTo} />;
+function RouteComponent() {
+	const [showSignIn, setShowSignIn] = useState(false);
+
+	return showSignIn ? (
+		<SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
+	) : (
+		<SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
+	);
 }
