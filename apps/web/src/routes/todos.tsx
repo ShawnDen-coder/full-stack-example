@@ -9,16 +9,21 @@ import {
 import { Checkbox } from "@my-better-t-app/ui/components/checkbox";
 import { Input } from "@my-better-t-app/ui/components/input";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Loader2, Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
+import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
 
 type TodoId = number;
 
 export const Route = createFileRoute("/todos")({
 	component: TodosRoute,
+	beforeLoad: async () => {
+		const session = await authClient.getSession();
+		if (!session.data) throw redirect({ to: "/login" });
+	},
 });
 
 function TodosRoute() {

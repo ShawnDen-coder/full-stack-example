@@ -1,167 +1,14 @@
-# my-better-t-app
+# full-stack-example
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, oRPC, and more.
+A TypeScript full-stack example with authenticated personal todos, user profiles, and background jobs running in a separate worker process.
 
-## Features
+Built with [Better T Stack](https://github.com/AmanVarshney01/create-better-t-stack): React and TanStack Router on the frontend, Hono and oRPC on Node.js, Better Auth, Drizzle/PostgreSQL, and BullMQ/Redis. Shared UI components use shadcn/ui and Tailwind CSS.
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Router** - File-based routing with full type safety
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Hono** - HTTP routing and middleware with oRPC and Better Auth
-- **oRPC** - End-to-end type-safe APIs with OpenAPI integration
-- **Node.js** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
-- **Biome** - Linting and formatting
-- **Husky** - Git hooks for code quality
+## Try it locally
 
-## Getting Started
+After setup, open [localhost:3001](http://localhost:3001), create an account or sign in, then visit `/todos` to create, complete, and delete your own tasks. Each account has its own list.
 
-First, install the dependencies:
-
-```bash
-pnpm install
-```
-
-## Database Setup
-
-This project uses PostgreSQL with Drizzle ORM.
-
-1. Start PostgreSQL and Redis with `pnpm infra:up`.
-2. Update your `apps/server/.env` file with your PostgreSQL connection details.
-
-3. Apply the schema to your database:
-
-```bash
-pnpm run db:push
-```
-
-Then, run the development server:
-
-```bash
-pnpm run dev
-```
-
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
-The API is running at [http://localhost:3000](http://localhost:3000).
-
-## UI Customization
-
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
-
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
-
-### Add more shared components
-
-Run this from the project root to add more primitives to the shared UI package:
-
-```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
-```
-
-Import shared components like this:
-
-```tsx
-import { Button } from "@my-better-t-app/ui/components/button";
-```
-
-### Add app-specific blocks
-
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
-
-## Environment Configuration
-
-Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `pnpm run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
-
-Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
-
-The Vite integration and Node server bootstrap load Varlock. Node deployments include Varlock and its dependencies alongside the app schema.
-
-Run standalone Node tools that use Varlock from the owning app directory so they load that app's schema and env files. `env:generate` only generates TypeScript files; it does not initialize environment values in a subsequent command.
-
-## Deployment
-
-### Docker Compose
-
-- Target: web + server + worker
-- Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
-- Build images: pnpm run docker:build
-- Start: pnpm run docker:up
-- Logs: pnpm run docker:logs
-- Stop: pnpm run docker:down
-
-Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
-
-For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
-
-## Git Hooks and Formatting
-
-- Initialize hooks: `pnpm run prepare`
-- Run checks: `pnpm run check`
-
-## Project Structure
-
-```
-my-better-t-app/
-├── apps/
-│   ├── web/         # Frontend application (React + TanStack Router)
-│   ├── server/      # Backend API (Hono, oRPC)
-│   └── worker/      # Independent BullMQ consumer (Node.js)
-├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   ├── api/         # API layer / business logic
-│   ├── auth/        # Authentication configuration & logic
-│   ├── users/       # User profile service
-│   ├── queue/       # Typed BullMQ client and job contracts
-│   └── db/          # Database schema & queries
-```
-
-## Available Scripts
-
-- `pnpm run dev`: Start all applications in development mode
-- `pnpm run build`: Build all applications
-- `pnpm run dev:web`: Start only the web application
-- `pnpm run dev:server`: Start only the server
-- `pnpm run dev:worker`: Start only the background worker
-- `pnpm run start:worker`: Run the built worker
-- `pnpm test`: Run offline module and API tests
-- `pnpm infra:up`: Start PostgreSQL and Redis
-- `pnpm infra:down`: Stop PostgreSQL and Redis
-- `pnpm run check-types`: Check TypeScript types across all apps
-- `pnpm run db:push`: Push schema changes to database
-- `pnpm run db:generate`: Generate database client/types
-- `pnpm run db:migrate`: Run database migrations
-- `pnpm run db:studio`: Open database studio UI
-- `pnpm run check`: Run Biome formatting and linting
-- `pnpm run docker:build`: Build the Docker Compose images
-- `pnpm run docker:up`: Build and start the Docker Compose stack
-- `pnpm run docker:logs`: Tail logs from the Docker Compose stack
-- `pnpm run docker:down`: Stop the Docker Compose stack
-
-## Better Auth Schema Generation
-
-After changing auth plugins or schema options, run `pnpm run auth:generate` from the project root. The script runs the Better Auth CLI through `varlock run` from the owning app directory, loading the auth instance from `src/auth-schema.ts`. Review the schema changes, then use your ORM's migration workflow to apply them.
-
-## Application composition
-
-The integration follows the explicit factory and dependency injection pattern in
-[claude-vps](https://github.com/grmkris/claude-vps/tree/d972236):
-
-- `apps/server/src/index.ts` owns process startup and shutdown. It creates the API runtime and serves the Hono application; it never starts consumers.
-- `apps/worker/src/index.ts` starts a separate Node.js consumer process. `apps/worker/src/runtime.ts` creates its database and users service, checks readiness, then starts the user-profile worker.
-- `apps/server/src/services.ts` creates the database, Better Auth, queue client, and users service once per process. Importing it does not start connections or workers.
-- `packages/api/src/create-api.ts` exports `createApi(...)`, which accepts initialized dependencies. It mounts Better Auth at `/api/auth/*`, oRPC at `/rpc`, OpenAPI at `/api-reference`, and health at `/health`. Health and unmatched URLs do not resolve sessions.
-- `packages/api/src/context.ts` resolves the incoming session and provides services to procedures. `protectedProcedure` requires authentication before calling business services.
-- `packages/users` reads a user profile through an injected database. `packages/queue` owns job contracts, producer configuration, retention, retries, and job ownership checks. Worker factories live under `packages/users/src/workers` and reuse the same service factory as HTTP requests, with separate instances and connections per process.
-
-The generated Todo example remains unchanged. The users API is authenticated and
-always derives the user ID from the session; it exposes no user-list or arbitrary-user lookup endpoint.
-
-Authenticated clients can exercise the complete service/queue path using the existing typed oRPC client:
+Authenticated code can also use the typed oRPC client to read a profile and submit a background job:
 
 ```ts
 const profile = await client.users.me();
@@ -169,48 +16,25 @@ const job = await client.users.requestProfile();
 const status = await client.users.profileJob({ id: job.id });
 ```
 
-The background task reads the current profile and returns only `id`, `name`, and
-`emailVerified` as a small example job. A caller can inspect only their own job;
-missing and foreign jobs both return `NOT_FOUND`. Results expire after one hour
-(or earlier when the completed-job count exceeds 1,000); failed jobs are retained
-for up to one day, capped at 1,000. Cleanup happens when subsequent jobs finish.
+The worker reads the profile and returns `id`, `name`, and `emailVerified`. Only the submitting user can inspect the job. Poll `profileJob` until it completes; results are retained for a limited time.
 
-`REDIS_URL` is declared in `apps/server/.env.schema` and defaults to
-`redis://localhost:6379` for host development. Docker Compose overrides it with
-`redis://redis:6379`, starts Redis with persistence and `noeviction`, and waits for
-PostgreSQL and Redis health checks before starting the server. Keep any Redis
-credentials in ignored local env overrides or your deployment secret provider.
+## Setup
 
-Better Auth receives an explicit database and configuration object. Cookie
-security follows Better Auth's URL/environment defaults so local HTTP development
-works without forcing cross-site secure cookies. Production should use HTTPS.
-The auth schema-generation entry point initializes only database/auth and never
-starts the queue, worker, or HTTP server.
+Use Node.js (the project uses Node 24 in Docker), pnpm 11.0.9, and Docker Compose. Run commands from the repository root.
 
-On `SIGINT` or `SIGTERM`, the API stops accepting requests and closes its queue
-and PostgreSQL pool. The independent worker stops consuming, drains active jobs,
-and then closes its own PostgreSQL pool. Workers use unlimited Redis request
-retries; HTTP producers use bounded request retries. The optional
-`msgpackr-extract` native build is disabled; its JavaScript fallback is used.
+```bash
+pnpm install
+```
 
-To add another module, expose a factory, instantiate it in `createServices`, add
-its concrete service type to `Services`, and mount its oRPC router in
-`packages/api/src/routers/index.ts`. For background work, add a typed job contract
-and a worker factory in the owning business package, then register and close it
-in the worker runtime.
+Create these ignored local files before starting the applications:
 
-## Independent worker
+| File | Values for local development |
+| --- | --- |
+| `apps/server/.env` | `DATABASE_URL=postgresql://postgres:password@localhost:5432/my-better-t-app`, `BETTER_AUTH_URL=http://localhost:3000`, `CORS_ORIGIN=http://localhost:3001`, and `BETTER_AUTH_SECRET` (at least 32 characters) |
+| `apps/worker/.env` | The same `DATABASE_URL` as the server |
+| `apps/web/.env` | `VITE_SERVER_URL=http://localhost:3000` |
 
-API requests enqueue jobs in Redis; `apps/worker` consumes them using the shared
-queue name, task name and Zod payload schema. It calls the users service directly,
-without HTTP or browser sessions. The worker package does not depend on API or
-auth packages. Importing its runtime or the users worker factory does not start
-connections or consumption.
-
-For local development, set the worker's `DATABASE_URL` in an ignored
-`apps/worker/.env` (or provide it through the process environment). Use the same
-database and Redis as the API. The worker owns its `.env.schema` and does not
-require Better Auth secrets. Then run:
+Generate a secret with `openssl rand -hex 32`. Redis defaults to `redis://localhost:6379` in both server and worker; set `REDIS_URL` in both files if yours differs. The database CLI imports its connection settings from the server schema. Never commit `.env` files.
 
 ```bash
 pnpm infra:up
@@ -218,32 +42,53 @@ pnpm db:push
 pnpm dev
 ```
 
-`pnpm dev` starts web, server and worker through the pnpm workspace. To restart
-or debug only the consumer, use `pnpm dev:worker`. Production runs the built
-entry with `pnpm start:worker`; Docker Compose includes a separate `worker`
-service with its own image and no published HTTP port.
+This starts PostgreSQL and Redis, applies the database schema, and runs web, API, and worker. The API listens at [localhost:3000](http://localhost:3000); its reference is at [/api-reference](http://localhost:3000/api-reference) and health check at [/health](http://localhost:3000/health).
 
-The runtime checks PostgreSQL, creates the worker with `autorun: false`, waits
-for Redis readiness, and then starts consumption. `WORKER_STARTUP_TIMEOUT_MS`
-(default 10,000 ms) bounds each readiness phase. Failure before readiness closes
-the unstarted worker and database, then exits unsuccessfully. Startup never
-creates or resets any scheduler configuration.
+### Existing databases
 
-`WORKER_CONCURRENCY` defaults to 5 and accepts integers from 1 to 100. Shutdown
-is idempotent and waits for active jobs before closing the database.
-`WORKER_SHUTDOWN_TIMEOUT_MS` defaults to 30,000 ms; exceeding the deadline exits
-unsuccessfully, allowing BullMQ to recover stalled work. Compose gives the
-container 40 seconds to stop; increase both values for longer jobs. Business
-handlers must tolerate repeated execution because retries and process failures
-can cause a job to run again. The example task only reads data.
+Apply `pnpm db:push` before running the updated Todo API. The new nullable `todo.user_id` foreign key preserves existing rows without guessing their owners. Rows with no owner are inaccessible through the API. Backfill only when ownership can be verified, or archive them separately. New todos always receive the authenticated user's ID; deleting a user also deletes their owned todos.
 
-This implements the process and lifecycle part of the referenced scheduling
-proposal. Schedule configuration, persistence, pause/resume and scheduler
-reconciliation are separate application features and are not implemented here.
+## Common commands
 
-The HTTP application uses Hono with oRPC's Fetch adapters. Better Auth is
-mounted directly through its Fetch handler. `createApi()` returns an import-safe
-Hono application; `apps/server` starts it through `@hono/node-server`.
-Hono handles routing, CORS, request logs and HTTP errors, while oRPC owns business
-procedures. CORS covers auth, RPC, docs and health, including preflight requests.
-The runtime remains Node.js with pnpm; no Bun configuration or scripts are used.
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev:web`, `pnpm dev:server`, `pnpm dev:worker` | Start one application |
+| `pnpm test` | Run offline API/module and worker tests |
+| `pnpm check-types` | Check workspace types (also builds the web app) |
+| `pnpm build` | Build applications |
+| `pnpm exec biome check .` | Check lint and formatting without changing files |
+| `pnpm check` | Apply Biome fixes |
+| `pnpm db:studio` | Inspect the database |
+| `pnpm db:generate`, `pnpm db:migrate` | Generate and apply SQL migrations |
+| `pnpm env:generate` | Regenerate environment types after schema changes |
+| `pnpm infra:down` | Stop local PostgreSQL and Redis |
+
+## Docker deployment
+
+Create the environment files above, configure production URLs and secrets, then use:
+
+```bash
+pnpm docker:build
+pnpm docker:up
+pnpm docker:logs
+# Stop the stack:
+pnpm docker:down
+```
+
+Compose runs web, server, worker, PostgreSQL, and Redis. It overrides database and Redis addresses for container networking. Public frontend configuration is baked into the web build. Apply database schema changes separately before starting the updated applications; container startup does not run migrations. Use HTTPS and deployment-managed secrets in production.
+
+## Development
+
+| Location | Responsibility |
+| --- | --- |
+| `apps/web` | React frontend and file-based routes |
+| `apps/server` | Hono API process; produces jobs |
+| `apps/worker` | Independent BullMQ consumer and lifecycle |
+| `packages/api`, `packages/auth` | oRPC procedures and Better Auth factory |
+| `packages/users`, `packages/queue` | Profile service, worker factory, typed jobs and queue client |
+| `packages/db` | PostgreSQL schema and Drizzle configuration |
+| `packages/ui`, `packages/config` | Shared components, styles, and TypeScript configuration |
+
+See the [development guide](docs/development.md) for UI customization, environment generation, auth schema generation, dependency injection, worker lifecycle, and adding modules. Generator choices are recorded in [bts.jsonc](bts.jsonc); all commands are defined in [package.json](package.json).
+
+Before contributing, run `pnpm install`, `pnpm test`, `pnpm check-types`, `pnpm build`, and `pnpm exec biome check .`. Keep dependency changes scoped to the owning package and use concise conventional commit subjects.

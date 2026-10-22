@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import { serve } from "@hono/node-server";
 import type { ContextDependencies } from "@my-better-t-app/api/context";
 import { createApi } from "@my-better-t-app/api/create-api";
@@ -156,6 +156,58 @@ test("anonymous requests cannot read profiles or enqueue and inspect jobs", asyn
 		}
 		assert.ok(f.calls.every((call) => call === "session"));
 	} finally {
+		await f.close();
+	}
+});
+
+test("anonymous requests cannot access any Todo operation", async () => {
+	const f = await fixture(null);
+	try {
+		for (const request of [
+			() => f.client.todo.getAll(),
+			() => f.client.todo.create({ text: "private" }),
+			() => f.client.todo.toggle({ id: 1, completed: true }),
+			() => f.client.todo.delete({ id: 1 }),
+		]) {
+			await assert.rejects(request, { code: "UNAUTHORIZED" });
+		}
+	} finally {
+		await f.close();
+	}
+});
+
+test("Todo SQL binds the session owner for reads, inserts and mutations", async () => {
+	const f = await fixture();
+	const queries: unknown[][] = [];
+	const query = mock.method(
+		f.deps.db.$client,
+		"query",
+		async (...args: unknown[]) => {
+			queries.push(args);
+			return { rows: [], rowCount: 0 };
+		},
+	);
+	try {
+		await f.client.todo.getAll();
+		await f.client.todo.create({ text: "private", userId: "foreign" } as {
+			text: string;
+		});
+		await f.client.todo.toggle({ id: 99, completed: true });
+		await f.client.todo.delete({ id: 99 });
+		assert.equal(queries.length, 4);
+		for (const [index, args] of queries.entries()) {
+			const sql = (args[0] as { text: string }).text;
+			const values = args[1] as unknown[];
+			assert.ok(values.includes("user-1"));
+			assert.ok(!values.includes("foreign"));
+			if (index !== 1) assert.match(sql, /where.*"user_id" = \$\d+/);
+			if (index >= 2) {
+				assert.match(sql, /where.*"id" = \$\d+\)* and .*"user_id" = \$\d+/);
+				assert.ok(values.includes(99));
+			}
+		}
+	} finally {
+		query.mock.restore();
 		await f.close();
 	}
 });
