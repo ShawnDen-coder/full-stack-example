@@ -1,0 +1,12 @@
+{
+	"extends": "@my-better-t-app/config/tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true
+	},
+	"references": [
+		{
+			"path": "../../packages/users"
+		}
+	],
+	"include": ["src/**/*.ts", "tests/**/*.ts", "tsdown.config.ts"]
+}

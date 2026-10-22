@@ -1,0 +1,26 @@
+{
+	"name": "worker",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/index.ts",
+		"build": "tsc -b ../../packages/users && tsdown",
+		"check-types": "tsc -b ../../packages/users && tsc --noEmit",
+		"start": "node dist/index.mjs",
+		"test": "node --import tsx --test tests/*.test.ts",
+		"env:generate": "varlock codegen"
+	},
+	"dependencies": {
+		"@my-better-t-app/db": "workspace:*",
+		"@my-better-t-app/queue": "workspace:*",
+		"@my-better-t-app/users": "workspace:*",
+		"varlock": "catalog:"
+	},
+	"devDependencies": {
+		"@my-better-t-app/config": "workspace:*",
+		"@types/node": "^26.4.1",
+		"tsdown": "^0.23.0",
+		"tsx": "^4.23.13",
+		"typescript": "catalog:"
+	}
+}

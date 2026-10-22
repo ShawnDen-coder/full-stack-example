@@ -1,14 +1,23 @@
-import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
-import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import { varlockVitePlugin } from "@varlock/vite-integration";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  root: fileURLToPath(new URL(".", import.meta.url)),
-  plugins: [
-    TanStackRouterVite({ routesDirectory: "./src/routes", autoCodeSplitting: true }),
-    react(),
-    tailwindcss(),
-  ],
+	server: {
+		port: 3001,
+	},
+	resolve: {
+		tsconfigPaths: true,
+	},
+	plugins: [
+		varlockVitePlugin({ ssrInjectMode: "auto-load" }),
+		tailwindcss(),
+		tanstackRouter({
+			target: "react",
+			autoCodeSplitting: true,
+		}),
+		react(),
+	],
 });

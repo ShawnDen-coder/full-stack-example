@@ -1,19 +1,22 @@
 packages:
-  - "apps/*"
-  - "packages/*"
-  - "docs"
-catalog:
-  hono: ^4.13.7
-  "@hono/zod-validator": ^0.7.5
-  zod: ^4.1.12
+  - apps/*
+  - packages/*
 allowBuilds:
   esbuild: true
-  msgpackr-extract: true
-  protobufjs: false
-  vue-demi: false
-minimumReleaseAgeExclude:
-  - '@tanstack/history@1.162.3'
-  - '@tanstack/router-cli@1.167.35'
-  - '@tanstack/router-core@1.171.29'
-  - '@tanstack/router-generator@1.167.35'
-  - '@tanstack/router-utils@1.162.3'
+  sharp: true
+  lefthook: true
+  msgpackr-extract: false
+catalog:
+  zod: ^4.5.4
+  typescript: ^6.0.3
+  varlock: 1.18.0
+  "@orpc/server": ^1.15.6
+  "@orpc/openapi": ^1.15.6
+  "@orpc/zod": ^1.15.6
+  better-auth: 1.7.7
+  next-themes: ^0.4.6
+  sonner: ^2.0.8
+  "@orpc/client": ^1.15.6
+  tailwindcss: ^4.3.3
+  drizzle-orm: 1.0.0-rc.4
+  "@types/pg": ^8.23.1
