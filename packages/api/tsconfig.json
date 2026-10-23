@@ -20,6 +20,12 @@
 		},
 		{
 			"path": "../queue"
+		},
+		{
+			"path": "../logger"
+		},
+		{
+			"path": "../todos"
 		}
 	]
 }

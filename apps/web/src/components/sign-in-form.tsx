@@ -5,15 +5,17 @@ import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import z from "zod";
-
 import { authClient } from "@/lib/auth-client";
+import { clearSessionData } from "@/utils/orpc";
 
 import Loader from "./loader";
 
 export default function SignInForm({
 	onSwitchToSignUp,
+	returnTo,
 }: {
 	onSwitchToSignUp: () => void;
+	returnTo: string;
 }) {
 	const navigate = useNavigate({
 		from: "/",
@@ -33,8 +35,9 @@ export default function SignInForm({
 				},
 				{
 					onSuccess: () => {
+						clearSessionData();
 						navigate({
-							to: "/dashboard",
+							to: returnTo,
 						});
 						toast.success("Sign in successful");
 					},

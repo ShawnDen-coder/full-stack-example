@@ -9,7 +9,8 @@
 		"serve": "vite preview",
 		"start": "vite",
 		"check-types": "tsc -b ../../packages/api && vite build && tsc --noEmit",
-		"env:generate": "varlock codegen"
+		"env:generate": "varlock codegen",
+		"test:e2e": "playwright test"
 	},
 	"dependencies": {
 		"@my-better-t-app/api": "workspace:*",
@@ -36,13 +37,14 @@
 		"@tanstack/react-query-devtools": "^5.104.2",
 		"@tanstack/react-router-devtools": "^1.167.2",
 		"@tanstack/router-plugin": "^1.168.45",
-		"@types/node": "^26.6.5",
+		"@types/node": "^24.0.0",
 		"@types/react": "^19.3.0",
 		"@types/react-dom": "^19.3.0",
 		"@vitejs/plugin-react": "^6.1.2",
 		"postcss": "^8.5.30",
 		"tailwindcss": "catalog:",
 		"typescript": "catalog:",
-		"vite": "^8.3.4"
+		"vite": "^8.3.4",
+		"@playwright/test": "^1.56.0"
 	}
 }

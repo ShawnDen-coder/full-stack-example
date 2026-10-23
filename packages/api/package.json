@@ -21,10 +21,16 @@
 		"zod": "catalog:",
 		"@my-better-t-app/users": "workspace:*",
 		"@my-better-t-app/queue": "workspace:*",
-		"hono": "^4.13.7"
+		"hono": "^4.13.7",
+		"@my-better-t-app/logger": "workspace:*",
+		"@my-better-t-app/todos": "workspace:*"
 	},
 	"devDependencies": {
 		"@my-better-t-app/config": "workspace:*",
 		"typescript": "catalog:"
-	}
+	},
+	"files": [
+		"src",
+		"dist"
+	]
 }

@@ -1,0 +1,1 @@
+CREATE INDEX "todo_user_id_id_idx" ON "todo" ("user_id","id");

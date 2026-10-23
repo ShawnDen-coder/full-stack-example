@@ -11,10 +11,15 @@
 	},
 	"dependencies": {
 		"bullmq": "^5.0.0",
-		"zod": "catalog:"
+		"zod": "catalog:",
+		"@my-better-t-app/logger": "workspace:*"
 	},
 	"devDependencies": {
 		"@my-better-t-app/config": "workspace:*",
 		"typescript": "catalog:"
-	}
+	},
+	"files": [
+		"src",
+		"dist"
+	]
 }

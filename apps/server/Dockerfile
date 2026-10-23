@@ -1,19 +1,17 @@
 FROM node:24-slim AS builder
-RUN npm install -g pnpm@11
-WORKDIR /app
-
+RUN npm install -g pnpm@11.0.9
+WORKDIR /workspace
 COPY . .
-RUN --mount=type=secret,id=web_env,target=/app/apps/web/.env.local --mount=type=secret,id=server_env,target=/app/apps/server/.env.local --mount=type=cache,target=/pnpm-store pnpm install --store-dir /pnpm-store
-
-ENV NODE_ENV=production
-RUN --mount=type=secret,id=web_env,target=/app/apps/web/.env.local --mount=type=secret,id=server_env,target=/app/apps/server/.env.local cd apps/server && pnpm run build
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter server build
+RUN pnpm --filter server deploy --prod --ignore-scripts /out
+RUN find /out/node_modules -path "*/@my-better-t-app/*/src" -type d -prune -exec rm -rf {} +
+RUN cp -R packages/db/src/migrations /out/migrations
 
 FROM node:24-slim AS runner
-WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app /app
-
+WORKDIR /app
+COPY --from=builder --chown=node:node /out /app
+USER node
 EXPOSE 3000
-
-WORKDIR /app/apps/server
 CMD ["node", "dist/index.mjs"]

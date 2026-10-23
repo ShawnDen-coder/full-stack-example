@@ -1,33 +1,37 @@
-import { serve } from "@hono/node-server";
-import { createApi } from "@my-better-t-app/api/create-api";
+import { createLogger } from "@my-better-t-app/logger";
 import { ENV } from "./env.server";
-import { createServices } from "./services";
+import { startServer } from "./runtime";
 
-const runtime = createServices(ENV);
-const { app } = createApi({ ...runtime, corsOrigin: ENV.CORS_ORIGIN });
-const server = serve({ fetch: app.fetch, port: 3000 }, (info) => {
-	console.log(`Server is running on http://localhost:${info.port}`);
-});
-
+const logger = createLogger("server");
+const startup = startServer(ENV, logger);
 let shutdownPromise: Promise<void> | undefined;
 function shutdown() {
 	shutdownPromise ??= (async () => {
+		const timer = setTimeout(() => {
+			logger.error("Server shutdown deadline exceeded");
+			process.exit(1);
+		}, ENV.SERVER_SHUTDOWN_TIMEOUT_MS);
 		try {
-			await new Promise<void>((resolve, reject) =>
-				server.close((error) => (error ? reject(error) : resolve())),
-			);
+			await (await startup).close();
 		} finally {
-			await runtime.close();
+			clearTimeout(timer);
 		}
 	})();
 	return shutdownPromise;
 }
-
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
 	process.once(signal, () => {
-		void shutdown().catch(() => {
-			console.error("Server shutdown failed");
-			process.exitCode = 1;
+		void shutdown().catch((err: unknown) => {
+			logger.error({ err }, "Server shutdown failed");
+			process.exit(1);
 		});
 	});
 }
+void startup
+	.then(() => {
+		if (!shutdownPromise) logger.info({ port: ENV.PORT }, "Server ready");
+	})
+	.catch((err: unknown) => {
+		logger.error({ err }, "Server startup failed");
+		process.exit(1);
+	});

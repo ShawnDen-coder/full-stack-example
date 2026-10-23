@@ -1,9 +1,12 @@
 import { createDb } from "@my-better-t-app/db";
+import { createLogger, type Logger } from "@my-better-t-app/logger";
 import { createUsersService, type UsersService } from "@my-better-t-app/users";
 import { createUserProfileWorker } from "@my-better-t-app/users/workers/user-profile.worker";
 
 export type WorkerConfig = {
 	DATABASE_URL: string;
+	DB_POOL_MAX?: number;
+	DB_QUERY_TIMEOUT_MS?: number;
 	REDIS_URL: string;
 	WORKER_CONCURRENCY: number;
 	WORKER_STARTUP_TIMEOUT_MS: number;
@@ -23,20 +26,23 @@ type ProfileWorker = {
 
 // Concrete factory boundaries make startup/rollback testable without live services.
 export type WorkerFactories = {
-	createResources(config: WorkerConfig): WorkerResources;
+	createResources(config: WorkerConfig, logger: Logger): WorkerResources;
 	createWorker(options: {
 		redisUrl: string;
 		usersService: UsersService;
 		concurrency: number;
 		autorun: false;
+		logger?: Logger;
 	}): ProfileWorker;
 };
 
 const factories: WorkerFactories = {
-	createResources(config) {
+	createResources(config, logger) {
 		const db = createDb(config, {
 			connectionTimeoutMillis: config.WORKER_STARTUP_TIMEOUT_MS,
-			queryTimeoutMillis: config.WORKER_STARTUP_TIMEOUT_MS,
+			queryTimeoutMillis: config.DB_QUERY_TIMEOUT_MS,
+			max: config.DB_POOL_MAX,
+			logger,
 		});
 		return {
 			usersService: createUsersService({ deps: { db } }),
@@ -69,6 +75,7 @@ async function waitForReady(check: Promise<unknown>, timeoutMs: number) {
 export async function startWorker(
 	config: WorkerConfig,
 	deps: WorkerFactories = factories,
+	logger: Logger = createLogger("worker"),
 ) {
 	if (
 		!Number.isInteger(config.WORKER_CONCURRENCY) ||
@@ -79,7 +86,7 @@ export async function startWorker(
 	) {
 		throw new Error("Invalid worker concurrency or startup timeout");
 	}
-	const resources = deps.createResources(config);
+	const resources = deps.createResources(config, logger);
 	let worker: ProfileWorker | undefined;
 	try {
 		await waitForReady(
@@ -91,6 +98,7 @@ export async function startWorker(
 			usersService: resources.usersService,
 			concurrency: config.WORKER_CONCURRENCY,
 			autorun: false,
+			logger,
 		});
 		await waitForReady(
 			worker.waitUntilReady(),

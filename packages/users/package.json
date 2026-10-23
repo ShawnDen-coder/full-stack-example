@@ -12,10 +12,15 @@
 	"dependencies": {
 		"@my-better-t-app/db": "workspace:*",
 		"drizzle-orm": "catalog:",
-		"@my-better-t-app/queue": "workspace:*"
+		"@my-better-t-app/queue": "workspace:*",
+		"@my-better-t-app/logger": "workspace:*"
 	},
 	"devDependencies": {
 		"@my-better-t-app/config": "workspace:*",
 		"typescript": "catalog:"
-	}
+	},
+	"files": [
+		"src",
+		"dist"
+	]
 }

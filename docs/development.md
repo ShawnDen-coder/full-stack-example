@@ -1,5 +1,7 @@
 # Development guide
 
+[English](development.md) · [简体中文](development.zh-CN.md)
+
 [Back to README](../README.md)
 
 ## UI Customization
@@ -49,10 +51,10 @@ The integration follows the explicit factory and dependency injection pattern in
 
 - `apps/server/src/index.ts` owns process startup and shutdown. It creates the API runtime and serves the Hono application; it never starts consumers.
 - `apps/worker/src/index.ts` starts a separate Node.js consumer process. `apps/worker/src/runtime.ts` creates its database and users service, checks readiness, then starts the user-profile worker.
-- `apps/server/src/services.ts` creates the database, Better Auth, queue client, and users service once per process. Importing it does not start connections or workers.
-- `packages/api/src/create-api.ts` exports `createApi(...)`, which accepts initialized dependencies. It mounts Better Auth at `/api/auth/*`, oRPC at `/rpc`, OpenAPI at `/api-reference`, and health at `/health`. Health and unmatched URLs do not resolve sessions.
+- `apps/server/src/services.ts` creates the database, Better Auth, queue client, users service and Todo service once per process. Importing it does not start connections or workers.
+- `packages/api/src/create-api.ts` exports `createApi(...)`, which accepts initialized dependencies. It mounts Better Auth at `/api/auth/*`, oRPC at `/rpc`, OpenAPI at `/api-reference`, and health at `/health` and dependency readiness at `/ready`. Health and unmatched URLs do not resolve sessions.
 - `packages/api/src/context.ts` resolves the incoming session and provides services to procedures. `protectedProcedure` requires authentication before calling business services.
-- `packages/users` reads a user profile through an injected database. `packages/queue` owns job contracts, producer configuration, retention, retries, and job ownership checks. Worker factories live under `packages/users/src/workers` and reuse the same service factory as HTTP requests, with separate instances and connections per process.
+- `packages/users` reads a user profile through an injected database. `packages/todos` owns the Todo service; both HTTP routers delegate to injected services. `packages/queue` owns job contracts, producer configuration, retention, retries, and job ownership checks. Worker factories live under `packages/users/src/workers` and reuse the same service factory as HTTP requests, with separate instances and connections per process.
 
 The Todo API requires authentication and scopes every operation to the session user.
 The users API is authenticated and
@@ -111,7 +113,7 @@ require Better Auth secrets. Then run:
 
 ```bash
 pnpm infra:up
-pnpm db:push
+pnpm db:migrate
 pnpm dev
 ```
 
@@ -144,3 +146,83 @@ Hono application; `apps/server` starts it through `@hono/node-server`.
 Hono handles routing, CORS, request logs and HTTP errors, while oRPC owns business
 procedures. CORS covers auth, RPC, docs and health, including preflight requests.
 The runtime remains Node.js with pnpm; no Bun configuration or scripts are used.
+
+## Complete module example
+
+Use `packages/todos` as the CRUD reference. Its factory receives a database;
+`createServices` wires it into `context.services`. Routers validate inputs and
+map a missing or foreign resource to the same `NOT_FOUND` response. Never accept
+an owner ID from the browser. Keep SQL and business decisions in the service.
+
+`todo.list({ cursor?, limit? })` returns `{ items, nextCursor }`, ordered by
+ID descending. Limit defaults to 20 and cannot exceed 100; the cursor is the
+last ID from the preceding page. Text is trimmed and limited to 1–500 characters.
+Create/toggle return `{ id, text, completed }`; delete returns `{ id }`.
+The old `todo.getAll` interface is removed. Add an index and a reviewed migration
+alongside new query patterns, and test them against PostgreSQL.
+
+Protected pages belong under the `_auth` layout. Query keys include the current
+user ID. The session boundary cancels and clears queries and invalidates router
+context when identity changes; delayed RPC responses from an older identity are
+rejected. A `UNAUTHORIZED` response clears private state and returns to login with
+a validated relative return path. Mutations have a shared error notification,
+which a page-specific `onError` may override. Never retry writes automatically.
+
+## Runtime and logs
+
+Both processes own their clients and shutdown. The API waits for PostgreSQL and
+Redis before listening. `/health` means the process responds; `/ready` checks
+both dependencies within two seconds and returns 503 during drain or failure.
+It does not resolve sessions. Readiness is a dependency probe, not a substitute
+for migration validation or worker-lag monitoring.
+
+Server startup defaults to 10 seconds; shutdown defaults to 30 seconds. Compose
+gives server and worker 40 seconds. Configure `DB_POOL_MAX` (default 10) per
+process and `DB_QUERY_TIMEOUT_MS` (default 10 seconds) for both client query and
+database statement deadlines. Budget total database connections across replicas.
+Worker startup/exit settings remain separate from query timeouts.
+
+Pino emits JSON to stdout with `service`, request ID, duration and status. HTTP
+responses expose `X-Request-ID`; queued jobs retain it and log their job ID on
+completion/failure. Driver exceptions are serialized with sanitized messages and
+stacks. Do not log request bodies, authentication headers, session objects,
+configuration objects or SQL bind values. Attach logs to your platform's collector
+and alert on repeated 503s, job failures and growing queue delay.
+
+## Production upgrades and recovery
+
+Load production configuration from `deploy/.env.schema` using Varlock. `pnpm
+docker:up` runs a fresh one-shot migration before replacing application containers.
+After the API is updated, it recreates the web container so Nginx resolves the
+current upstream address.
+Production Node images run as the `node` user and contain built application code
+plus production dependencies. No local value files are copied into image layers.
+
+Before a schema-changing release, create a PostgreSQL logical backup with
+`pg_dump -Fc` using your deployment-managed credentials, and store it outside the
+host. Test `pg_restore` into a new empty database. Preserve Redis AOF volumes for
+queued work, and remember handlers must tolerate repeated execution. Backups on
+the same machine or untested restores are insufficient.
+
+For an application rollback, redeploy the previously validated image versions
+only when they remain compatible with the current schema. There is no automatic
+destructive down-migration. For a database restore, stop producers and consumers,
+restore into a fresh database, verify schema and ownership, then start services
+against that database. Reconcile queued jobs before resuming consumers. Never use
+`docker compose down -v` as part of a production update.
+
+## Quality checks
+
+GitHub Actions verifies Node 24 with pnpm 11.0.9 and the committed lockfile.
+Offline tests cover HTTP boundaries, readiness, sanitized logs and worker
+lifecycle. Integration tests use real PostgreSQL/Redis, committed migrations,
+Better Auth, job retries, connection termination and SIGTERM. Playwright covers
+account switching (including delayed responses), failed writes and expired
+sessions. The production smoke test exercises the built Nginx/API/worker stack,
+secure cookies and a deep SPA route. Deployment guard tests ensure failed
+migrations prevent subsequent application replacement.
+
+Use Husky/lint-staged for staged files only. CI is authoritative; local hooks do
+not replace it. Keep `.node-version`, Node type definitions and Docker runtimes
+aligned. Dependency upgrades, especially Drizzle RC changes, must pass the full
+pipeline; do not combine them with unrelated feature changes.

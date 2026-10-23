@@ -27,14 +27,22 @@
 			"!**/.svelte-kit",
 			"!**/wrangler.jsonc",
 			"!**/.source",
-			"!**/convex/_generated"
+			"!**/convex/_generated",
+			"!**/test-results",
+			"!**/playwright-report"
 		]
 	},
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab"
 	},
-	"assist": { "actions": { "source": { "organizeImports": "on" } } },
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {

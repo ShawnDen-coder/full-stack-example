@@ -1,5 +1,7 @@
 # full-stack-example
 
+[English](README.md) · [简体中文](README.zh-CN.md)
+
 A TypeScript full-stack example with authenticated personal todos, user profiles, and background jobs running in a separate worker process.
 
 Built with [Better T Stack](https://github.com/AmanVarshney01/create-better-t-stack): React and TanStack Router on the frontend, Hono and oRPC on Node.js, Better Auth, Drizzle/PostgreSQL, and BullMQ/Redis. Shared UI components use shadcn/ui and Tailwind CSS.
@@ -20,40 +22,53 @@ The worker reads the profile and returns `id`, `name`, and `emailVerified`. Only
 
 ## Setup
 
-Use Node.js (the project uses Node 24 in Docker), pnpm 11.0.9, and Docker Compose. Run commands from the repository root.
+Use Node.js 24 (`.node-version`), pnpm 11.0.9, and Docker Compose. Run commands from the repository root.
 
 ```bash
 pnpm install
 ```
 
-Create these ignored local files before starting the applications:
+Initialize ignored development configuration (existing files are preserved):
 
-| File | Values for local development |
-| --- | --- |
-| `apps/server/.env` | `DATABASE_URL=postgresql://postgres:password@localhost:5432/my-better-t-app`, `BETTER_AUTH_URL=http://localhost:3000`, `CORS_ORIGIN=http://localhost:3001`, and `BETTER_AUTH_SECRET` (at least 32 characters) |
-| `apps/worker/.env` | The same `DATABASE_URL` as the server |
-| `apps/web/.env` | `VITE_SERVER_URL=http://localhost:3000` |
+```bash
+pnpm env:init
+```
 
-Generate a secret with `openssl rand -hex 32`. Redis defaults to `redis://localhost:6379` in both server and worker; set `REDIS_URL` in both files if yours differs. The database CLI imports its connection settings from the server schema. Never commit `.env` files.
+This creates app-owned `.env` files for local ports 3000/3001, PostgreSQL on
+5432 and Redis on 6379, with a random authentication secret. It prints filenames
+only. Change local values or supply process environment overrides when needed;
+never commit value files. `apps/server/.env.schema`, `apps/worker/.env.schema`
+and `apps/web/.env.schema` document application configuration.
 
 ```bash
 pnpm infra:up
-pnpm db:push
+pnpm db:migrate
 pnpm dev
 ```
 
-This starts PostgreSQL and Redis, applies the database schema, and runs web, API, and worker. The API listens at [localhost:3000](http://localhost:3000); its reference is at [/api-reference](http://localhost:3000/api-reference) and health check at [/health](http://localhost:3000/health).
+This starts PostgreSQL and Redis, applies the database schema, and runs web, API, and worker. The API listens at [localhost:3000](http://localhost:3000); its reference is at [/api-reference](http://localhost:3000/api-reference) and liveness at [/health](http://localhost:3000/health). Dependency readiness is at [/ready](http://localhost:3000/ready).
 
-### Existing databases
+### Database changes
 
-Apply `pnpm db:push` before running the updated Todo API. The new nullable `todo.user_id` foreign key preserves existing rows without guessing their owners. Rows with no owner are inaccessible through the API. Backfill only when ownership can be verified, or archive them separately. New todos always receive the authenticated user's ID; deleting a user also deletes their owned todos.
+Committed SQL migrations initialize an empty database and record every schema
+change. Use `pnpm db:generate`, review and commit the generated SQL and snapshot,
+then run `pnpm db:migrate`. Re-running migrations is safe. `pnpm db:push` is
+available only for disposable local experiments; do not use it for releases.
+
+The initial migration targets new databases. Existing databases previously
+created with `db:push` require a separately reviewed baseline adoption; do not
+run the initial migration over them or mark it applied without comparing schemas.
+The nullable Todo owner column is preserved for compatibility: ownerless rows
+remain inaccessible, and new API writes always bind the authenticated user.
 
 ## Common commands
 
 | Command | Purpose |
 | --- | --- |
 | `pnpm dev:web`, `pnpm dev:server`, `pnpm dev:worker` | Start one application |
-| `pnpm test` | Run offline API/module and worker tests |
+| `pnpm test` | Run offline API, worker and deployment guard tests |
+| `pnpm test:integration` | Exercise real PostgreSQL/Redis, auth, migrations and processes |
+| `pnpm test:e2e` | Run Playwright account isolation and CRUD scenarios |
 | `pnpm check-types` | Check workspace types (also builds the web app) |
 | `pnpm build` | Build applications |
 | `pnpm exec biome check .` | Check lint and formatting without changing files |
@@ -63,19 +78,39 @@ Apply `pnpm db:push` before running the updated Todo API. The new nullable `todo
 | `pnpm env:generate` | Regenerate environment types after schema changes |
 | `pnpm infra:down` | Stop local PostgreSQL and Redis |
 
-## Docker deployment
+## Production deployment
 
-Create the environment files above, configure production URLs and secrets, then use:
+The supported baseline is one Docker Compose host behind an HTTPS reverse proxy.
+`docker-compose.yml` is for local development; `compose.production.yml` is the
+independent production stack. All browser requests use one public HTTPS origin.
+
+Supply production values via the environment or an ignored `deploy/.env` file,
+following `deploy/.env.schema`: `PUBLIC_APP_URL`, `BETTER_AUTH_SECRET` (32+
+characters), `POSTGRES_PASSWORD`, and `DATABASE_URL`. The database URL must use
+`postgres:5432/app`, user `postgres`, and the same password as `POSTGRES_PASSWORD`
+(URL-encode special characters in the URL). No production password has a fallback.
+Never reuse development or CI credentials.
 
 ```bash
-pnpm docker:build
 pnpm docker:up
 pnpm docker:logs
-# Stop the stack:
+# Stop containers while preserving data volumes:
 pnpm docker:down
 ```
 
-Compose runs web, server, worker, PostgreSQL, and Redis. It overrides database and Redis addresses for container networking. Public frontend configuration is baked into the web build. Apply database schema changes separately before starting the updated applications; container startup does not run migrations. Use HTTPS and deployment-managed secrets in production.
+The deployment command builds images, waits for PostgreSQL and Redis, runs a
+fresh migration task, and only then updates server/worker and web. A migration
+failure stops the release before replacing existing application containers.
+A readiness failure stops subsequent deployment steps; there is no automatic
+application rollback. Use additive, backward-compatible migrations during updates.
+
+Point your external TLS proxy to `127.0.0.1:8080` (`WEB_PORT` can change this).
+Nginx serves the SPA and proxies auth/RPC/API-reference paths to the server.
+The API, database and Redis have no published production ports. The browser URL
+is baked into the frontend build; changing it requires rebuilding web.
+
+See the [development and operations guide](docs/development.md) for migration,
+backup, recovery, logging and validation procedures.
 
 ## Development
 
@@ -85,10 +120,30 @@ Compose runs web, server, worker, PostgreSQL, and Redis. It overrides database a
 | `apps/server` | Hono API process; produces jobs |
 | `apps/worker` | Independent BullMQ consumer and lifecycle |
 | `packages/api`, `packages/auth` | oRPC procedures and Better Auth factory |
-| `packages/users`, `packages/queue` | Profile service, worker factory, typed jobs and queue client |
+| `packages/users`, `packages/todos`, `packages/queue` | Business services, worker factory and typed queue contracts |
+| `packages/logger` | Structured, redacted logging and lifecycle deadlines |
 | `packages/db` | PostgreSQL schema and Drizzle configuration |
 | `packages/ui`, `packages/config` | Shared components, styles, and TypeScript configuration |
 
 See the [development guide](docs/development.md) for UI customization, environment generation, auth schema generation, dependency injection, worker lifecycle, and adding modules. Generator choices are recorded in [bts.jsonc](bts.jsonc); all commands are defined in [package.json](package.json).
 
 Before contributing, run `pnpm install`, `pnpm test`, `pnpm check-types`, `pnpm build`, and `pnpm exec biome check .`. Keep dependency changes scoped to the owning package and use concise conventional commit subjects.
+
+## Validation
+
+CI runs lint, offline tests, type checks, builds, real-service integration tests,
+Playwright and an independent production Compose smoke test.
+
+For integration/browser tests, set `TEST_DATABASE_URL` and `TEST_REDIS_URL` to
+**dedicated disposable services**, then run:
+
+```bash
+pnpm test:integration
+pnpm --filter web exec playwright install chromium
+pnpm test:e2e
+```
+
+Integration tests apply committed migrations, create temporary accounts and
+verify database failures, worker retries and process shutdown. Browser tests use
+ports 43100/43101 and leave test accounts in the disposable database. Do not point
+these commands at a development database you care about or a production service.

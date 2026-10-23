@@ -1,3 +1,4 @@
+import type { Logger } from "@my-better-t-app/logger";
 import { type ConnectionOptions, Queue } from "bullmq";
 import {
 	USER_PROFILE_QUEUE,
@@ -33,7 +34,13 @@ export function createQueueConnection(redisUrl: string): ConnectionOptions {
 	};
 }
 
-export function createQueueClient({ redisUrl }: { redisUrl: string }) {
+export function createQueueClient({
+	redisUrl,
+	logger,
+}: {
+	redisUrl: string;
+	logger?: Logger;
+}) {
 	const profileQueue = new Queue<
 		UserProfileJobData,
 		UserProfileJobResult,
@@ -48,22 +55,26 @@ export function createQueueClient({ redisUrl }: { redisUrl: string }) {
 		},
 	});
 	// EventEmitter errors must be handled even when the producer is idle.
-	profileQueue.on("error", () =>
-		console.error("User profile queue connection error"),
+	profileQueue.on("error", (err) =>
+		logger?.error({ err }, "User profile queue connection error"),
 	);
 
 	return {
-		async enqueueUserProfile(userId: string) {
+		async enqueueUserProfile(userId: string, requestId?: string) {
 			const job = await profileQueue.add(
 				"profile",
-				userProfileJobSchema.parse({ userId }),
+				userProfileJobSchema.parse({ userId, requestId }),
 			);
 			if (!job.id) throw new Error("Queue did not return a job ID");
+			logger?.info({ jobId: job.id, requestId }, "User profile job enqueued");
 			return { id: job.id };
 		},
 		getUserProfileJob: (jobId: string, userId: string) =>
 			getUserProfileJob(profileQueue, jobId, userId),
 		close: () => profileQueue.close(),
+		async checkReady() {
+			await profileQueue.getJobCounts("waiting");
+		},
 	};
 }
 
