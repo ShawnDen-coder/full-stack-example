@@ -10,8 +10,9 @@ import {
 } from "@my-better-t-app/ui/components/dropdown-menu";
 import { Skeleton } from "@my-better-t-app/ui/components/skeleton";
 import { Link, useNavigate } from "@tanstack/react-router";
-
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { clearSessionData } from "@/utils/orpc";
 
 export default function UserMenu() {
 	const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function UserMenu() {
 
 	if (!session) {
 		return (
-			<Link to="/login">
+			<Link to="/login" search={{ redirect: "/dashboard" }}>
 				<Button variant="outline">Sign In</Button>
 			</Link>
 		);
@@ -44,7 +45,11 @@ export default function UserMenu() {
 						onClick={() => {
 							authClient.signOut({
 								fetchOptions: {
+									onError: () => {
+										toast.error("Sign out failed. Please retry.");
+									},
 									onSuccess: () => {
+										clearSessionData();
 										navigate({
 											to: "/",
 										});

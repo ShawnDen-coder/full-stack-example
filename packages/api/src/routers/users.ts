@@ -11,7 +11,10 @@ export const usersRouter = {
 		return profile;
 	}),
 	requestProfile: protectedProcedure.handler(({ context }) =>
-		context.services.queueClient.enqueueUserProfile(context.session.user.id),
+		context.services.queueClient.enqueueUserProfile(
+			context.session.user.id,
+			context.requestId,
+		),
 	),
 	profileJob: protectedProcedure
 		.input(z.object({ id: z.string().min(1).max(128) }))

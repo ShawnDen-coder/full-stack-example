@@ -1,14 +1,20 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-
+import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
+import { safeReturnTo } from "@/lib/return-to";
+import { synchronizeIdentity } from "@/utils/orpc";
 
 export const Route = createFileRoute("/_auth")({
 	component: AuthLayout,
-	beforeLoad: async () => {
+	beforeLoad: async ({ location }) => {
 		const session = await authClient.getSession();
+		if (session.error)
+			throw new Error("Unable to verify your session. Please retry.");
+		synchronizeIdentity(session.data?.user.id ?? null);
 		if (!session.data) {
 			throw redirect({
 				to: "/login",
+				search: { redirect: safeReturnTo(location.href) },
 			});
 		}
 		return { session };
@@ -16,5 +22,13 @@ export const Route = createFileRoute("/_auth")({
 });
 
 function AuthLayout() {
+	const { session } = Route.useRouteContext();
+	const live = authClient.useSession();
+	if (
+		live.isPending ||
+		!live.data ||
+		live.data.user.id !== session.data?.user.id
+	)
+		return <Loader />;
 	return <Outlet />;
 }

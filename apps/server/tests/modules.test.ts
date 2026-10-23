@@ -6,8 +6,10 @@ import { createApi } from "@my-better-t-app/api/create-api";
 import type { AppRouterClient } from "@my-better-t-app/api/routers/index";
 import type { Session } from "@my-better-t-app/auth";
 import { createDb } from "@my-better-t-app/db";
+import { createLogger } from "@my-better-t-app/logger";
 import { createQueueConnection } from "@my-better-t-app/queue";
 import { getUserProfileJob } from "@my-better-t-app/queue/user-profile-job";
+import { createTodosService } from "@my-better-t-app/todos";
 import { createUserProfileProcessor } from "@my-better-t-app/users/workers/user-profile.worker";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
@@ -38,7 +40,10 @@ async function fixture(currentSession: Session | null = session) {
 	const sessionHeaders: Headers[] = [];
 	// Creating a pool is lazy; these HTTP tests never connect to PostgreSQL.
 	const db = createDb({ DATABASE_URL: "postgresql://localhost/unused" });
+	const logger = createLogger("test");
+	logger.level = "silent";
 	const deps: ContextDependencies = {
+		logger,
 		db,
 		auth: {
 			handler: async (request) => {
@@ -57,6 +62,7 @@ async function fixture(currentSession: Session | null = session) {
 			return currentSession;
 		},
 		services: {
+			todosService: createTodosService({ deps: { db } }),
 			usersService: {
 				getProfile: async (id) => {
 					calls.push(`profile:${id}`);
@@ -78,6 +84,7 @@ async function fixture(currentSession: Session | null = session) {
 	const { app } = createApi({
 		...deps,
 		corsOrigin: "http://localhost:3001",
+		checkReady: async () => {},
 	});
 	const server = serve({ fetch: app.fetch, port: 0, hostname: "127.0.0.1" });
 	try {
@@ -164,7 +171,7 @@ test("anonymous requests cannot access any Todo operation", async () => {
 	const f = await fixture(null);
 	try {
 		for (const request of [
-			() => f.client.todo.getAll(),
+			() => f.client.todo.list({}),
 			() => f.client.todo.create({ text: "private" }),
 			() => f.client.todo.toggle({ id: 1, completed: true }),
 			() => f.client.todo.delete({ id: 1 }),
@@ -184,11 +191,11 @@ test("Todo SQL binds the session owner for reads, inserts and mutations", async 
 		"query",
 		async (...args: unknown[]) => {
 			queries.push(args);
-			return { rows: [], rowCount: 0 };
+			return { rows: [[99, "private", false]], rowCount: 1 };
 		},
 	);
 	try {
-		await f.client.todo.getAll();
+		await f.client.todo.list({});
 		await f.client.todo.create({ text: "private", userId: "foreign" } as {
 			text: string;
 		});
@@ -202,7 +209,7 @@ test("Todo SQL binds the session owner for reads, inserts and mutations", async 
 			assert.ok(!values.includes("foreign"));
 			if (index !== 1) assert.match(sql, /where.*"user_id" = \$\d+/);
 			if (index >= 2) {
-				assert.match(sql, /where.*"id" = \$\d+\)* and .*"user_id" = \$\d+/);
+				assert.match(sql, /where.*"user_id" = \$\d+\)* and .*"id" = \$\d+/);
 				assert.ok(values.includes(99));
 			}
 		}
@@ -255,6 +262,25 @@ test("job ownership prevents returning another user's result", async () => {
 		),
 		null,
 	);
+});
+
+test("completion reloads the result when a worker finishes between reads", async () => {
+	let reads = 0;
+	const profile = { id: "user-1", name: "Alice", emailVerified: true };
+	const result = await getUserProfileJob(
+		{
+			getJob: async () => ({
+				id: "job-1",
+				data: { userId: "user-1" },
+				returnvalue: ++reads === 1 ? null : profile,
+				getState: async () => "completed",
+			}),
+		},
+		"job-1",
+		"user-1",
+	);
+	assert.equal(result?.state, "completed");
+	assert.deepEqual(result?.result, profile);
 });
 
 test("unfinished jobs hide stored results", async () => {
@@ -400,4 +426,80 @@ test("OpenAPI reference remains available and similar prefixes do not match", as
 	} finally {
 		await f.close();
 	}
+});
+
+test("readiness distinguishes dependency failure and draining without resolving sessions", async () => {
+	const f = await fixture();
+	try {
+		let available = true;
+		let accepting = true;
+		const { app } = createApi({
+			...f.deps,
+			corsOrigin: "http://localhost:3001",
+			isReady: () => accepting,
+			checkReady: async () => {
+				if (!available) throw new Error("dependency unavailable");
+			},
+		});
+		const ready = await app.request("/ready");
+		assert.equal(ready.status, 200);
+		assert.ok(ready.headers.get("X-Request-ID"));
+		available = false;
+		assert.equal((await app.request("/ready")).status, 503);
+		assert.equal((await app.request("/health")).status, 200);
+		available = true;
+		accepting = false;
+		assert.equal((await app.request("/ready")).status, 503);
+		assert.deepEqual(f.calls, []);
+	} finally {
+		await f.close();
+	}
+});
+
+test("readiness has a deadline even when a dependency never settles", async () => {
+	const f = await fixture();
+	try {
+		const { app } = createApi({
+			...f.deps,
+			corsOrigin: "http://localhost:3001",
+			checkReady: () => new Promise<void>(() => {}),
+		});
+		const start = Date.now();
+		assert.equal((await app.request("/ready")).status, 503);
+		assert.ok(Date.now() - start < 3000);
+	} finally {
+		await f.close();
+	}
+});
+
+test("structured logs redact credentials and retain request correlation and stack", () => {
+	const lines: string[] = [];
+	const logger = createLogger("redaction-test", {
+		write: (line) => {
+			lines.push(line);
+		},
+	});
+	logger.error(
+		{
+			err: new Error("connection postgres://user:secret-value@host/db failed"),
+			requestId: "request-1",
+			headers: {
+				cookie: "private-cookie",
+				authorization: "Bearer private-token",
+			},
+			password: "private-password",
+		},
+		"Request failed",
+	);
+	const output = lines.join("");
+	for (const value of [
+		"secret-value",
+		"private-cookie",
+		"private-token",
+		"private-password",
+	])
+		assert.ok(!output.includes(value));
+	const entry = JSON.parse(output);
+	assert.equal(entry.requestId, "request-1");
+	assert.ok(entry.err.stack);
 });

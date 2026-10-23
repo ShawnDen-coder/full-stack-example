@@ -9,7 +9,8 @@
 		"start": "node dist/index.mjs",
 		"env:generate": "varlock codegen",
 		"auth:generate": "varlock run -- pnpm dlx auth@latest generate --config src/auth-schema.ts --output ../../packages/db/src/schema/auth.ts --yes",
-		"test": "node --import tsx --test tests/*.test.ts"
+		"test": "node --import tsx --test tests/*.test.ts",
+		"test:integration": "node --import tsx --test tests/integration/*.test.ts"
 	},
 	"dependencies": {
 		"@my-better-t-app/api": "workspace:*",
@@ -23,14 +24,21 @@
 		"zod": "catalog:",
 		"@my-better-t-app/users": "workspace:*",
 		"@my-better-t-app/queue": "workspace:*",
-		"@hono/node-server": "^2.1.1"
+		"@hono/node-server": "^2.1.1",
+		"@my-better-t-app/logger": "workspace:*",
+		"@my-better-t-app/todos": "workspace:*",
+		"drizzle-orm": "catalog:"
 	},
 	"devDependencies": {
 		"@my-better-t-app/config": "workspace:*",
-		"@types/node": "^26.4.1",
+		"@types/node": "^24.0.0",
 		"tsdown": "^0.23.0",
 		"tsx": "^4.23.13",
 		"typescript": "catalog:",
 		"@orpc/client": "catalog:"
-	}
+	},
+	"files": [
+		"dist",
+		".env.schema"
+	]
 }

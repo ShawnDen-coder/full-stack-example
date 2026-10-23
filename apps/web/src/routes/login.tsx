@@ -1,19 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-
 import SignInForm from "@/components/sign-in-form";
 import SignUpForm from "@/components/sign-up-form";
+import { safeReturnTo } from "@/lib/return-to";
 
 export const Route = createFileRoute("/login")({
 	component: RouteComponent,
+	validateSearch: (search: Record<string, unknown>) => ({
+		redirect: safeReturnTo(search.redirect),
+	}),
 });
 
 function RouteComponent() {
-	const [showSignIn, setShowSignIn] = useState(false);
+	const { redirect } = Route.useSearch();
+	const [showSignIn, setShowSignIn] = useState(true);
 
 	return showSignIn ? (
-		<SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
+		<SignInForm
+			returnTo={redirect}
+			onSwitchToSignUp={() => setShowSignIn(false)}
+		/>
 	) : (
-		<SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
+		<SignUpForm
+			returnTo={redirect}
+			onSwitchToSignIn={() => setShowSignIn(true)}
+		/>
 	);
 }

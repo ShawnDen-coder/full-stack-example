@@ -1,0 +1,79 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: integration-only
+          POSTGRES_DB: starter_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d starter_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: [6379:6379]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:integration-only@127.0.0.1:5432/starter_test
+      TEST_REDIS_URL: redis://127.0.0.1:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.0.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm env:init
+      - run: pnpm exec biome check .
+      - run: pnpm test
+      - run: pnpm check-types
+      - run: pnpm build
+      - run: pnpm test:integration
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failures
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PUBLIC_APP_URL: https://starter.test
+      BETTER_AUTH_SECRET: compose-smoke-only-secret-at-least-32-characters
+      POSTGRES_PASSWORD: compose-smoke-only
+      DATABASE_URL: postgresql://postgres:compose-smoke-only@postgres:5432/app
+      COMPOSE_PROJECT_NAME: starter-smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: docker compose -f compose.production.yml build
+      - run: docker compose -f compose.production.yml up -d --wait
+      - run: node scripts/smoke-production.mjs
+      - if: failure()
+        run: docker compose -f compose.production.yml logs --tail 100
+      - if: always()
+        run: docker compose -f compose.production.yml down -v

@@ -20,20 +20,23 @@
 		"db:watch": "docker compose up postgres",
 		"db:stop": "docker compose stop postgres",
 		"db:down": "docker compose down postgres",
-		"docker:build": "docker compose build",
-		"docker:up": "docker compose up -d --build",
-		"docker:down": "docker compose down",
-		"docker:logs": "docker compose logs -f",
+		"docker:build": "varlock run --path ./deploy/ -- docker compose -f compose.production.yml build",
+		"docker:up": "varlock run --path ./deploy/ -- node scripts/deploy.mjs",
+		"docker:down": "varlock run --path ./deploy/ -- docker compose -f compose.production.yml down",
+		"docker:logs": "varlock run --path ./deploy/ -- docker compose -f compose.production.yml logs -f",
 		"env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/ && varlock codegen --path ./apps/worker/",
 		"postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/ && varlock codegen --path ./apps/worker/",
 		"auth:generate": "cd apps/server && pnpm run auth:generate",
 		"check": "biome check --write .",
 		"prepare": "husky",
-		"test": "pnpm --filter server --filter worker test",
+		"test": "node --test scripts/*.test.mjs && pnpm -r --if-present test",
 		"infra:up": "docker compose up -d postgres redis",
 		"infra:down": "docker compose stop postgres redis",
 		"dev:worker": "pnpm --filter worker dev",
-		"start:worker": "pnpm --filter worker start"
+		"start:worker": "pnpm --filter worker start",
+		"env:init": "node scripts/init-env.mjs",
+		"test:integration": "pnpm --filter server test:integration",
+		"test:e2e": "pnpm --filter web test:e2e"
 	},
 	"dependencies": {
 		"zod": "catalog:"
@@ -41,17 +44,20 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.15",
 		"@my-better-t-app/config": "workspace:*",
-		"@types/node": "^26.4.1",
+		"@types/node": "^24.0.0",
 		"husky": "^9.1.7",
-		"lefthook": "^2.2.1",
 		"lint-staged": "^17.6.0",
 		"typescript": "catalog:",
 		"varlock": "catalog:"
 	},
 	"lint-staged": {
 		"*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}": [
-			"biome check --write ."
+			"biome check --write --no-errors-on-unmatched"
 		]
 	},
-	"packageManager": "pnpm@11.0.9"
+	"packageManager": "pnpm@11.0.9",
+	"engines": {
+		"node": ">=24 <25",
+		"pnpm": "11.0.9"
+	}
 }

@@ -1,44 +1,43 @@
-import { todo } from "@my-better-t-app/db/schema/todo";
-import { and, eq } from "drizzle-orm";
-import z from "zod";
-
+import { ORPCError } from "@orpc/server";
+import { z } from "zod";
 import { protectedProcedure } from "../index";
 
+const id = z.number().int().positive();
 export const todoRouter = {
-	getAll: protectedProcedure.handler(async ({ context }) => {
-		return await context.db
-			.select()
-			.from(todo)
-			.where(eq(todo.userId, context.session.user.id));
-	}),
-
+	list: protectedProcedure
+		.input(
+			z.object({
+				cursor: id.optional(),
+				limit: z.number().int().min(1).max(100).default(20),
+			}),
+		)
+		.handler(({ input, context }) =>
+			context.services.todosService.list(context.session.user.id, input),
+		),
 	create: protectedProcedure
-		.input(z.object({ text: z.string().min(1) }))
-		.handler(async ({ input, context }) => {
-			return await context.db.insert(todo).values({
-				text: input.text,
-				userId: context.session.user.id,
-			});
-		}),
-
+		.input(z.object({ text: z.string().trim().min(1).max(500) }))
+		.handler(({ input, context }) =>
+			context.services.todosService.create(context.session.user.id, input.text),
+		),
 	toggle: protectedProcedure
-		.input(z.object({ id: z.number(), completed: z.boolean() }))
+		.input(z.object({ id, completed: z.boolean() }))
 		.handler(async ({ input, context }) => {
-			return await context.db
-				.update(todo)
-				.set({ completed: input.completed })
-				.where(
-					and(eq(todo.id, input.id), eq(todo.userId, context.session.user.id)),
-				);
+			const result = await context.services.todosService.toggle(
+				context.session.user.id,
+				input.id,
+				input.completed,
+			);
+			if (!result) throw new ORPCError("NOT_FOUND");
+			return result;
 		}),
-
 	delete: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id }))
 		.handler(async ({ input, context }) => {
-			return await context.db
-				.delete(todo)
-				.where(
-					and(eq(todo.id, input.id), eq(todo.userId, context.session.user.id)),
-				);
+			const result = await context.services.todosService.delete(
+				context.session.user.id,
+				input.id,
+			);
+			if (!result) throw new ORPCError("NOT_FOUND");
+			return result;
 		}),
 };

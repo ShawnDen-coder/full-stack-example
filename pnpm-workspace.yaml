@@ -4,7 +4,6 @@ packages:
 allowBuilds:
   esbuild: true
   sharp: true
-  lefthook: true
   msgpackr-extract: false
 catalog:
   zod: ^4.5.4
@@ -20,3 +19,9 @@ catalog:
   tailwindcss: ^4.3.3
   drizzle-orm: 1.0.0-rc.4
   "@types/pg": ^8.23.1
+
+# Deploy isolated production dependencies without copying the workspace.
+injectWorkspacePackages: true
+syncInjectedDepsAfterScripts:
+  - build
+  - check-types

@@ -4,11 +4,12 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
 	createRootRouteWithContext,
 	HeadContent,
+	Link,
 	Outlet,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-
 import Header from "@/components/header";
+import { SessionBoundary } from "@/components/session-boundary";
 import { ThemeProvider } from "@/components/theme-provider";
 import type { orpc } from "@/utils/orpc";
 
@@ -21,6 +22,21 @@ export interface RouterAppContext {
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootComponent,
+	errorComponent: ({ reset }) => (
+		<main className="p-8">
+			<h1>Something went wrong</h1>
+			<p>Please try again.</p>
+			<button type="button" onClick={reset}>
+				Retry
+			</button>
+		</main>
+	),
+	notFoundComponent: () => (
+		<main className="p-8">
+			<h1>Page not found</h1>
+			<Link to="/">Go home</Link>
+		</main>
+	),
 	head: () => ({
 		meta: [
 			{
@@ -51,8 +67,10 @@ function RootComponent() {
 				storageKey="vite-ui-theme"
 			>
 				<div className="grid h-svh grid-rows-[auto_1fr]">
-					<Header />
-					<Outlet />
+					<SessionBoundary>
+						<Header />
+						<Outlet />
+					</SessionBoundary>
 				</div>
 				<Toaster richColors />
 			</ThemeProvider>

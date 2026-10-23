@@ -1,3 +1,4 @@
+import type { Logger } from "@my-better-t-app/logger";
 import {
 	createQueueConnection,
 	USER_PROFILE_QUEUE,
@@ -31,11 +32,13 @@ export function createUserProfileWorker({
 	usersService,
 	concurrency = 5,
 	autorun = true,
+	logger,
 }: {
 	redisUrl: string;
 	usersService: UsersService;
 	concurrency?: number;
 	autorun?: boolean;
+	logger?: Logger;
 }) {
 	const process = createUserProfileProcessor({ usersService });
 	const connection = {
@@ -52,11 +55,20 @@ export function createUserProfileWorker({
 		},
 		{ connection, concurrency, autorun },
 	);
-	worker.on("error", () =>
-		console.error("User profile worker connection error"),
+	worker.on("error", (err) =>
+		logger?.error({ err }, "User profile worker connection error"),
 	);
-	worker.on("failed", (job) =>
-		console.error("User profile job failed", { jobId: job?.id }),
+	worker.on("failed", (job, err) =>
+		logger?.error(
+			{ err, jobId: job?.id, requestId: job?.data.requestId },
+			"User profile job failed",
+		),
+	);
+	worker.on("completed", (job) =>
+		logger?.info(
+			{ jobId: job.id, requestId: job.data.requestId },
+			"User profile job completed",
+		),
 	);
 	return worker;
 }

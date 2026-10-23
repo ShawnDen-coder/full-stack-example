@@ -5,9 +5,6 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-      secrets:
-        - web_env
-        - server_env
       args:
         VITE_SERVER_URL: http://localhost:3000
     init: true
@@ -31,9 +28,6 @@ services:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
-      secrets:
-        - web_env
-        - server_env
     init: true
     ports:
       - "3000:3000"
@@ -50,7 +44,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://localhost:3000/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+          "fetch('http://localhost:3000/ready').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
@@ -99,13 +93,12 @@ services:
 
   postgres:
     image: postgres:18
-    container_name: my-better-t-app-postgres
     environment:
       POSTGRES_DB: my-better-t-app
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - my-better-t-app_postgres_data:/var/lib/postgresql
     healthcheck:
@@ -118,10 +111,3 @@ services:
 volumes:
   my-better-t-app_redis_data:
   my-better-t-app_postgres_data:
-
-# BuildKit makes these available only while install/build commands run.
-secrets:
-  web_env:
-    file: apps/web/.env
-  server_env:
-    file: apps/server/.env

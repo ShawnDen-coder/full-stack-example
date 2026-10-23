@@ -20,5 +20,9 @@
 	"devDependencies": {
 		"@my-better-t-app/config": "workspace:*",
 		"typescript": "catalog:"
-	}
+	},
+	"files": [
+		"src",
+		"dist"
+	]
 }
