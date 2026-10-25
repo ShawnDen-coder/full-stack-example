@@ -101,19 +101,37 @@ function patternMatch(pattern, value) {
 			value.length - suffix.length || undefined,
 		);
 }
-function publicSubpath(manifest, specifier) {
+function publicTargets(workspace, specifier) {
+	const { manifest, directory } = workspace;
 	const subpath =
 		specifier === manifest.name
 			? "."
 			: `.${specifier.slice(manifest.name.length)}`;
-	const entries = manifest.exports;
-	if (!entries) return false;
-	const keys =
-		typeof entries === "string" ||
-		!Object.keys(entries).some((key) => key.startsWith("."))
-			? ["."]
-			: Object.keys(entries);
-	return keys.some((key) => patternMatch(key, subpath) !== undefined);
+	const exports = manifest.exports;
+	if (!exports) return [];
+	const entries =
+		typeof exports === "string" ||
+		!Object.keys(exports).some((key) => key.startsWith("."))
+			? { ".": exports }
+			: exports;
+	const key = Object.keys(entries)
+		.filter((key) => patternMatch(key, subpath) !== undefined)
+		.sort(
+			(a, b) =>
+				Number(b === subpath) - Number(a === subpath) || b.length - a.length,
+		)[0];
+	if (!key) return [];
+	const strings = (value) =>
+		typeof value === "string"
+			? [value]
+			: value && typeof value === "object"
+				? Object.values(value).flatMap(strings)
+				: [];
+	return strings(entries[key])
+		.filter((value) => value.startsWith("./"))
+		.map((value) =>
+			resolve(directory, value.replaceAll("*", patternMatch(key, subpath))),
+		);
 }
 
 export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
@@ -172,35 +190,33 @@ export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
 						specifier === manifest.name ||
 						specifier.startsWith(`${manifest.name}/`),
 				);
-				let target = named;
-				if (!target) {
-					let path = ts.resolveModuleName(
-						specifier,
-						file,
-						workspace.options,
-						ts.sys,
-					).resolvedModule?.resolvedFileName;
-					if (!path && specifier.startsWith("."))
-						path = resolve(dirname(file), specifier);
-					// TypeScript does not resolve stylesheet assets; still inspect aliases for boundaries.
-					if (!path)
-						for (const [pattern, substitutions] of Object.entries(
-							workspace.options.paths ?? {},
-						)) {
-							const wildcard = patternMatch(pattern, specifier);
-							if (wildcard !== undefined) {
-								path = resolve(
-									workspace.options.baseUrl ??
-										workspace.options.pathsBasePath ??
-										workspace.directory,
-									substitutions[0].replace("*", wildcard),
-								);
-								break;
-							}
+
+				let path = ts.resolveModuleName(
+					specifier,
+					file,
+					workspace.options,
+					ts.sys,
+				).resolvedModule?.resolvedFileName;
+				if (!path && specifier.startsWith("."))
+					path = resolve(dirname(file), specifier);
+				// TypeScript does not resolve stylesheet assets; still inspect aliases for boundaries.
+				if (!path)
+					for (const [pattern, substitutions] of Object.entries(
+						workspace.options.paths ?? {},
+					)) {
+						const wildcard = patternMatch(pattern, specifier);
+						if (wildcard !== undefined) {
+							path = resolve(
+								workspace.options.baseUrl ??
+									workspace.options.pathsBasePath ??
+									workspace.directory,
+								substitutions[0].replace("*", wildcard),
+							);
+							break;
 						}
-					if (!path && isAbsolute(specifier)) path = specifier;
-					if (path) target = owner(resolve(path));
-				}
+					}
+				if (!path && isAbsolute(specifier)) path = specifier;
+				const target = (path && owner(resolve(path))) || named;
 				if (!target) {
 					if (specifier.startsWith("@my-better-t-app/"))
 						diagnostics.push(
@@ -208,8 +224,8 @@ export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
 						);
 					continue;
 				}
-				if (target === workspace) continue;
-				graph.get(workspace.id).add(target.id);
+				if (target === workspace && (!named || named === workspace)) continue;
+				if (target !== workspace) graph.get(workspace.id).add(target.id);
 				const errors = [];
 				if (
 					!(rules[workspace.id] ?? []).includes(
@@ -217,7 +233,13 @@ export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
 					)
 				)
 					errors.push(`dependency on ${target.id} is forbidden`);
-				if (!named || !publicSubpath(target.manifest, specifier))
+				if (
+					!named ||
+					named !== target ||
+					!publicTargets(named, specifier).some(
+						(exported) => !path || exported === resolve(path),
+					)
+				)
 					errors.push(
 						"use a public package export; cross-package paths and private subpaths are forbidden",
 					);

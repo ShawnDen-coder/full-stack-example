@@ -157,3 +157,41 @@ test("test fixtures are excluded and new production workspaces require a policy"
 	f.put("packages/new/src/index.ts", "export {};");
 	assert.deepEqual(f.check(), ["packages/new: missing dependency policy"]);
 });
+
+test("aliases cannot redirect public-looking package names to private or foreign code", (t) => {
+	const f = fixture(t);
+	f.put(
+		"apps/web/tsconfig.json",
+		JSON.stringify({
+			compilerOptions: {
+				moduleResolution: "bundler",
+				paths: {
+					"@my-better-t-app/ui/components/button": [
+						"../../packages/db/src/index.ts",
+					],
+					"@my-better-t-app/ui/components/private": [
+						"../../packages/ui/src/private.ts",
+					],
+				},
+			},
+		}),
+	);
+	f.put("packages/ui/src/private.ts", "export const privateValue = 1;");
+	f.put(
+		"apps/web/src/leak.ts",
+		`
+import { value } from '@my-better-t-app/ui/components/button';
+import { privateValue } from '@my-better-t-app/ui/components/private';`,
+	);
+	const errors = f.check();
+	assert.ok(
+		errors.some(
+			(error) => error.includes("packages/db") && error.includes("forbidden"),
+		),
+	);
+	assert.equal(
+		errors.filter((error) => error.includes("use a public package export"))
+			.length,
+		2,
+	);
+});
