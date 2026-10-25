@@ -4,10 +4,9 @@
 	"exports": {
 		"./users": "./src/users/service.ts",
 		"./todos": "./src/todos/service.ts",
-		"./users/jobs/contract": "./src/users/jobs/profile-read.contract.ts",
-		"./users/jobs/producer": "./src/users/jobs/profile-read.producer.ts",
-		"./users/jobs/status": "./src/users/jobs/profile-read.status.ts",
-		"./users/jobs/worker": "./src/users/jobs/profile-read.worker.ts"
+		"./users/jobs/profile-read/contract": "./src/users/jobs/profile-read.contract.ts",
+		"./users/jobs/profile-read/producer": "./src/users/jobs/profile-read.producer.ts",
+		"./users/jobs/profile-read/worker": "./src/users/jobs/profile-read.worker.ts"
 	},
 	"scripts": {
 		"build": "tsc -b",

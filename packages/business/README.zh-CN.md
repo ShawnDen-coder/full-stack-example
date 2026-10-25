@@ -18,13 +18,15 @@
 
 ## 扩展步骤
 
-1. 新建业务目录，导出 `create...Service` 工厂，用 `ReturnType` 推导类型。客户端通过参数注入，导入模块时不创建运行资源。
+1. 新建业务目录，导出 `create...Service` 工厂，用 `ReturnType` 推导类型。Service、Repository 和任务工厂均接收一个具名依赖对象，例如 `createTodosRepository({ db: tx })`。多个业务字段使用对象，如 `service.setCompleted({ userId, id, completed })`；单个 ID 可保留原始参数，如 `forUser(userId)`。客户端通过参数注入，导入模块时不创建运行资源。
 2. 归属过滤反复出现时，再增加 `repository.ts`。通过 `forUser(userId)` 绑定可信用户，读写均约束归属，创建时显式填入用户 ID。返回执行结果，不暴露可修改的查询构造器。
 3. 简单查询可以留在服务里。多语句用例由服务开启事务，各 Repository 使用同一个 `tx`；网络调用和队列发布放在数据库事务之外。确有数据库写入与任务投递原子性要求时，再设计 outbox。
 4. 使用 `observeOperation` 包裹有稳定名称的业务操作。RPC 错误和 session 留在 API，仅向 [exports](package.json) 增加调用方需要的子路径。
 5. HTTP 服务通过 [API](../api/README.zh-CN.md) 和 [server services](../../apps/server/src/services.ts) 接线。
 
-新增任务时参考 `users/jobs`：先定义契约、校验输入，再实现 processor、producer 和 Worker 工厂；返回任务状态或结果时检查归属。处理函数须能承受重试，结果字段和保留策略应明确受限。连接复用 [queue 基础设施](../queue/README.zh-CN.md)，消费者在 [Worker runtime](../../apps/worker/src/runtime.ts) 显式注册。当前运行时只组装一个消费者；增加队列时，必须同步扩展工厂、就绪检查、运行失败追踪和所有消费者的关闭逻辑。
+新增任务时参考 `users/jobs`：先定义契约、校验输入，再实现 processor、producer 和 Worker 工厂；返回任务状态或结果时检查归属。处理函数须能承受重试，结果字段和保留策略应明确受限。连接复用 [queue 基础设施](../queue/README.zh-CN.md)，消费者在 [Worker runtime](../../apps/worker/src/runtime.ts) 显式注册。任务使用明确的公共入口，如 `@my-better-t-app/business/users/jobs/profile-read/producer`（`createProfileReadClient`）和 `.../profile-read/worker`（`createProfileReadWorker`、`createProfileReadProcessor`）。Client 接收 `enqueueProfileRead({ userId, requestId })` 和 `getProfileReadJob({ userId, jobId })`；状态 helper 留在内部。
+
+Worker 工厂返回原生 Worker，内部固定 `autorun: false`。增加一个 `consumerDefinitions` 注册项即可接入全组就绪、运行失败追踪和并行 drain；只有新增业务依赖时才扩展共享资源组装。`WORKER_CONCURRENCY` 表示每个消费者的并发，总并发要结合数据库池和内存容量评估。详见[扩展约定](../../docs/extension-design.zh-CN.md)。
 
 ## 验证
 

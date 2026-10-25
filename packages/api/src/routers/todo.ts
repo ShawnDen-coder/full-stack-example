@@ -6,11 +6,11 @@ const id = z.number().int().positive();
 const setCompletedProcedure = protectedProcedure
 	.input(z.object({ id, completed: z.boolean() }))
 	.handler(async ({ input, context }) => {
-		const result = await context.services.todosService.setCompleted(
-			context.session.user.id,
-			input.id,
-			input.completed,
-		);
+		const result = await context.services.todosService.setCompleted({
+			userId: context.session.user.id,
+			id: input.id,
+			completed: input.completed,
+		});
 		if (!result) throw new ORPCError("NOT_FOUND");
 		return result;
 	});
@@ -24,12 +24,18 @@ export const todoRouter = {
 			}),
 		)
 		.handler(({ input, context }) =>
-			context.services.todosService.list(context.session.user.id, input),
+			context.services.todosService.list({
+				...input,
+				userId: context.session.user.id,
+			}),
 		),
 	create: protectedProcedure
 		.input(z.object({ text: z.string().trim().min(1).max(500) }))
 		.handler(({ input, context }) =>
-			context.services.todosService.create(context.session.user.id, input.text),
+			context.services.todosService.create({
+				userId: context.session.user.id,
+				text: input.text,
+			}),
 		),
 	setCompleted: setCompletedProcedure,
 	// Compatibility alias for existing clients.
@@ -37,10 +43,10 @@ export const todoRouter = {
 	delete: protectedProcedure
 		.input(z.object({ id }))
 		.handler(async ({ input, context }) => {
-			const result = await context.services.todosService.delete(
-				context.session.user.id,
-				input.id,
-			);
+			const result = await context.services.todosService.delete({
+				userId: context.session.user.id,
+				id: input.id,
+			});
 			if (!result) throw new ORPCError("NOT_FOUND");
 			return result;
 		}),

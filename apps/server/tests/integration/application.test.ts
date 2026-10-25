@@ -68,7 +68,7 @@ test("scoped Todo repositories isolate owners and participate in transaction rol
 							email: `${id}@example.test`,
 						})),
 					);
-					const repository = createTodosRepository(tx);
+					const repository = createTodosRepository({ db: tx });
 					const owner = repository.forUser(ownerId);
 					const other = repository.forUser(otherId);
 					const input = { text: "owner only", userId: otherId };
@@ -90,14 +90,20 @@ test("scoped Todo repositories isolate owners and participate in transaction rol
 						first,
 					]);
 					for (const id of [foreign.id, legacy.id]) {
-						assert.equal(await owner.setCompleted(id, true), null);
+						assert.equal(
+							await owner.setCompleted({ id, completed: true }),
+							null,
+						);
 						assert.equal(await owner.delete(id), null);
 					}
 					assert.deepEqual(await other.list({ limit: 10 }), [foreign]);
-					assert.deepEqual(await owner.setCompleted(first.id, true), {
-						...first,
-						completed: true,
-					});
+					assert.deepEqual(
+						await owner.setCompleted({ id: first.id, completed: true }),
+						{
+							...first,
+							completed: true,
+						},
+					);
 					assert.deepEqual(await owner.delete(first.id), { id: first.id });
 					assert.deepEqual(await owner.list({ limit: 10 }), [second]);
 					throw rollback;
@@ -123,11 +129,15 @@ test("migrations, real authentication, owner isolation, pagination and independe
 		await migrate(runtime.db, { migrationsFolder });
 		await migrate(runtime.db, { migrationsFolder });
 		await runtime.checkReady();
-		worker = await startWorker(
-			{ ...config, WORKER_CONCURRENCY: 2, WORKER_STARTUP_TIMEOUT_MS: 5000 },
-			undefined,
+		worker = await startWorker({
+			config: {
+				...config,
+				WORKER_CONCURRENCY: 2,
+				WORKER_STARTUP_TIMEOUT_MS: 5000,
+				WORKER_SHUTDOWN_TIMEOUT_MS: 5000,
+			},
 			logger,
-		);
+		});
 		const { app } = createApi({
 			...runtime,
 			corsOrigin: config.CORS_ORIGIN,
@@ -340,7 +350,7 @@ test("server and worker processes drain on SIGTERM", {
 					output += chunk;
 					if (
 						output.includes(
-							app === "server" ? "Server ready" : "User profile worker ready",
+							app === "server" ? "Server ready" : "Worker consumers ready",
 						)
 					) {
 						clearTimeout(timer);
@@ -359,12 +369,12 @@ test("server and worker processes drain on SIGTERM", {
 test("failed jobs use bounded retries and expose no internal failure details", {
 	timeout: 15000,
 }, async () => {
-	const { createUserProfileWorker } = await import(
-		"@my-better-t-app/business/users/jobs/worker"
+	const { createProfileReadWorker } = await import(
+		"@my-better-t-app/business/users/jobs/profile-read/worker"
 	);
 	const runtime = createServices(config, logger);
 	let attempts = 0;
-	const worker = createUserProfileWorker({
+	const worker = createProfileReadWorker({
 		redisUrl: config.REDIS_URL,
 		logger,
 		usersService: {
@@ -374,26 +384,39 @@ test("failed jobs use bounded retries and expose no internal failure details", {
 			},
 		},
 	});
+	let running: Promise<void> | undefined;
 	try {
 		await worker.waitUntilReady();
+		assert.equal(worker.isRunning(), false);
+		running = worker.run();
+		void running.catch(() => {});
 		const owner = `failure-${randomUUID()}`;
-		const owned = await runtime.services.profileJobs.enqueueProfileRead(
-			owner,
-			"retry-test",
-		);
+		const owned = await runtime.services.profileJobs.enqueueProfileRead({
+			userId: owner,
+			requestId: "retry-test",
+		});
 		const state = await eventually(
-			() => runtime.services.profileJobs.getProfileReadJob(owned.id, owner),
+			() =>
+				runtime.services.profileJobs.getProfileReadJob({
+					jobId: owned.id,
+					userId: owner,
+				}),
 			(value) => value?.state === "failed",
 		);
 		assert.equal(state?.result, null);
 		assert.ok(!JSON.stringify(state).includes("internal test failure"));
 		assert.equal(attempts, 3);
+		assert.equal(worker.isRunning(), true);
 		assert.equal(
-			await runtime.services.profileJobs.getProfileReadJob(owned.id, "foreign"),
+			await runtime.services.profileJobs.getProfileReadJob({
+				jobId: owned.id,
+				userId: "foreign",
+			}),
 			null,
 		);
 	} finally {
 		await worker.close();
+		await running;
 		await runtime.close();
 	}
 });
@@ -497,21 +520,32 @@ test("native BullMQ telemetry preserves producer trace context through Redis and
 	const runtime = createServices(config, logger);
 	let worker: Awaited<ReturnType<typeof startWorker>> | undefined;
 	try {
-		worker = await startWorker(
-			{ ...config, WORKER_CONCURRENCY: 1, WORKER_STARTUP_TIMEOUT_MS: 5000 },
-			undefined,
+		worker = await startWorker({
+			config: {
+				...config,
+				WORKER_CONCURRENCY: 1,
+				WORKER_STARTUP_TIMEOUT_MS: 5000,
+				WORKER_SHUTDOWN_TIMEOUT_MS: 5000,
+			},
 			logger,
-		);
+		});
 		const traceId = "abcdef0123456789abcdef0123456789";
 		const owner = `trace-test-${randomUUID()}`;
 		const job = await traceRequest(
 			new Headers({ traceparent: `00-${traceId}-0123456789abcdef-01` }),
 			"integration.enqueueProfileRead",
 			() =>
-				runtime.services.profileJobs.enqueueProfileRead(owner, "trace-test"),
+				runtime.services.profileJobs.enqueueProfileRead({
+					userId: owner,
+					requestId: "trace-test",
+				}),
 		);
 		await eventually(
-			() => runtime.services.profileJobs.getProfileReadJob(job.id, owner),
+			() =>
+				runtime.services.profileJobs.getProfileReadJob({
+					jobId: job.id,
+					userId: owner,
+				}),
 			(value) => value?.state === "completed",
 		);
 		await eventually(
@@ -534,5 +568,114 @@ test("native BullMQ telemetry preserves producer trace context through Redis and
 		await worker?.close();
 		await runtime.close();
 		await telemetry.shutdown();
+	}
+});
+
+test("two real consumers drain together before their shared PostgreSQL pool closes", {
+	timeout: 20000,
+}, async () => {
+	const { Queue, Worker, createQueueConnection } = await import(
+		"@my-better-t-app/queue"
+	);
+	const db = createDb(config, { logger });
+	const gates = [Promise.withResolvers<void>(), Promise.withResolvers<void>()];
+	const entered = [
+		Promise.withResolvers<void>(),
+		Promise.withResolvers<void>(),
+	];
+	const queues = gates.map(
+		() =>
+			new Queue(`runtime-test-${randomUUID()}`, {
+				connection: createQueueConnection(config.REDIS_URL),
+			}),
+	);
+	for (const queue of queues) queue.on("error", () => {});
+	let databaseClosed = false;
+	let runtime: Awaited<ReturnType<typeof startWorker>> | undefined;
+	try {
+		runtime = await startWorker({
+			config: {
+				...config,
+				WORKER_CONCURRENCY: 1,
+				WORKER_STARTUP_TIMEOUT_MS: 5000,
+				WORKER_SHUTDOWN_TIMEOUT_MS: 5000,
+			},
+			logger,
+			factories: {
+				createResources: () => ({
+					services: { usersService: { getProfile: async () => null } },
+					checkReady: async () => {
+						await db.$client.query("SELECT 1");
+					},
+					close: async () => {
+						databaseClosed = true;
+						await db.close();
+					},
+				}),
+				consumerDefinitions: queues.map((queue, index) => ({
+					name: queue.name,
+					create: () => {
+						const worker = new Worker(
+							queue.name,
+							async () => {
+								entered[index]?.resolve();
+								await gates[index]?.promise;
+								return (await db.$client.query("SELECT 1 AS ok")).rows[0].ok;
+							},
+							{
+								connection: createQueueConnection(config.REDIS_URL, "worker"),
+								autorun: false,
+							},
+						);
+						worker.on("error", () => {});
+						return worker;
+					},
+				})),
+			},
+		});
+		const jobs = await Promise.all(
+			queues.map((queue) => queue.add("probe", {})),
+		);
+		await Promise.all(entered.map((item) => item.promise));
+		await runtime.checkReady();
+		const closing = runtime.close();
+		void closing.catch(() => {});
+		assert.equal(runtime.close(), closing);
+		const firstGate = gates[0];
+		const firstQueue = queues[0];
+		const firstJob = jobs[0];
+		assert.ok(firstGate && firstQueue && firstJob?.id);
+		const firstJobId = firstJob.id;
+		firstGate.resolve();
+		await eventually(
+			() => firstQueue.getJob(firstJobId),
+			(job) => job?.returnvalue === 1,
+		);
+		assert.equal(databaseClosed, false);
+		for (const gate of gates) gate.resolve();
+		await closing;
+		await runtime.done;
+		assert.equal(databaseClosed, true);
+		for (const [index, queue] of queues.entries()) {
+			const job = await queue.getJob(jobs[index]?.id ?? "missing");
+			assert.equal(job?.returnvalue, 1);
+			assert.equal(await job?.getState(), "completed");
+		}
+	} finally {
+		for (const gate of gates) gate.resolve();
+		try {
+			await runtime?.close();
+		} finally {
+			await Promise.all(
+				queues.map(async (queue) => {
+					try {
+						await queue.obliterate({ force: true });
+					} finally {
+						await queue.close();
+					}
+				}),
+			);
+			await db.close();
+		}
 	}
 });

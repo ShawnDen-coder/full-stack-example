@@ -1,4 +1,4 @@
-import { ProfileJobsUnavailableError } from "@my-better-t-app/business/users/jobs/producer";
+import { ProfileJobsUnavailableError } from "@my-better-t-app/business/users/jobs/profile-read/producer";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { protectedProcedure } from "../procedures";
@@ -14,20 +14,20 @@ async function withProfileJobs<T>(work: () => Promise<T>) {
 }
 const enqueueProfileRead = protectedProcedure.handler(({ context }) =>
 	withProfileJobs(() =>
-		context.services.profileJobs.enqueueProfileRead(
-			context.session.user.id,
-			context.requestId,
-		),
+		context.services.profileJobs.enqueueProfileRead({
+			userId: context.session.user.id,
+			requestId: context.requestId,
+		}),
 	),
 );
 const getProfileReadJob = protectedProcedure
 	.input(z.object({ id: z.string().min(1).max(128) }))
 	.handler(async ({ context, input }) => {
 		const job = await withProfileJobs(() =>
-			context.services.profileJobs.getProfileReadJob(
-				input.id,
-				context.session.user.id,
-			),
+			context.services.profileJobs.getProfileReadJob({
+				jobId: input.id,
+				userId: context.session.user.id,
+			}),
 		);
 		if (!job) throw new ORPCError("NOT_FOUND");
 		return job;

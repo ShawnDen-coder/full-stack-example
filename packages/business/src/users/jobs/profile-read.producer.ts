@@ -21,7 +21,7 @@ export class ProfileJobsUnavailableError extends Error {
 	}
 }
 
-export function createProfileJobClient({
+export function createProfileReadClient({
 	redisUrl,
 	logger,
 }: {
@@ -44,7 +44,13 @@ export function createProfileJobClient({
 
 	const stopMetrics = observeQueue(profileQueue, USER_PROFILE_QUEUE);
 	return {
-		async enqueueProfileRead(userId: string, requestId?: string) {
+		async enqueueProfileRead({
+			userId,
+			requestId,
+		}: {
+			userId: string;
+			requestId?: string;
+		}) {
 			const data = userProfileJobSchema.parse({ userId, requestId });
 			const job = await profileQueue.add(USER_PROFILE_TASK, data).catch(() => {
 				throw new ProfileJobsUnavailableError();
@@ -56,7 +62,7 @@ export function createProfileJobClient({
 			);
 			return { id: job.id };
 		},
-		getProfileReadJob: (jobId: string, userId: string) =>
+		getProfileReadJob: ({ jobId, userId }: { jobId: string; userId: string }) =>
 			getProfileReadJob(profileQueue, jobId, userId).catch(() => {
 				throw new ProfileJobsUnavailableError();
 			}),
@@ -70,4 +76,4 @@ export function createProfileJobClient({
 	};
 }
 
-export type ProfileJobClient = ReturnType<typeof createProfileJobClient>;
+export type ProfileReadClient = ReturnType<typeof createProfileReadClient>;

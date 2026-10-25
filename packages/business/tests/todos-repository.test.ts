@@ -18,7 +18,7 @@ function fixture(t: TestContext, rows: unknown[][] = []) {
 			return { rows, rowCount: rows.length };
 		},
 	);
-	return { repository: createTodosRepository(db), queries };
+	return { repository: createTodosRepository({ db }), queries };
 }
 
 function assertFilter(query: Query, column: string, value: unknown) {
@@ -33,7 +33,7 @@ test("interleaved Todo scopes keep their own owner on reads and mutations", asyn
 	const bob = repository.forUser("bob");
 	assert.deepEqual(await alice.list({ cursor: 50, limit: 2 }), []);
 	assert.deepEqual(await bob.list({ limit: 3 }), []);
-	assert.equal(await alice.setCompleted(20, true), null);
+	assert.equal(await alice.setCompleted({ id: 20, completed: true }), null);
 	assert.equal(await bob.delete(20), null);
 	await alice.list({ limit: 1 });
 

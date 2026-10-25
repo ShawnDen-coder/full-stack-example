@@ -20,7 +20,10 @@ and Worker processes through injected dependencies.
 ## Extend
 
 1. Add a feature directory with a `create...Service` factory and infer its type
-   with `ReturnType`. Inject clients; importing the module must not open resources.
+   with `ReturnType`. Service, Repository and job factories take one named
+   dependency object, e.g. `createTodosRepository({ db: tx })`. Use named objects
+   for multiple business fields (`service.setCompleted({ userId, id, completed })`);
+   single IDs can stay primitive (`forUser(userId)`). Inject clients; importing the module must not open resources.
 2. Add a scoped `repository.ts` when ownership filters repeat. Bind the trusted
    owner once with `forUser(userId)`, enforce it on reads and writes, and assign
    it explicitly on insert. Return data rather than a mutable query builder.
@@ -38,8 +41,17 @@ implement the processor, producer and Worker factory, and enforce ownership when
 returning job status/results. Handlers must tolerate retries; choose bounded
 retention and safe result fields. Reuse [queue infrastructure](../queue/README.md).
 Register consumers explicitly in [Worker runtime](../../apps/worker/src/runtime.ts).
-That runtime currently composes one consumer; another queue requires extending
-its factories, readiness, failure tracking and shutdown for every consumer.
+Use task-specific exports such as
+`@my-better-t-app/business/users/jobs/profile-read/producer` (`createProfileReadClient`)
+and `.../profile-read/worker` (`createProfileReadWorker`, `createProfileReadProcessor`).
+The client accepts `enqueueProfileRead({ userId, requestId })` and
+`getProfileReadJob({ userId, jobId })`; status helpers stay internal.
+Worker factories return native Workers with `autorun: false` fixed internally.
+Add one `consumerDefinitions` entry; runtime handles readiness, run failures and
+concurrent drain for the entire group. Extend shared resources only if the new
+consumer needs another dependency. `WORKER_CONCURRENCY` is per consumer; review the
+sum against database pool and memory capacity. See the
+[extension contract](../../docs/extension-design.md).
 
 ## Verify
 
