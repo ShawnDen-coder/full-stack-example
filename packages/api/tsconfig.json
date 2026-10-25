@@ -1,5 +1,5 @@
 {
-	"extends": "@my-better-t-app/config/tsconfig.base.json",
+	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
 		"composite": true,
 		"declaration": true,
@@ -13,19 +13,13 @@
 			"path": "../db"
 		},
 		{
-			"path": "../auth"
-		},
-		{
-			"path": "../users"
+			"path": "../business"
 		},
 		{
 			"path": "../queue"
 		},
 		{
-			"path": "../logger"
-		},
-		{
-			"path": "../todos"
+			"path": "../observability"
 		}
 	]
 }

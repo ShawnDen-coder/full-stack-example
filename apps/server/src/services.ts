@@ -1,9 +1,9 @@
-import { type AuthConfig, createAuth } from "@my-better-t-app/auth";
+import { type AuthConfig, createAuth } from "@my-better-t-app/api/auth";
+import { createTodosService } from "@my-better-t-app/business/todos";
+import { createUsersService } from "@my-better-t-app/business/users";
+import { createProfileJobClient } from "@my-better-t-app/business/users/jobs/producer";
 import { createDb } from "@my-better-t-app/db";
-import { createLogger, type Logger } from "@my-better-t-app/logger";
-import { createQueueClient } from "@my-better-t-app/queue";
-import { createTodosService } from "@my-better-t-app/todos";
-import { createUsersService } from "@my-better-t-app/users";
+import { createLogger, type Logger } from "@my-better-t-app/observability";
 
 export type ServerConfig = {
 	DATABASE_URL: string;
@@ -23,8 +23,9 @@ export function createServices(
 		max: config.DB_POOL_MAX,
 		queryTimeoutMillis: config.DB_QUERY_TIMEOUT_MS,
 		logger,
+		role: "server",
 	});
-	let queueClient: ReturnType<typeof createQueueClient>;
+	let profileJobs: ReturnType<typeof createProfileJobClient>;
 	try {
 		const authConfig: AuthConfig = {
 			db,
@@ -33,39 +34,37 @@ export function createServices(
 			trustedOrigins: [config.CORS_ORIGIN],
 		};
 		const auth = createAuth(authConfig);
-		queueClient = createQueueClient({ redisUrl: config.REDIS_URL, logger });
-		const usersService = createUsersService({ deps: { db } });
-		const todosService = createTodosService({ deps: { db } });
+		profileJobs = createProfileJobClient({
+			redisUrl: config.REDIS_URL,
+			logger,
+		});
+		const usersService = createUsersService({ db });
+		const todosService = createTodosService({ db });
 		let closePromise: Promise<void> | undefined;
 		return {
 			db,
 			auth,
 			logger,
 			getSession: (headers: Headers) => auth.api.getSession({ headers }),
-			services: { usersService, todosService, queueClient },
+			services: { usersService, todosService, profileJobs },
 			async checkReady() {
-				// Let both probes settle before cleanup can close an initializing client.
-				const checks = await Promise.allSettled([
-					db.$client.query("SELECT 1"),
-					queueClient.checkReady(),
-				]);
-				for (const check of checks)
-					if (check.status === "rejected") throw check.reason;
+				await db.$client.query("SELECT 1");
 			},
+			checkJobsReady: () => profileJobs.checkReady(),
 			close() {
 				closePromise ??= (async () => {
 					try {
-						await queueClient.close();
+						await profileJobs.close();
 					} finally {
-						await db.$client.end();
+						await db.close();
 					}
 				})();
 				return closePromise;
 			},
 		};
 	} catch (error) {
-		void db.$client
-			.end()
+		void db
+			.close()
 			.catch((err: unknown) => logger.error({ err }, "Startup cleanup failed"));
 		throw error;
 	}

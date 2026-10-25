@@ -14,8 +14,8 @@ Authenticated code can also use the typed oRPC client to read a profile and subm
 
 ```ts
 const profile = await client.users.me();
-const job = await client.users.requestProfile();
-const status = await client.users.profileJob({ id: job.id });
+const job = await client.users.enqueueProfileRead();
+const status = await client.users.getProfileReadJob({ id: job.id });
 ```
 
 The worker reads the profile and returns `id`, `name`, and `emailVerified`. Only the submitting user can inspect the job. Poll `profileJob` until it completes; results are retained for a limited time.
@@ -46,7 +46,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-This starts PostgreSQL and Redis, applies the database schema, and runs web, API, and worker. The API listens at [localhost:3000](http://localhost:3000); its reference is at [/api-reference](http://localhost:3000/api-reference) and liveness at [/health](http://localhost:3000/health). Dependency readiness is at [/ready](http://localhost:3000/ready).
+This starts PostgreSQL and Redis, applies the database schema, and runs web, API, and worker. The API listens at [localhost:3000](http://localhost:3000); its reference is at [/api-reference](http://localhost:3000/api-reference) and liveness at [/health](http://localhost:3000/health). Core database readiness is at [/ready](http://localhost:3000/ready); queue readiness is separate at [/ready/jobs](http://localhost:3000/ready/jobs). Redis outages do not prevent the API from starting.
 
 ### Database changes
 
@@ -69,7 +69,7 @@ remain inaccessible, and new API writes always bind the authenticated user.
 | `pnpm test` | Run offline API, worker and deployment guard tests |
 | `pnpm test:integration` | Exercise real PostgreSQL/Redis, auth, migrations and processes |
 | `pnpm test:e2e` | Run Playwright account isolation and CRUD scenarios |
-| `pnpm check-types` | Check workspace types (also builds the web app) |
+| `pnpm check-types` | Generate route types and check workspace types |
 | `pnpm build` | Build applications |
 | `pnpm exec biome check .` | Check lint and formatting without changing files |
 | `pnpm check` | Apply Biome fixes |
@@ -86,9 +86,15 @@ independent production stack. All browser requests use one public HTTPS origin.
 
 Supply production values via the environment or an ignored `deploy/.env` file,
 following `deploy/.env.schema`: `PUBLIC_APP_URL`, `BETTER_AUTH_SECRET` (32+
-characters), `POSTGRES_PASSWORD`, and `DATABASE_URL`. The database URL must use
-`postgres:5432/app`, user `postgres`, and the same password as `POSTGRES_PASSWORD`
-(URL-encode special characters in the URL). No production password has a fallback.
+characters), `POSTGRES_PASSWORD`, and three database URLs targeting `postgres:5432/app`:
+
+- `MIGRATION_DATABASE_URL`: schema owner `postgres`, with the configured `POSTGRES_PASSWORD`.
+- `DATABASE_URL`: login role `app_server`, with a separate runtime password.
+- `WORKER_DATABASE_URL`: login role `app_worker`, with a separate runtime password.
+
+URL-encode passwords. No production password has a fallback. The deployment
+provisions these fixed runtime roles after migration: Server gets table CRUD;
+Worker can only read user profiles. Runtime roles cannot change the schema.
 Never reuse development or CI credentials.
 
 ```bash
@@ -99,7 +105,7 @@ pnpm docker:down
 ```
 
 The deployment command builds images, waits for PostgreSQL and Redis, runs a
-fresh migration task, and only then updates server/worker and web. A migration
+fresh migration task and runtime-role provisioning, and only then updates server/worker and web. A migration
 failure stops the release before replacing existing application containers.
 A readiness failure stops subsequent deployment steps; there is no automatic
 application rollback. Use additive, backward-compatible migrations during updates.
@@ -119,11 +125,11 @@ backup, recovery, logging and validation procedures.
 | `apps/web` | React frontend and file-based routes |
 | `apps/server` | Hono API process; produces jobs |
 | `apps/worker` | Independent BullMQ consumer and lifecycle |
-| `packages/api`, `packages/auth` | oRPC procedures and Better Auth factory |
-| `packages/users`, `packages/todos`, `packages/queue` | Business services, worker factory and typed queue contracts |
-| `packages/logger` | Structured, redacted logging and lifecycle deadlines |
+| `packages/api` | oRPC procedures and Better Auth factory |
+| `packages/business`, `packages/queue` | Business services, worker factory and typed queue contracts |
+| `packages/observability` | Structured, redacted logging and lifecycle deadlines |
 | `packages/db` | PostgreSQL schema and Drizzle configuration |
-| `packages/ui`, `packages/config` | Shared components, styles, and TypeScript configuration |
+| `packages/ui`, root `tsconfig.base.json` | Shared components, styles, and TypeScript configuration |
 
 See the [development guide](docs/development.md) for UI customization, environment generation, auth schema generation, dependency injection, worker lifecycle, and adding modules. Generator choices are recorded in [bts.jsonc](bts.jsonc); all commands are defined in [package.json](package.json).
 
@@ -147,3 +153,13 @@ Integration tests apply committed migrations, create temporary accounts and
 verify database failures, worker retries and process shutdown. Browser tests use
 ports 43100/43101 and leave test accounts in the disposable database. Do not point
 these commands at a development database you care about or a production service.
+
+## Observability
+
+Pino emits structured JSON with request/job IDs and active `trace_id`/`span_id`.
+Set `OTEL_ENABLED=true` to export traces and metrics over OTLP/HTTP; it is disabled
+by default. `pnpm telemetry:up` starts an optional local Collector with a Prometheus
+endpoint on `127.0.0.1:8889`. See [observability operations](docs/observability.md)
+for fields, sampling, queue metrics, health probes and failure verification.
+
+Integration role tests also configure the fixed app_server/app_worker roles and public-schema grants; use a dedicated PostgreSQL instance.

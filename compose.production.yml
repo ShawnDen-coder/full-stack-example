@@ -29,11 +29,25 @@ services:
     image: ${COMPOSE_PROJECT_NAME:-starter}-server
     init: true
     environment:
-      DATABASE_URL: ${DATABASE_URL:?Set URL-encoded DATABASE_URL for postgres:5432/app}
+      DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set migration owner URL}
+      DB_MIGRATION_TIMEOUT_MS: ${DB_MIGRATION_TIMEOUT_MS:-300000}
+      DB_MIGRATION_LOCK_TIMEOUT_MS: ${DB_MIGRATION_LOCK_TIMEOUT_MS:-5000}
     command: ["node", "dist/migrate.mjs"]
     depends_on:
       postgres:
         condition: service_healthy
+    restart: "no"
+  provision:
+    image: ${COMPOSE_PROJECT_NAME:-starter}-server
+    init: true
+    environment:
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set migration owner URL}
+      DATABASE_URL: ${DATABASE_URL:?Set app_server URL}
+      WORKER_DATABASE_URL: ${WORKER_DATABASE_URL:?Set app_worker URL}
+    command: ["node", "dist/provision-db.mjs"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     restart: "no"
   server:
     image: ${COMPOSE_PROJECT_NAME:-starter}-server
@@ -46,15 +60,17 @@ services:
       PORT: 3000
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
       REDIS_URL: redis://redis:6379
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_SERVICE_VERSION: ${OTEL_SERVICE_VERSION:-development}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${PUBLIC_APP_URL:?Set HTTPS PUBLIC_APP_URL}
       CORS_ORIGIN: ${PUBLIC_APP_URL:?Set HTTPS PUBLIC_APP_URL}
       SERVER_SHUTDOWN_TIMEOUT_MS: 30000
     depends_on:
-      migrate:
+      provision:
         condition: service_completed_successfully
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
@@ -69,13 +85,23 @@ services:
     init: true
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      DATABASE_URL: ${WORKER_DATABASE_URL:?Set app_worker URL}
       REDIS_URL: redis://redis:6379
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      OTEL_SERVICE_VERSION: ${OTEL_SERVICE_VERSION:-development}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1}
     depends_on:
-      migrate:
+      provision:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "dist/healthcheck.mjs"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     stop_grace_period: 40s
     restart: unless-stopped
   web:

@@ -1,5 +1,5 @@
 // Better Auth CLI entry: importing this file never starts queues, workers, or HTTP.
-import { createAuth } from "@my-better-t-app/auth";
+import { createAuth } from "@my-better-t-app/api/auth";
 import { createDb } from "@my-better-t-app/db";
 import { ENV } from "./env.server";
 

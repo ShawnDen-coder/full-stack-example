@@ -8,9 +8,10 @@
 		"build": "tsc -b ../../packages/api && vite build",
 		"serve": "vite preview",
 		"start": "vite",
-		"check-types": "tsc -b ../../packages/api && vite build && tsc --noEmit",
+		"check-types": "tsc -b ../../packages/api && pnpm routes:generate && tsc --noEmit",
 		"env:generate": "varlock codegen",
-		"test:e2e": "playwright test"
+		"test:e2e": "playwright test",
+		"routes:generate": "node scripts/generate-routes.mjs"
 	},
 	"dependencies": {
 		"@my-better-t-app/api": "workspace:*",
@@ -33,7 +34,6 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"@my-better-t-app/config": "workspace:*",
 		"@tanstack/react-query-devtools": "^5.104.2",
 		"@tanstack/react-router-devtools": "^1.167.2",
 		"@tanstack/router-plugin": "^1.168.45",
@@ -45,6 +45,7 @@
 		"tailwindcss": "catalog:",
 		"typescript": "catalog:",
 		"vite": "^8.3.4",
-		"@playwright/test": "^1.56.0"
+		"@playwright/test": "^1.56.0",
+		"@tanstack/router-generator": "^1.167.46"
 	}
 }

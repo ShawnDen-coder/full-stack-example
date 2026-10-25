@@ -4,8 +4,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
-		"build": "tsc -b ../../packages/users && tsdown",
-		"check-types": "tsc -b ../../packages/users && tsc --noEmit",
+		"build": "tsc -b ../../packages/business && tsdown",
+		"check-types": "tsc -b ../../packages/business && tsc --noEmit",
 		"start": "node dist/index.mjs",
 		"test": "node --import tsx --test tests/*.test.ts",
 		"env:generate": "varlock codegen"
@@ -13,12 +13,22 @@
 	"dependencies": {
 		"@my-better-t-app/db": "workspace:*",
 		"@my-better-t-app/queue": "workspace:*",
-		"@my-better-t-app/users": "workspace:*",
 		"varlock": "catalog:",
-		"@my-better-t-app/logger": "workspace:*"
+		"@my-better-t-app/observability": "workspace:*",
+		"@my-better-t-app/business": "workspace:*",
+		"pino": "catalog:",
+		"@opentelemetry/api": "catalog:",
+		"@opentelemetry/sdk-node": "catalog:",
+		"@opentelemetry/resources": "catalog:",
+		"@opentelemetry/exporter-trace-otlp-http": "catalog:",
+		"@opentelemetry/exporter-metrics-otlp-http": "catalog:",
+		"@opentelemetry/sdk-metrics": "catalog:",
+		"@opentelemetry/sdk-trace": "catalog:",
+		"pg": "catalog:",
+		"bullmq": "catalog:",
+		"bullmq-otel": "catalog:"
 	},
 	"devDependencies": {
-		"@my-better-t-app/config": "workspace:*",
 		"@types/node": "^24.0.0",
 		"tsdown": "^0.23.0",
 		"tsx": "^4.23.13",

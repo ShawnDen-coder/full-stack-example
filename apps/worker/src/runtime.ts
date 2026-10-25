@@ -1,7 +1,14 @@
+import {
+	createUsersService,
+	type UsersService,
+} from "@my-better-t-app/business/users";
+import { createUserProfileWorker } from "@my-better-t-app/business/users/jobs/worker";
 import { createDb } from "@my-better-t-app/db";
-import { createLogger, type Logger } from "@my-better-t-app/logger";
-import { createUsersService, type UsersService } from "@my-better-t-app/users";
-import { createUserProfileWorker } from "@my-better-t-app/users/workers/user-profile.worker";
+import {
+	createLogger,
+	type Logger,
+	withDeadline,
+} from "@my-better-t-app/observability";
 
 export type WorkerConfig = {
 	DATABASE_URL: string;
@@ -22,6 +29,11 @@ type ProfileWorker = {
 	waitUntilReady(): Promise<unknown>;
 	run(): Promise<void>;
 	close(force?: boolean): Promise<void>;
+	client?: Promise<{
+		status: string;
+		get(key: string): Promise<string | null>;
+	}>;
+	isRunning?(): boolean;
 };
 
 // Concrete factory boundaries make startup/rollback testable without live services.
@@ -42,35 +54,19 @@ const factories: WorkerFactories = {
 			connectionTimeoutMillis: config.WORKER_STARTUP_TIMEOUT_MS,
 			queryTimeoutMillis: config.DB_QUERY_TIMEOUT_MS,
 			max: config.DB_POOL_MAX,
+			role: "worker",
 			logger,
 		});
 		return {
-			usersService: createUsersService({ deps: { db } }),
+			usersService: createUsersService({ db }),
 			async checkReady() {
 				await db.$client.query("SELECT 1");
 			},
-			close: () => db.$client.end(),
+			close: () => db.close(),
 		};
 	},
 	createWorker: createUserProfileWorker,
 };
-
-async function waitForReady(check: Promise<unknown>, timeoutMs: number) {
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	try {
-		await Promise.race([
-			check,
-			new Promise<never>((_, reject) => {
-				timer = setTimeout(
-					() => reject(new Error("Worker startup timed out")),
-					timeoutMs,
-				);
-			}),
-		]);
-	} finally {
-		clearTimeout(timer);
-	}
-}
 
 export async function startWorker(
 	config: WorkerConfig,
@@ -89,9 +85,10 @@ export async function startWorker(
 	const resources = deps.createResources(config, logger);
 	let worker: ProfileWorker | undefined;
 	try {
-		await waitForReady(
+		await withDeadline(
 			resources.checkReady(),
 			config.WORKER_STARTUP_TIMEOUT_MS,
+			"Worker startup timed out",
 		);
 		worker = deps.createWorker({
 			redisUrl: config.REDIS_URL,
@@ -100,9 +97,10 @@ export async function startWorker(
 			autorun: false,
 			logger,
 		});
-		await waitForReady(
+		await withDeadline(
 			worker.waitUntilReady(),
 			config.WORKER_STARTUP_TIMEOUT_MS,
+			"Worker startup timed out",
 		);
 		const done = worker.run();
 		// The process entry observes failure; attach a handler before returning it.
@@ -111,6 +109,17 @@ export async function startWorker(
 		let closePromise: Promise<void> | undefined;
 		return {
 			done,
+			async checkReady() {
+				if (runningWorker.isRunning && !runningWorker.isRunning())
+					throw new Error("Worker is not consuming");
+				await resources.checkReady();
+				if (runningWorker.client) {
+					const client = await runningWorker.client;
+					if (client.status !== "ready")
+						throw new Error("Worker Redis connection is not ready");
+					await client.get("full-stack:worker:health");
+				}
+			},
 			close() {
 				closePromise ??= (async () => {
 					try {

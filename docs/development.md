@@ -54,7 +54,7 @@ The integration follows the explicit factory and dependency injection pattern in
 - `apps/server/src/services.ts` creates the database, Better Auth, queue client, users service and Todo service once per process. Importing it does not start connections or workers.
 - `packages/api/src/create-api.ts` exports `createApi(...)`, which accepts initialized dependencies. It mounts Better Auth at `/api/auth/*`, oRPC at `/rpc`, OpenAPI at `/api-reference`, and health at `/health` and dependency readiness at `/ready`. Health and unmatched URLs do not resolve sessions.
 - `packages/api/src/context.ts` resolves the incoming session and provides services to procedures. `protectedProcedure` requires authentication before calling business services.
-- `packages/users` reads a user profile through an injected database. `packages/todos` owns the Todo service; both HTTP routers delegate to injected services. `packages/queue` owns job contracts, producer configuration, retention, retries, and job ownership checks. Worker factories live under `packages/users/src/workers` and reuse the same service factory as HTTP requests, with separate instances and connections per process.
+- `packages/business/src/users` reads a user profile through an injected database. `packages/business/src/todos` owns the Todo service; both HTTP routers delegate to injected services. `packages/business/src/users/jobs` owns contracts, producer configuration, retention, retries and ownership checks. `packages/queue` only owns generic connections and BullMQ telemetry. Worker factories live under `packages/business/src/users/jobs` and reuse the same service factory as HTTP requests, with separate instances and connections per process.
 
 The Todo API requires authentication and scopes every operation to the session user.
 The users API is authenticated and
@@ -64,8 +64,8 @@ Authenticated clients can exercise the complete service/queue path using the exi
 
 ```ts
 const profile = await client.users.me();
-const job = await client.users.requestProfile();
-const status = await client.users.profileJob({ id: job.id });
+const job = await client.users.enqueueProfileRead();
+const status = await client.users.getProfileReadJob({ id: job.id });
 ```
 
 The background task reads the current profile and returns only `id`, `name`, and
@@ -77,7 +77,7 @@ for up to one day, capped at 1,000. Cleanup happens when subsequent jobs finish.
 `REDIS_URL` is declared in `apps/server/.env.schema` and defaults to
 `redis://localhost:6379` for host development. Docker Compose overrides it with
 `redis://redis:6379`, starts Redis with persistence and `noeviction`, and waits for
-PostgreSQL and Redis health checks before starting the server. Keep any Redis
+PostgreSQL readiness before starting the server; only the Worker requires Redis readiness. Keep any Redis
 credentials in ignored local env overrides or your deployment secret provider.
 
 Better Auth receives an explicit database and configuration object. Cookie
@@ -149,10 +149,19 @@ The runtime remains Node.js with pnpm; no Bun configuration or scripts are used.
 
 ## Complete module example
 
-Use `packages/todos` as the CRUD reference. Its factory receives a database;
+Use `packages/business/src/todos` as the CRUD reference. Its factory receives a database;
 `createServices` wires it into `context.services`. Routers validate inputs and
 map a missing or foreign resource to the same `NOT_FOUND` response. Never accept
-an owner ID from the browser. Keep SQL and business decisions in the service.
+an owner ID from the browser. `repository.ts` owns SQL, field projections and the
+user scope: `createTodosRepository(db).forUser(session.user.id)` returns operations
+that always filter by that owner and assign it on insert. It returns resolved data,
+never a mutable query builder. Scopes are immutable closures, so a shared repository
+cannot switch another request's user. Keep pagination and business decisions in
+`service.ts`, along with the existing operation spans and metrics. Repository
+factories accept a database or transaction and never create or close connections.
+Use a scoped repository where ownership rules repeat; simple modules do not need
+an extra repository layer or a generic base class. This is an application-level
+boundary; using the raw database directly can bypass it.
 
 `todo.list({ cursor?, limit? })` returns `{ items, nextCursor }`, ordered by
 ID descending. Limit defaults to 20 and cannot exceed 100; the cursor is the
@@ -170,9 +179,8 @@ which a page-specific `onError` may override. Never retry writes automatically.
 
 ## Runtime and logs
 
-Both processes own their clients and shutdown. The API waits for PostgreSQL and
-Redis before listening. `/health` means the process responds; `/ready` checks
-both dependencies within two seconds and returns 503 during drain or failure.
+Both processes own their clients and shutdown. The API waits for PostgreSQL before listening; Redis is an optional capability probed at `/ready/jobs`. `/health` means the process responds; `/ready` checks
+the database within two seconds and returns 503 during drain or failure.
 It does not resolve sessions. Readiness is a dependency probe, not a substitute
 for migration validation or worker-lag monitoring.
 
@@ -226,3 +234,21 @@ Use Husky/lint-staged for staged files only. CI is authoritative; local hooks do
 not replace it. Keep `.node-version`, Node type definitions and Docker runtimes
 aligned. Dependency upgrades, especially Drizzle RC changes, must pass the full
 pipeline; do not combine them with unrelated feature changes.
+
+## Workspace and production boundaries
+
+There are six shared packages: api, business, db, queue, observability and ui.
+Auth lives under api; users/Todo modules live under business; shared TypeScript
+configuration is at the repository root. A package is not required for each feature.
+`todo.setCompleted`, `users.enqueueProfileRead` and `users.getProfileReadJob` are
+the preferred API names; the old names remain compatibility aliases.
+
+Production uses three database URLs: owner-only `MIGRATION_DATABASE_URL`,
+`DATABASE_URL` for app_server and `WORKER_DATABASE_URL` for app_worker. A fresh
+provision task follows migration, before application replacement. Review the
+explicit table grants in `packages/db/src/provision.ts` when adding tables. The
+migration timeout defaults to 300 seconds and lock wait to 5 seconds, independently
+of request query deadlines. No legacy Todo ownership is guessed or deleted.
+
+See [observability operations](observability.md) for telemetry configuration and
+failure validation. Type checking generates routes without building Vite output.

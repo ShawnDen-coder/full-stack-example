@@ -2,15 +2,17 @@
 	"name": "@my-better-t-app/api",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts",
-		"./*": "./src/*.ts"
+		"./auth": "./src/auth.ts",
+		"./context": "./src/context.ts",
+		"./create-api": "./src/create-api.ts",
+		"./procedures": "./src/procedures.ts",
+		"./routers/index": "./src/routers/index.ts"
 	},
 	"scripts": {
 		"build": "tsc -b",
 		"check-types": "tsc -b"
 	},
 	"dependencies": {
-		"@my-better-t-app/auth": "workspace:*",
 		"@my-better-t-app/db": "workspace:*",
 		"@orpc/client": "catalog:",
 		"@orpc/openapi": "catalog:",
@@ -19,14 +21,15 @@
 		"@types/pg": "catalog:",
 		"drizzle-orm": "catalog:",
 		"zod": "catalog:",
-		"@my-better-t-app/users": "workspace:*",
 		"@my-better-t-app/queue": "workspace:*",
 		"hono": "^4.13.7",
-		"@my-better-t-app/logger": "workspace:*",
-		"@my-better-t-app/todos": "workspace:*"
+		"@my-better-t-app/observability": "workspace:*",
+		"@better-auth/core": "1.7.7",
+		"@better-auth/drizzle-adapter": "1.7.7",
+		"better-auth": "catalog:",
+		"@my-better-t-app/business": "workspace:*"
 	},
 	"devDependencies": {
-		"@my-better-t-app/config": "workspace:*",
 		"typescript": "catalog:"
 	},
 	"files": [

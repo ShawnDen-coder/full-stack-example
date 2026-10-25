@@ -1,8 +1,20 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure } from "../index";
+import { protectedProcedure } from "../procedures";
 
 const id = z.number().int().positive();
+const setCompletedProcedure = protectedProcedure
+	.input(z.object({ id, completed: z.boolean() }))
+	.handler(async ({ input, context }) => {
+		const result = await context.services.todosService.setCompleted(
+			context.session.user.id,
+			input.id,
+			input.completed,
+		);
+		if (!result) throw new ORPCError("NOT_FOUND");
+		return result;
+	});
+
 export const todoRouter = {
 	list: protectedProcedure
 		.input(
@@ -19,17 +31,9 @@ export const todoRouter = {
 		.handler(({ input, context }) =>
 			context.services.todosService.create(context.session.user.id, input.text),
 		),
-	toggle: protectedProcedure
-		.input(z.object({ id, completed: z.boolean() }))
-		.handler(async ({ input, context }) => {
-			const result = await context.services.todosService.toggle(
-				context.session.user.id,
-				input.id,
-				input.completed,
-			);
-			if (!result) throw new ORPCError("NOT_FOUND");
-			return result;
-		}),
+	setCompleted: setCompletedProcedure,
+	// Compatibility alias for existing clients.
+	toggle: setCompletedProcedure,
 	delete: protectedProcedure
 		.input(z.object({ id }))
 		.handler(async ({ input, context }) => {

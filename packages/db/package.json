@@ -3,7 +3,10 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./*": "./src/*.ts"
+		"./schema": "./src/schema/index.ts",
+		"./schema/auth": "./src/schema/auth.ts",
+		"./schema/todo": "./src/schema/todo.ts",
+		"./provision": "./src/provision.ts"
 	},
 	"scripts": {
 		"build": "tsc -b",
@@ -16,12 +19,11 @@
 	},
 	"dependencies": {
 		"drizzle-orm": "catalog:",
-		"pg": "^8.23.0",
+		"pg": "catalog:",
 		"zod": "catalog:",
-		"@my-better-t-app/logger": "workspace:*"
+		"@my-better-t-app/observability": "workspace:*"
 	},
 	"devDependencies": {
-		"@my-better-t-app/config": "workspace:*",
 		"@types/pg": "catalog:",
 		"drizzle-kit": "1.0.0-rc.4",
 		"typescript": "catalog:",

@@ -1,0 +1,33 @@
+{
+	"name": "@my-better-t-app/business",
+	"type": "module",
+	"exports": {
+		"./users": "./src/users/service.ts",
+		"./todos": "./src/todos/service.ts",
+		"./users/jobs/contract": "./src/users/jobs/profile-read.contract.ts",
+		"./users/jobs/producer": "./src/users/jobs/profile-read.producer.ts",
+		"./users/jobs/status": "./src/users/jobs/profile-read.status.ts",
+		"./users/jobs/worker": "./src/users/jobs/profile-read.worker.ts"
+	},
+	"scripts": {
+		"build": "tsc -b",
+		"check-types": "tsc -b",
+		"test": "node --import tsx --test tests/*.test.ts"
+	},
+	"dependencies": {
+		"@my-better-t-app/db": "workspace:*",
+		"drizzle-orm": "catalog:",
+		"@my-better-t-app/queue": "workspace:*",
+		"@my-better-t-app/observability": "workspace:*",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"typescript": "catalog:",
+		"tsx": "^4.23.13"
+	},
+	"files": [
+		"src",
+		"dist"
+	],
+	"private": true
+}

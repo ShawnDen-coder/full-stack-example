@@ -1,9 +1,17 @@
-import { createLogger } from "@my-better-t-app/logger";
+import { createLogger, withDeadline } from "@my-better-t-app/observability";
+import { startTelemetry } from "@my-better-t-app/observability/telemetry";
 import { ENV } from "./env.server";
+import { startHeartbeat } from "./heartbeat";
 import { startWorker } from "./runtime";
 
-const logger = createLogger("worker");
+const telemetry = startTelemetry("worker", ENV);
+const logger = createLogger("worker", undefined, {
+	level: ENV.LOG_LEVEL,
+	version: ENV.OTEL_SERVICE_VERSION,
+	environment: ENV.NODE_ENV,
+});
 const startup = startWorker(ENV, undefined, logger);
+let heartbeat: Awaited<ReturnType<typeof startHeartbeat>> | undefined;
 let shutdownPromise: Promise<void> | undefined;
 function shutdown() {
 	shutdownPromise ??= (async () => {
@@ -12,8 +20,20 @@ function shutdown() {
 			process.exit(1);
 		}, ENV.WORKER_SHUTDOWN_TIMEOUT_MS);
 		try {
-			const runtime = await startup;
-			await runtime.close();
+			try {
+				const runtime = await startup;
+				try {
+					await heartbeat?.close();
+				} finally {
+					await runtime.close();
+				}
+			} finally {
+				await withDeadline(
+					telemetry.shutdown(),
+					3000,
+					"Telemetry shutdown timed out",
+				);
+			}
 		} finally {
 			clearTimeout(deadline);
 		}
@@ -39,8 +59,15 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 }
 
 void startup
-	.then((runtime) => {
-		if (!shutdownPromise) logger.info("User profile worker ready");
+	.then(async (runtime) => {
 		void runtime.done.catch(fail);
+		if (shutdownPromise) return;
+		const readyHeartbeat = await startHeartbeat(() => runtime.checkReady());
+		if (shutdownPromise) {
+			await readyHeartbeat.close();
+			return;
+		}
+		heartbeat = readyHeartbeat;
+		logger.info("User profile worker ready");
 	})
 	.catch(fail);

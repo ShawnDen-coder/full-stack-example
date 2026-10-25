@@ -1,17 +1,17 @@
-import type { Logger } from "@my-better-t-app/logger";
-import { type ConnectionOptions, Queue } from "bullmq";
-import {
-	USER_PROFILE_QUEUE,
-	type UserProfileJobData,
-	type UserProfileJobResult,
-	userProfileJobSchema,
-} from "./jobs";
-import { getUserProfileJob } from "./user-profile-job";
+import type { RedisOptions } from "bullmq";
+import { BullMQOtel } from "bullmq-otel";
 
-export { Worker } from "bullmq";
-export * from "./jobs";
+export type { Telemetry } from "bullmq";
+export { Queue, Worker } from "bullmq";
 
-export function createQueueConnection(redisUrl: string): ConnectionOptions {
+export function createQueueTelemetry() {
+	return new BullMQOtel("full-stack-example");
+}
+
+export function createQueueConnection(
+	redisUrl: string,
+	role: "producer" | "worker" = "producer",
+): RedisOptions {
 	const url = new URL(redisUrl);
 	const db = Number(url.pathname.slice(1) || 0);
 	if (
@@ -28,54 +28,9 @@ export function createQueueConnection(redisUrl: string): ConnectionOptions {
 		password: url.password ? decodeURIComponent(url.password) : undefined,
 		db,
 		tls: url.protocol === "rediss:" ? {} : undefined,
-		maxRetriesPerRequest: 1,
-		enableOfflineQueue: false,
+		maxRetriesPerRequest: role === "worker" ? null : 1,
+		enableOfflineQueue: role === "worker",
+		commandTimeout: role === "worker" ? undefined : 2000,
 		connectTimeout: 5000,
 	};
 }
-
-export function createQueueClient({
-	redisUrl,
-	logger,
-}: {
-	redisUrl: string;
-	logger?: Logger;
-}) {
-	const profileQueue = new Queue<
-		UserProfileJobData,
-		UserProfileJobResult,
-		"profile"
-	>(USER_PROFILE_QUEUE, {
-		connection: createQueueConnection(redisUrl),
-		defaultJobOptions: {
-			attempts: 3,
-			backoff: { type: "exponential", delay: 1000 },
-			removeOnComplete: { age: 3600, count: 1000 },
-			removeOnFail: { age: 86400, count: 1000 },
-		},
-	});
-	// EventEmitter errors must be handled even when the producer is idle.
-	profileQueue.on("error", (err) =>
-		logger?.error({ err }, "User profile queue connection error"),
-	);
-
-	return {
-		async enqueueUserProfile(userId: string, requestId?: string) {
-			const job = await profileQueue.add(
-				"profile",
-				userProfileJobSchema.parse({ userId, requestId }),
-			);
-			if (!job.id) throw new Error("Queue did not return a job ID");
-			logger?.info({ jobId: job.id, requestId }, "User profile job enqueued");
-			return { id: job.id };
-		},
-		getUserProfileJob: (jobId: string, userId: string) =>
-			getUserProfileJob(profileQueue, jobId, userId),
-		close: () => profileQueue.close(),
-		async checkReady() {
-			await profileQueue.getJobCounts("waiting");
-		},
-	};
-}
-
-export type QueueClient = ReturnType<typeof createQueueClient>;
