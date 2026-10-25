@@ -60,6 +60,7 @@ pnpm dev
 | `pnpm test:e2e` | 通过 Playwright 验证账号隔离和增删改查场景 |
 | `pnpm check-types` | 生成路由类型并检查工作区类型 |
 | `pnpm build` | 构建应用 |
+| `pnpm check:boundaries` | 检查包依赖和公共导出边界 |
 | `pnpm exec biome check .` | 只读检查代码规范和格式 |
 | `pnpm check` | 应用 Biome 自动修复 |
 | `pnpm db:studio` | 查看数据库 |
@@ -106,13 +107,13 @@ pnpm docker:down
 
 [开发指南](docs/development.zh-CN.md) 说明应用接线和运维流程；各包指引列出代码入口、扩展步骤、职责边界和验证命令。共享 TypeScript 配置位于根目录 `tsconfig.base.json`。当前技术栈以各包清单和应用配置为准，命令定义见 [package.json](package.json)。
 
-下一步业务接口和多消费者组装的收敛方案，见[扩展方式统一设计提案](docs/extension-design.zh-CN.md)。
+具名业务参数、任务入口、消费者注册和包依赖规则，见[扩展约定](docs/extension-design.zh-CN.md)。
 
-提交变更前，执行 `pnpm install`、`pnpm test`、`pnpm check-types`、`pnpm build` 和 `pnpm exec biome check .`。依赖变更应限定在实际使用它的包中；提交标题使用简洁的 Conventional Commits 格式。
+提交变更前，执行 `pnpm install`、`pnpm test`、`pnpm check-types`、`pnpm build`、`pnpm check:boundaries` 和 `pnpm exec biome check .`。依赖变更应限定在实际使用它的包中；提交标题使用简洁的 Conventional Commits 格式。
 
 ## 验证
 
-CI 会运行代码规范检查、离线测试、类型检查、构建、真实服务集成测试、Playwright，以及独立的生产 Compose 冒烟测试。
+CI 会运行代码规范及包依赖检查、离线测试、类型检查、构建、真实服务集成测试、Playwright，以及独立的生产 Compose 冒烟测试。
 
 运行集成测试或浏览器测试前，将 `TEST_DATABASE_URL` 和 `TEST_REDIS_URL` 指向**专用、可随时丢弃的测试服务**，然后执行：
 

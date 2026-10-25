@@ -43,6 +43,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm env:init
       - run: pnpm exec biome check .
+      - run: pnpm check:boundaries
       - run: pnpm test
       - run: pnpm check-types
       - run: pnpm build
