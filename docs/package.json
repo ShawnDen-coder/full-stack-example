@@ -1,0 +1,30 @@
+{
+	"name": "@full-stack-example/docs",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"generate": "tsx scripts/generate.ts",
+		"dev:site": "pnpm generate && rspress dev --host 127.0.0.1",
+		"build:site": "pnpm generate && rspress build && node scripts/check-build.mjs",
+		"preview:site": "rspress preview --host 127.0.0.1",
+		"check-types": "tsc --noEmit",
+		"test": "node --test scripts/*.test.mjs"
+	},
+	"dependencies": {
+		"@full-stack-example/api": "workspace:*",
+		"@orpc/openapi": "catalog:",
+		"@orpc/zod": "catalog:",
+		"@rspress/core": "2.0.23",
+		"@rspress/plugin-typedoc": "2.0.23",
+		"@scalar/api-reference-react": "^0.9.0",
+		"react": "^19.2.8",
+		"react-dom": "^19.2.8",
+		"rspress-plugin-mermaid": "1.0.3"
+	},
+	"devDependencies": {
+		"@types/react": "^19.2.18",
+		"@types/react-dom": "^19.2.3",
+		"tsx": "^4.20.6",
+		"typescript": "catalog:"
+	}
+}

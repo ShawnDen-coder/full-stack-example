@@ -1,0 +1,131 @@
+html:root {
+	--rp-c-brand: #245c4a;
+	--rp-c-brand-light: #31785f;
+	--rp-c-brand-dark: #194b3c;
+	--rp-c-brand-tint: #eef4f1;
+	--rp-c-bg: #ffffff;
+	--rp-c-bg-soft: #f6f7f7;
+	--rp-c-bg-mute: #eff1f1;
+	--rp-c-text-1: #222a28;
+	--rp-c-text-2: #56615c;
+	--rp-sidebar-width: 256px;
+	--rp-content-max-width: 960px;
+	--rp-content-padding-x: 56px;
+	--rp-content-padding-y: 32px;
+	--rp-code-block-border: 0;
+	--rp-code-block-bg: var(--rp-c-bg-soft);
+	--rp-code-block-shadow: none;
+	--rp-radius: 6px;
+	--rp-font-family-base:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif;
+}
+
+html.rp-dark {
+	--rp-c-brand: #9bc9b3;
+	--rp-c-brand-light: #b0d7c4;
+	--rp-c-brand-dark: #86b69e;
+	--rp-c-brand-tint: #202e27;
+	--rp-c-bg: #171b19;
+	--rp-c-bg-soft: #1e2420;
+	--rp-c-bg-mute: #262e28;
+	--rp-c-text-1: #e7ece8;
+	--rp-c-text-2: #b3bdb6;
+	--rp-code-block-border: 0;
+	--rp-code-block-bg: var(--rp-c-bg-soft);
+}
+
+.rp-doc-layout__outline-placeholder {
+	display: none;
+}
+
+html .rp-sidebar-item.rp-sidebar-item--active {
+	color: var(--rp-c-text-1);
+	background: var(--rp-c-bg-mute);
+}
+
+.rp-sidebar-item--group-item::before,
+.rp-sidebar-item--group-item.rp-sidebar-item--active
+	.rp-sidebar-item__left::before {
+	display: none;
+}
+
+.rp-doc {
+	font-size: 16px;
+	line-height: 1.75;
+}
+
+.rp-doc h1.rp-toc-include {
+	font-size: 32px;
+	font-weight: 600;
+	letter-spacing: -0.025em;
+}
+
+.rp-doc h2.rp-toc-include {
+	margin-top: 40px;
+	padding-top: 0;
+	border: 0;
+	font-size: 23px;
+}
+
+.rp-doc h2.rp-toc-include:first-of-type::before {
+	display: none;
+}
+
+.rp-doc h3.rp-toc-include {
+	font-size: 19px;
+}
+
+.rp-table-scroll-container > table {
+	display: table;
+	width: 100%;
+	font-size: 15px;
+	border: 0;
+	border-radius: 0;
+	border-collapse: collapse;
+}
+
+.rp-table-scroll-container > table thead {
+	background: transparent;
+}
+
+.rp-table-scroll-container > table th,
+.rp-table-scroll-container > table td {
+	background: transparent;
+	border: 0;
+	border-bottom: 1px solid var(--rp-c-divider);
+	padding: 12px 10px;
+	text-align: left;
+	min-width: 0;
+}
+
+.rp-table-scroll-container > table tr:nth-child(2n) {
+	background: transparent;
+}
+
+.rp-doc svg[aria-roledescription] {
+	background: #ffffff;
+}
+
+@media (max-width: 640px) {
+	html:root {
+		--rp-content-padding-x: 20px;
+		--rp-content-padding-y: 28px;
+	}
+	.rp-doc h1.rp-toc-include {
+		font-size: 28px;
+	}
+	.rp-table-scroll-container > table {
+		display: table;
+	}
+	.rp-table-scroll-container > table th,
+	.rp-table-scroll-container > table td {
+		padding: 10px 8px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html,
+	body {
+		scroll-behavior: auto;
+	}
+}

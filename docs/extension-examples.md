@@ -1,6 +1,6 @@
 # Module extension examples
 
-[English](extension-examples.md) · [简体中文](extension-examples.zh-CN.md) · [Development guide](development.md)
+[English](extension-examples.md) · [简体中文](extension-examples.zh-CN.md) · [Development guide](development.md) · [Project overview](../README.md)
 
 These are implementation walkthroughs built from the current Todo and profile-job
 code. The proposed operations below are not already available. Apply each case

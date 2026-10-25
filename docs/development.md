@@ -1,8 +1,8 @@
 # Development guide
 
-[English](development.md) · [简体中文](development.zh-CN.md)
+[English](development.md) · [简体中文](development.zh-CN.md) · [Project overview](../README.md)
 
-[Back to README](../README.md)
+This page covers runtime architecture and application wiring. Follow [extension examples](extension-examples.md) for changes, [operations](operations.md) for deployment and recovery, and [contributing](../CONTRIBUTING.md) for checks and releases.
 
 ## Architecture overview
 
@@ -38,7 +38,7 @@ The web app runs in the browser. In production, Nginx serves the SPA and proxies
 requests to Server; this proxy and TLS termination are omitted from the view.
 Server and Worker each own their database connections and service instances.
 Server produces jobs; Worker consumes them without calling the API. OTLP export is
-optional and never a readiness dependency. See [runtime and logs](#runtime-and-logs)
+optional and never a readiness dependency. See [runtime and logs](operations.md#runtime-and-logs)
 for the separate database and queue readiness checks.
 
 ### Authenticated Todo request
@@ -111,18 +111,18 @@ for explicit consumer registration.
 
 ## Package extension guides
 
-Start with the package that owns the change. Its guide covers code entry points,
-public exports, extension steps and focused checks:
-[API](../packages/api/README.md), [business](../packages/business/README.md),
-[database](../packages/db/README.md), [queue](../packages/queue/README.md),
-[observability](../packages/observability/README.md), [UI](../packages/ui/README.md).
+Choose the package that owns the change, then read its entry points, extension steps, and checks:
 
-For concrete changes, start with the [module extension examples](extension-examples.md):
-rename a Todo across business/API/web, or add a separately registered background
-job. Each package guide also includes a focused extension example and checks.
+| Package | Responsibility |
+| --- | --- |
+| [API](../packages/api/README.md) | HTTP, authentication, and oRPC procedures |
+| [Business](../packages/business/README.md) | Services, scoped repositories, and business-owned jobs |
+| [DB](../packages/db/README.md) | Database factory, schema, migrations, and runtime grants |
+| [Queue](../packages/queue/README.md) | Generic BullMQ connections and telemetry |
+| [Observability](../packages/observability/README.md) | Logs, traces, metrics, and deadlines |
+| [UI](../packages/ui/README.md) | Shared primitives and styles |
 
-The [extension contract](extension-design.md) describes named business inputs,
-task-specific exports, the multiple-consumer lifecycle and CI dependency rules.
+Follow [extension examples](extension-examples.md) for cross-package changes. The [extension contract](extension-design.md) defines named inputs, task exports, consumer lifecycle, and dependency rules. Shared TypeScript settings live in root `tsconfig.base.json`; each feature does not need its own package.
 
 ## Application extension entry points
 
@@ -172,27 +172,33 @@ The Vite integration and Node server bootstrap load Varlock. Node deployments in
 
 Run standalone Node tools that use Varlock from the owning app directory so they load that app's schema and env files. `env:generate` only generates TypeScript files; it does not initialize environment values in a subsequent command.
 
+`pnpm env:init` creates development values for Web/API on 3001/3000 and PostgreSQL/Redis on 5432/6379, generates a random auth secret, and prints only filenames. Existing files are preserved; edit local values or supply process overrides. The default local database and Compose project are named `full-stack-example`. When renaming the project, update `DATABASE_URL` in existing server/worker value files; migrate data before changing Compose project or volume names.
+
+`REDIS_URL` defaults to `redis://localhost:6379`; containers use `redis://redis:6379`, with Redis persistence and `noeviction`. Worker uses the same database and Redis as API, with its own `.env.schema` and no Better Auth secret.
+
 ## Better Auth Schema Generation
 
 After changing auth plugins or schema options, run `pnpm run auth:generate` from the project root. The script runs the Better Auth CLI through `varlock run` from the owning app directory, loading the auth instance from `src/auth-schema.ts`. Review the schema changes, then use your ORM's migration workflow to apply them.
 
 ## Application composition
 
-The integration follows the explicit factory and dependency injection pattern in
-[claude-vps](https://github.com/grmkris/claude-vps/tree/d972236):
+Applications use explicit factories and dependency injection. Processes own creation and cleanup; importing modules starts neither connections nor consumption.
 
-- `apps/server/src/index.ts` owns process startup and shutdown. It creates the API runtime and serves the Hono application; it never starts consumers.
-- `apps/worker/src/index.ts` starts a separate Node.js consumer process. `apps/worker/src/runtime.ts` creates its database and users service, checks readiness, then starts the user-profile worker.
-- `apps/server/src/services.ts` creates the database, Better Auth, queue client, users service and Todo service once per process. Importing it does not start connections or workers.
-- `packages/api/src/create-api.ts` exports `createApi(...)`, which accepts initialized dependencies. It mounts Better Auth at `/api/auth/*`, oRPC at `/rpc`, OpenAPI at `/api-reference`, and health at `/health` and dependency readiness at `/ready`. Health and unmatched URLs do not resolve sessions.
-- `packages/api/src/context.ts` resolves the incoming session and provides services to procedures. `protectedProcedure` requires authentication before calling business services.
-- `packages/business/src/users` reads a user profile through an injected database. `packages/business/src/todos` owns the Todo service; both HTTP routers delegate to injected services. `packages/business/src/users/jobs` owns contracts, producer configuration, retention, retries and ownership checks. `packages/queue` only owns generic connections and BullMQ telemetry. Worker factories live under `packages/business/src/users/jobs` and reuse the same service factory as HTTP requests, with separate instances and connections per process.
+| Entry point | Responsibility |
+| --- | --- |
+| `apps/server/src/index.ts` | Serve Hono over HTTP and own API process shutdown |
+| `apps/server/src/services.ts` | Create the database, Better Auth, queue client, and business services |
+| `apps/worker/src/runtime.ts` | Create independent database/services and explicitly register and start consumers |
+| `packages/api/src/create-api.ts` | Accept initialized dependencies and return the Hono application |
+| `packages/api/src/context.ts` | Resolve sessions and provide business services to procedures |
 
-The Todo API requires authentication and scopes every operation to the session user.
-The users API is authenticated and
-always derives the user ID from the session; it exposes no user-list or arbitrary-user lookup endpoint.
+Hono handles routing, CORS, request logs, and HTTP errors; oRPC Fetch adapters own business procedures, and Better Auth uses its Fetch handler. Server listens through `@hono/node-server` on Node.js. CORS covers auth, RPC, API reference, health, and preflight requests.
 
-Authenticated clients can exercise the complete service/queue path using the existing typed oRPC client:
+`createApi` mounts `/api/auth/*`, `/rpc`, `/api-reference`, and health routes. Liveness checks and unmatched URLs do not resolve sessions. Better Auth receives an explicit database and config; its URL/environment cookie defaults support local HTTP and production HTTPS. Auth schema generation initializes only database/auth.
+
+Todo and users procedures require authentication and derive user IDs from the session. Business logic is called through `context.services`; API and Worker reuse service factories with independent instances per process.
+
+Authenticated clients can call:
 
 ```ts
 const profile = await client.users.me();
@@ -200,85 +206,9 @@ const job = await client.users.enqueueProfileRead();
 const status = await client.users.getProfileReadJob({ id: job.id });
 ```
 
-The background task reads the current profile and returns only `id`, `name`, and
-`emailVerified` as a small example job. A caller can inspect only their own job;
-missing and foreign jobs both return `NOT_FOUND`. Results expire after one hour
-(or earlier when the completed-job count exceeds 1,000); failed jobs are retained
-for up to one day, capped at 1,000. Cleanup happens when subsequent jobs finish.
+The example job returns only `id`, `name`, and `emailVerified`. Inspect only your own jobs: `result` is `null` before completion or if the user no longer exists; missing or foreign jobs return `NOT_FOUND`. Completed jobs are retained for up to one hour / 1,000 entries; failed jobs for one day / 1,000 entries. Cleanup happens when later jobs finish. Poll with a deadline.
 
-`REDIS_URL` is declared in `apps/server/.env.schema` and defaults to
-`redis://localhost:6379` for host development. Docker Compose overrides it with
-`redis://redis:6379`, starts Redis with persistence and `noeviction`, and waits for
-PostgreSQL readiness before starting the server; only the Worker requires Redis readiness. Keep any Redis
-credentials in ignored local env overrides or your deployment secret provider.
-
-Better Auth receives an explicit database and configuration object. Cookie
-security follows Better Auth's URL/environment defaults so local HTTP development
-works without forcing cross-site secure cookies. Production should use HTTPS.
-The auth schema-generation entry point initializes only database/auth and never
-starts the queue, worker, or HTTP server.
-
-On `SIGINT` or `SIGTERM`, the API stops accepting requests and closes its queue
-and PostgreSQL pool. The independent worker stops consuming, drains active jobs,
-and then closes its own PostgreSQL pool. Workers use unlimited Redis request
-retries; HTTP producers use bounded request retries. The optional
-`msgpackr-extract` native build is disabled; its JavaScript fallback is used.
-
-To add another module, expose a factory, instantiate it in `createServices`, add
-its concrete service type to `Services`, and mount its oRPC router in
-`packages/api/src/routers/index.ts`. For background work, add a typed job contract
-and a worker factory in the owning business package, then register and close it
-in the worker runtime.
-
-## Independent worker
-
-API requests enqueue jobs in Redis; `apps/worker` consumes them using the shared
-queue name, task name and Zod payload schema. It calls the users service directly,
-without HTTP or browser sessions. The worker package does not depend on API or
-auth packages. Importing its runtime or the users worker factory does not start
-connections or consumption.
-
-For local development, set the worker's `DATABASE_URL` in an ignored
-`apps/worker/.env` (or provide it through the process environment). Use the same
-database and Redis as the API. The worker owns its `.env.schema` and does not
-require Better Auth secrets. Then run:
-
-```bash
-pnpm infra:up
-pnpm db:migrate
-pnpm dev
-```
-
-`pnpm dev` starts web, server and worker through the pnpm workspace. To restart
-or debug only the consumer, use `pnpm dev:worker`. Production runs the built
-entry with `pnpm start:worker`; Docker Compose includes a separate `worker`
-service with its own image and no published HTTP port.
-
-The runtime checks PostgreSQL, constructs every registered consumer with
-`autorun: false`, waits for all Redis connections, then starts their loops. `WORKER_STARTUP_TIMEOUT_MS`
-(default 10,000 ms) bounds each readiness phase. Failure before readiness rolls back all returned consumers and shared resources
-within the shutdown budget. Exit signals cancel startup waits. Startup never
-creates or resets any scheduler configuration.
-
-`WORKER_CONCURRENCY` defaults to 5 per consumer and accepts integers from 1 to 100.
-Total process concurrency is the sum across definitions; review pool/memory capacity. Shutdown
-is idempotent and waits for active jobs before closing the database.
-`WORKER_SHUTDOWN_TIMEOUT_MS` defaults to 30,000 ms; exceeding the deadline exits
-unsuccessfully, allowing BullMQ to recover stalled work. Compose gives the
-container 40 seconds to stop; increase both values for longer jobs. Business
-handlers must tolerate repeated execution because retries and process failures
-can cause a job to run again. The example task only reads data.
-
-This implements the process and lifecycle part of the referenced scheduling
-proposal. Schedule configuration, persistence, pause/resume and scheduler
-reconciliation are separate application features and are not implemented here.
-
-The HTTP application uses Hono with oRPC's Fetch adapters. Better Auth is
-mounted directly through its Fetch handler. `createApi()` returns an import-safe
-Hono application; `apps/server` starts it through `@hono/node-server`.
-Hono handles routing, CORS, request logs and HTTP errors, while oRPC owns business
-procedures. CORS covers auth, RPC, docs and health, including preflight requests.
-The runtime remains Node.js with pnpm; no Bun configuration or scripts are used.
+To add a Service, expose its factory in business, create it in `createServices`, add its type to API `Services`, and register its router. Job contracts and Worker factories belong to the owning business package; register consumers explicitly in `apps/worker/src/runtime.ts`. See [extension examples](extension-examples.md) for the steps and [Worker runtime limits](operations.md#worker-runtime-limits) for startup, retries, and shutdown budgets.
 
 ## Complete module example
 
@@ -309,81 +239,3 @@ context when identity changes; delayed RPC responses from an older identity are
 rejected. A `UNAUTHORIZED` response clears private state and returns to login with
 a validated relative return path. Mutations have a shared error notification,
 which a page-specific `onError` may override. Never retry writes automatically.
-
-## Runtime and logs
-
-Both processes own their clients and shutdown. The API waits for PostgreSQL before listening; Redis is an optional capability probed at `/ready/jobs`. `/health` means the process responds; `/ready` checks
-the database within two seconds and returns 503 during drain or failure.
-It does not resolve sessions. Readiness is a dependency probe, not a substitute
-for migration validation or worker-lag monitoring.
-
-Server startup defaults to 10 seconds; shutdown defaults to 30 seconds. Compose
-gives server and worker 40 seconds. Configure `DB_POOL_MAX` (default 10) per
-process and `DB_QUERY_TIMEOUT_MS` (default 10 seconds) for both client query and
-database statement deadlines. Budget total database connections across replicas.
-Worker startup/exit settings remain separate from query timeouts.
-
-Pino emits JSON to stdout with `service`, request ID, duration and status. HTTP
-responses expose `X-Request-ID`; queued jobs retain it and log their job ID on
-completion/failure. Driver exceptions are serialized with sanitized messages and
-stacks. Do not log request bodies, authentication headers, session objects,
-configuration objects or SQL bind values. Attach logs to your platform's collector
-and alert on repeated 503s, job failures and growing queue delay.
-
-## Production upgrades and recovery
-
-Load production configuration from `deploy/.env.schema` using Varlock. `pnpm
-docker:up` runs a fresh one-shot migration before replacing application containers.
-After the API is updated, it recreates the web container so Nginx resolves the
-current upstream address.
-Production Node images run as the `node` user and contain built application code
-plus production dependencies. No local value files are copied into image layers.
-
-Before a schema-changing release, create a PostgreSQL logical backup with
-`pg_dump -Fc` using your deployment-managed credentials, and store it outside the
-host. Test `pg_restore` into a new empty database. Preserve Redis AOF volumes for
-queued work, and remember handlers must tolerate repeated execution. Backups on
-the same machine or untested restores are insufficient.
-
-For an application rollback, redeploy the previously validated image versions
-only when they remain compatible with the current schema. There is no automatic
-destructive down-migration. For a database restore, stop producers and consumers,
-restore into a fresh database, verify schema and ownership, then start services
-against that database. Reconcile queued jobs before resuming consumers. Never use
-`docker compose down -v` as part of a production update.
-
-## Quality checks
-
-GitHub Actions verifies Node 24 with pnpm 11.0.9 and the committed lockfile.
-Offline tests cover HTTP boundaries, readiness, sanitized logs and worker
-lifecycle. Integration tests use real PostgreSQL/Redis, committed migrations,
-Better Auth, job retries, connection termination and SIGTERM. Playwright covers
-account switching (including delayed responses), failed writes and expired
-sessions. The production smoke test exercises the built Nginx/API/worker stack,
-secure cookies and a deep SPA route. Deployment guard tests ensure failed
-migrations prevent subsequent application replacement.
-
-Husky runs lint-staged on staged files and Cocogitto on commit messages. See the
-[versioning guide](../README.md#versioning) for CLI installation and unified
-application releases. CI is authoritative; local hooks do not replace it.
-Keep `.node-version`, Node type definitions and Docker runtimes
-aligned. Dependency upgrades, especially Drizzle RC changes, must pass the full
-pipeline; do not combine them with unrelated feature changes.
-
-## Workspace and production boundaries
-
-There are six shared packages: api, business, db, queue, observability and ui.
-Auth lives under api; users/Todo modules live under business; shared TypeScript
-configuration is at the repository root. A package is not required for each feature.
-`todo.setCompleted`, `users.enqueueProfileRead` and `users.getProfileReadJob` are
-the preferred API names; the old names remain compatibility aliases.
-
-Production uses three database URLs: owner-only `MIGRATION_DATABASE_URL`,
-`DATABASE_URL` for app_server and `WORKER_DATABASE_URL` for app_worker. A fresh
-provision task follows migration, before application replacement. Review the
-explicit table grants in `packages/db/src/provision.ts` when adding tables. The
-migration timeout defaults to 300 seconds and lock wait to 5 seconds, independently
-of request query deadlines. No legacy Todo ownership is guessed or deleted.
-
-See [observability operations](observability.md) for telemetry configuration and
-failure validation. Type checking generates routes without building Vite output.

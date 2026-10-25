@@ -28,7 +28,11 @@
 			"!**/.source",
 			"!**/convex/_generated",
 			"!**/test-results",
-			"!**/playwright-report"
+			"!**/playwright-report",
+			"!docs/content",
+			"!docs/doc_build",
+			"!docs/public/generated",
+			"!docs/.rspress"
 		]
 	},
 	"formatter": {

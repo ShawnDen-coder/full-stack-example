@@ -3,7 +3,8 @@
 	"private": true,
 	"workspaces": [
 		"apps/*",
-		"packages/*"
+		"packages/*",
+		"docs"
 	],
 	"type": "module",
 	"scripts": {
@@ -42,7 +43,10 @@
 		"check:boundaries": "node scripts/check-boundaries.mjs",
 		"check:commits": "cog check",
 		"release:preview": "cog bump --auto --dry-run",
-		"release": "cog bump --auto"
+		"release": "cog bump --auto",
+		"docs:dev": "pnpm --filter @full-stack-example/docs dev:site",
+		"docs:build": "pnpm --filter @full-stack-example/docs build:site",
+		"docs:preview": "pnpm --filter @full-stack-example/docs preview:site"
 	},
 	"dependencies": {
 		"zod": "catalog:"

@@ -1,6 +1,6 @@
 # Observability operations
 
-[简体中文](observability.zh-CN.md)
+[English](observability.md) · [简体中文](observability.zh-CN.md) · [Operations guide](operations.md)
 
 The Server and Worker emit Pino JSON to stdout. Route names, operation names,
 queue names and outcomes are bounded labels. Request/user/job IDs, raw URLs,

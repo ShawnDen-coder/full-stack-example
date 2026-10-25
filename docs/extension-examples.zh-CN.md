@@ -1,6 +1,6 @@
 # 模块扩展示例
 
-[English](extension-examples.md) · [简体中文](extension-examples.zh-CN.md) · [开发指南](development.zh-CN.md)
+[English](extension-examples.md) · [简体中文](extension-examples.zh-CN.md) · [开发指南](development.zh-CN.md) · [项目说明](../README.zh-CN.md)
 
 这些案例以当前 Todo 和资料任务代码为基础，说明如何完成一次扩展；下文的新操作尚未实现。每个案例需要配套修改，代码片段会说明具体插入位置。除非另有说明，命令均在仓库根目录执行。
 

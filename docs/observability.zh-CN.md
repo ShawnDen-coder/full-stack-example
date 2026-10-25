@@ -1,6 +1,6 @@
 # 可观测性运维
 
-[English](observability.md)
+[English](observability.md) · [简体中文](observability.zh-CN.md) · [运维指南](operations.zh-CN.md)
 
 Server 和 Worker 使用 Pino 向 stdout 输出 JSON。平台已有的日志采集器负责收集；应用通过 OTLP/HTTP 导出 traces 和 metrics。Collector 与 exporter 均不参与业务 readiness。
 
