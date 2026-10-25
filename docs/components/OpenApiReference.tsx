@@ -19,6 +19,7 @@ export function OpenApiReference() {
 				<ApiReferenceReact
 					configuration={{
 						url,
+						withDefaultFonts: false,
 						darkMode,
 						showDeveloperTools: "never",
 						showSidebar: false,

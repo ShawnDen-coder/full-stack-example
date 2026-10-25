@@ -46,7 +46,12 @@ export default defineConfig({
 		],
 	},
 	plugins: [
-		mermaid({ mermaidConfig: { theme: "neutral" } }),
+		mermaid({
+			mermaidConfig: {
+				theme: "neutral",
+				fontFamily: '"JetBrains Mono", "Sarasa Term SC", monospace',
+			},
+		}),
 		pluginTypeDoc({
 			entryPoints: [
 				"packages/api/src/routers/index.ts",
