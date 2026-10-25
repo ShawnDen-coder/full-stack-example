@@ -1,0 +1,50 @@
+# @my-better-t-app/api
+
+[English](README.md) · [简体中文](README.zh-CN.md) · [Project](../../README.md)
+
+HTTP and authentication boundaries for the server: Hono composition, Better Auth,
+oRPC input validation, session resolution and transport error mapping.
+
+## Entry points
+
+| File | Responsibility |
+| --- | --- |
+| [src/create-api.ts](src/create-api.ts) | Build the Hono app from injected dependencies; HTTP middleware and health routes |
+| [src/context.ts](src/context.ts) | `Services`, session, request ID and request logger |
+| [src/procedures.ts](src/procedures.ts) | Public and authenticated procedure builders |
+| [src/routers/todo.ts](src/routers/todo.ts) | Reference for validated, owner-scoped CRUD |
+| [src/routers/index.ts](src/routers/index.ts) | Router registration and inferred client types |
+| [src/auth.ts](src/auth.ts) | Better Auth factory |
+
+## Extend
+
+1. Implement the operation in [business](../business/README.md). Add its concrete
+   service type to `Services`; instantiate it in
+   [server services](../../apps/server/src/services.ts) and pass it through `createApi`.
+2. Add a router under `src/routers`. Validate payloads with Zod and call
+   `context.services`; use `protectedProcedure` for private data and derive the
+   owner from `context.session.user.id`.
+3. Map missing and foreign resources to the same `NOT_FOUND`. Translate known
+   domain failures to stable RPC errors, without returning driver error details.
+4. Register the router in `src/routers/index.ts`. Prefer explicit operation names
+   such as `setCompleted`; preserve aliases when existing clients require them.
+5. Keep dependency creation, listening and shutdown in the application. Add a
+   [package export](package.json) only when another package needs a new entry point.
+
+Auth plugin/schema changes start in `src/auth.ts`; follow
+[auth schema generation](../../docs/development.md#better-auth-schema-generation),
+then the [database migration workflow](../db/README.md).
+
+## Verify
+
+Run from the workspace root:
+
+```bash
+pnpm --filter @my-better-t-app/api check-types
+pnpm --filter server test
+```
+
+For auth, database or queue behavior, also run `pnpm test:integration` against
+dedicated test services. Update web callers and run `pnpm check-types` when the
+API contract changes. This package does not start Worker consumers or expose a
+raw database through the RPC context.

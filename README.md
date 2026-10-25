@@ -4,7 +4,7 @@
 
 A TypeScript full-stack example with authenticated personal todos, user profiles, and background jobs running in a separate worker process.
 
-Built with [Better T Stack](https://github.com/AmanVarshney01/create-better-t-stack): React and TanStack Router on the frontend, Hono and oRPC on Node.js, Better Auth, Drizzle/PostgreSQL, and BullMQ/Redis. Shared UI components use shadcn/ui and Tailwind CSS.
+Originally scaffolded with [Better T Stack](https://github.com/AmanVarshney01/create-better-t-stack). The stack uses React and TanStack Router on the frontend, Hono and oRPC on Node.js, Better Auth, Drizzle/PostgreSQL, and BullMQ/Redis. Shared UI components use shadcn/ui and Tailwind CSS.
 
 ## Try it locally
 
@@ -18,7 +18,7 @@ const job = await client.users.enqueueProfileRead();
 const status = await client.users.getProfileReadJob({ id: job.id });
 ```
 
-The worker reads the profile and returns `id`, `name`, and `emailVerified`. Only the submitting user can inspect the job. Poll `profileJob` until it completes; results are retained for a limited time.
+The worker reads the profile and returns `id`, `name`, and `emailVerified`. Only the submitting user can inspect the job. Poll `getProfileReadJob` until it completes; results are retained for a limited time.
 
 ## Setup
 
@@ -120,18 +120,22 @@ backup, recovery, logging and validation procedures.
 
 ## Development
 
-| Location | Responsibility |
-| --- | --- |
-| `apps/web` | React frontend and file-based routes |
-| `apps/server` | Hono API process; produces jobs |
-| `apps/worker` | Independent BullMQ consumer and lifecycle |
-| `packages/api` | oRPC procedures and Better Auth factory |
-| `packages/business`, `packages/queue` | Business services, worker factory and typed queue contracts |
-| `packages/observability` | Structured, redacted logging and lifecycle deadlines |
-| `packages/db` | PostgreSQL schema and Drizzle configuration |
-| `packages/ui`, root `tsconfig.base.json` | Shared components, styles, and TypeScript configuration |
+| Location | Responsibility | Extension guide |
+| --- | --- | --- |
+| `apps/web` | React frontend and file-based routes | [Application wiring](docs/development.md#application-extension-entry-points) |
+| `apps/server` | Hono API process; produces jobs | [Application wiring](docs/development.md#application-extension-entry-points) |
+| `apps/worker` | Independent BullMQ consumer and lifecycle | [Application wiring](docs/development.md#application-extension-entry-points) |
+| `packages/api` | HTTP/auth boundaries and oRPC procedures | [API](packages/api/README.md) |
+| `packages/business` | Services, scoped repositories and business-owned jobs | [Business](packages/business/README.md) |
+| `packages/db` | Database factory, schema, migrations and runtime grants | [Database](packages/db/README.md) |
+| `packages/queue` | Generic BullMQ connections and telemetry adapter | [Queue](packages/queue/README.md) |
+| `packages/observability` | Structured logs, traces, metrics and deadlines | [Observability](packages/observability/README.md) |
+| `packages/ui` | Shared components and styles | [UI](packages/ui/README.md) |
 
-See the [development guide](docs/development.md) for UI customization, environment generation, auth schema generation, dependency injection, worker lifecycle, and adding modules. Generator choices are recorded in [bts.jsonc](bts.jsonc); all commands are defined in [package.json](package.json).
+The [development guide](docs/development.md) covers application wiring and operations;
+each package guide lists its entry points, extension steps, boundaries and checks.
+Root `tsconfig.base.json` owns shared TypeScript settings. Package manifests and
+application configuration define the current stack; commands live in [package.json](package.json).
 
 Before contributing, run `pnpm install`, `pnpm test`, `pnpm check-types`, `pnpm build`, and `pnpm exec biome check .`. Keep dependency changes scoped to the owning package and use concise conventional commit subjects.
 

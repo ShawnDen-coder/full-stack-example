@@ -4,6 +4,20 @@
 
 [返回 README](../README.zh-CN.md)
 
+## 包扩展指引
+
+先确定改动归属，再阅读对应指引中的代码入口、公共导出、扩展步骤和验证命令：[API](../packages/api/README.zh-CN.md)、[业务](../packages/business/README.zh-CN.md)、[数据库](../packages/db/README.zh-CN.md)、[队列](../packages/queue/README.zh-CN.md)、[可观测性](../packages/observability/README.zh-CN.md)、[UI](../packages/ui/README.zh-CN.md)。
+
+## 应用扩展入口
+
+| 应用 | 修改入口 | 需要同步处理 |
+| --- | --- | --- |
+| `apps/web` | `src/routes` 路由、应用专用组件和 `src/utils/orpc.ts` | 受保护页面放在 `_auth` 下，用户数据 query key 包含身份；保留加载、错误和空状态。`pnpm check-types` 会生成路由类型。 |
+| `apps/server` | `src/services.ts` 组装依赖，`src/runtime.ts` / `src/index.ts` 管理进程 | 将新服务接入 API 的 `Services` 类型；为进程拥有的资源补齐就绪检查和关闭逻辑。消费者仍由 Worker 进程启动。 |
+| `apps/worker` | `src/runtime.ts` 显式组装资源和消费者，`src/index.ts` 管理健康和退出 | 当前运行时只有一个 profile 消费者。增加消费者时要扩展工厂／资源类型，并汇总消费者的就绪、运行失败和 drain；仅新增 import 不会完成注册。 |
+
+应用配置写入各自的 `.env.schema`，通过 `pnpm env:generate` 重新生成类型。当前直接维护运行配置和包清单，不通过脚手架 CLI 修改技术栈。
+
 ## UI 定制
 
 本项目的 React 前端通过 `packages/ui` 共享 shadcn/ui 基础组件。

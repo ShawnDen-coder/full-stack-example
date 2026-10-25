@@ -4,7 +4,7 @@
 
 一个 TypeScript 全栈示例，提供需要登录的个人待办、用户资料，以及由独立 worker 进程执行的后台任务。
 
-项目由 [Better T Stack](https://github.com/AmanVarshney01/create-better-t-stack) 生成：前端使用 React 和 TanStack Router；后端在 Node.js 上运行 Hono 和 oRPC，搭配 Better Auth、Drizzle/PostgreSQL 与 BullMQ/Redis。共享 UI 组件使用 shadcn/ui 和 Tailwind CSS。
+项目最初由 [Better T Stack](https://github.com/AmanVarshney01/create-better-t-stack) 生成。前端使用 React 和 TanStack Router；后端在 Node.js 上运行 Hono 和 oRPC，搭配 Better Auth、Drizzle/PostgreSQL 与 BullMQ/Redis。共享 UI 组件使用 shadcn/ui 和 Tailwind CSS。
 
 ## 本地体验
 
@@ -18,7 +18,7 @@ const job = await client.users.enqueueProfileRead();
 const status = await client.users.getProfileReadJob({ id: job.id });
 ```
 
-worker 会读取用户资料，返回 `id`、`name` 和 `emailVerified`。只有任务提交者可以查询该任务。轮询 `profileJob` 直到任务完成；结果仅保留一段时间。
+worker 会读取用户资料，返回 `id`、`name` 和 `emailVerified`。只有任务提交者可以查询该任务。轮询 `getProfileReadJob` 直到任务完成；结果仅保留一段时间。
 
 ## 安装与配置
 
@@ -92,18 +92,19 @@ pnpm docker:down
 
 ## 开发
 
-| 路径 | 职责 |
-| --- | --- |
-| `apps/web` | React 前端和文件路由 |
-| `apps/server` | Hono API 进程，负责生产队列任务 |
-| `apps/worker` | 独立 BullMQ 消费者及其生命周期管理 |
-| `packages/api` | oRPC 过程和 Better Auth 工厂 |
-| `packages/business`, `packages/queue` | 业务服务、worker 工厂和类型化队列契约 |
-| `packages/observability` | 结构化日志、敏感信息脱敏和生命周期超时控制 |
-| `packages/db` | PostgreSQL 数据库结构和 Drizzle 配置 |
-| `packages/ui`, 根目录 `tsconfig.base.json` | 共享组件、样式和 TypeScript 配置 |
+| 路径 | 职责 | 扩展指引 |
+| --- | --- | --- |
+| `apps/web` | React 前端和文件路由 | [应用接线](docs/development.zh-CN.md#应用扩展入口) |
+| `apps/server` | Hono API 进程，负责生产队列任务 | [应用接线](docs/development.zh-CN.md#应用扩展入口) |
+| `apps/worker` | 独立 BullMQ 消费者及其生命周期管理 | [应用接线](docs/development.zh-CN.md#应用扩展入口) |
+| `packages/api` | HTTP／认证边界和 oRPC 过程 | [API](packages/api/README.zh-CN.md) |
+| `packages/business` | 业务服务、Scoped Repository 和所属业务的任务 | [业务](packages/business/README.zh-CN.md) |
+| `packages/db` | 数据库工厂、表结构、迁移和运行角色授权 | [数据库](packages/db/README.zh-CN.md) |
+| `packages/queue` | 通用 BullMQ 连接和 telemetry 适配器 | [队列](packages/queue/README.zh-CN.md) |
+| `packages/observability` | 结构化日志、trace、指标和超时控制 | [可观测性](packages/observability/README.zh-CN.md) |
+| `packages/ui` | 共享组件和样式 | [UI](packages/ui/README.zh-CN.md) |
 
-UI 定制、环境类型生成、认证表结构生成、依赖注入、worker 生命周期和新增模块的方法见[开发指南](docs/development.zh-CN.md)。生成器选项记录在 [bts.jsonc](bts.jsonc)，所有命令定义见 [package.json](package.json)。
+[开发指南](docs/development.zh-CN.md) 说明应用接线和运维流程；各包指引列出代码入口、扩展步骤、职责边界和验证命令。共享 TypeScript 配置位于根目录 `tsconfig.base.json`。当前技术栈以各包清单和应用配置为准，命令定义见 [package.json](package.json)。
 
 提交变更前，执行 `pnpm install`、`pnpm test`、`pnpm check-types`、`pnpm build` 和 `pnpm exec biome check .`。依赖变更应限定在实际使用它的包中；提交标题使用简洁的 Conventional Commits 格式。
 
