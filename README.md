@@ -137,6 +137,9 @@ each package guide lists its entry points, extension steps, boundaries and check
 Root `tsconfig.base.json` owns shared TypeScript settings. Package manifests and
 application configuration define the current stack; commands live in [package.json](package.json).
 
+See the proposed [unified extension design](docs/extension-design.md) for the next
+iteration of business interfaces and multiple-consumer composition.
+
 Before contributing, run `pnpm install`, `pnpm test`, `pnpm check-types`, `pnpm build`, and `pnpm exec biome check .`. Keep dependency changes scoped to the owning package and use concise conventional commit subjects.
 
 ## Validation

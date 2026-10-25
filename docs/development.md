@@ -12,6 +12,10 @@ public exports, extension steps and focused checks:
 [database](../packages/db/README.md), [queue](../packages/queue/README.md),
 [observability](../packages/observability/README.md), [UI](../packages/ui/README.md).
 
+The [unified extension design](extension-design.md) proposes named business inputs,
+task-specific exports and a shared multiple-consumer lifecycle. It is a proposal;
+the guides above describe the current implementation.
+
 ## Application extension entry points
 
 | Application | Where to extend | What must stay coordinated |

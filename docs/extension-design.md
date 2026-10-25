@@ -1,0 +1,284 @@
+# Unified extension design
+
+[English](extension-design.md) · [简体中文](extension-design.zh-CN.md) · [Development guide](development.md)
+
+Status: proposal. This document defines target interfaces and rollout steps;
+runtime code has not changed. Package READMEs and actual exports still describe
+the current implementation.
+
+## Goals and scope
+
+Extend regular features through business implementation, application injection
+and API routing. Extend background work through business-owned task implementation
+and explicit consumer registration. Lifecycle algorithms are shared across consumers.
+
+Keep the six shared packages. Standardize comparable factories and business calls
+while retaining database, UI and infrastructure-specific interfaces. Preserve HTTP
+payloads/results and compatibility aliases, Redis queue/task names, retry/retention
+policies and database schema. No database migration or queue recreation is required.
+
+## Ownership and composition
+
+| Location | Owns | Extension work |
+| --- | --- | --- |
+| [business](../packages/business/README.md) | Services, scoped repositories, task contract/client/processor/Worker factories | Feature code and required public subpaths |
+| [API context](../packages/api/src/context.ts) and routers | Service capabilities, identity, input validation and RPC errors | Inject operations and mount routers |
+| [server services](../apps/server/src/services.ts) | Database and task client creation/ownership | Wire capabilities, readiness and cleanup |
+| [Worker runtime](../apps/worker/src/runtime.ts) | Consumer protocol, explicit definitions, composition and lifecycle | One definition per new consumer; resource composition changes only for new dependencies |
+| [Worker entry](../apps/worker/src/index.ts) and heartbeat | Signals, fatal failures, process exit, heartbeat removal and final deadline | One process-level exit path |
+| db/queue/observability/ui | Their infrastructure or shared capabilities | Changes only when the capability itself changes |
+
+The consumer protocol belongs to the application runtime. Business factories keep
+returning native BullMQ Workers that structurally satisfy it, without importing
+application types. Queue remains generic connection/telemetry infrastructure.
+
+## Factories and business operations
+
+Business Service, Repository and task factories take one named dependency object.
+Infrastructure interfaces such as `createDb(config, options)` and `createLogger(...)`
+can retain their existing conventions.
+
+Target usage:
+
+```ts
+const service = createTodosService({ db });
+const repository = createTodosRepository({ db: tx });
+const owned = repository.forUser(userId);
+
+await service.list({ userId, cursor, limit });
+await service.create({ userId, text });
+await service.setCompleted({ userId, id, completed });
+await service.delete({ userId, id });
+
+await owned.list({ cursor, limit });
+await owned.setCompleted({ id, completed });
+await owned.delete(id);
+
+await profileJobs.enqueueProfileRead({ userId, requestId });
+await profileJobs.getProfileReadJob({ userId, jobId });
+```
+
+- Multiple business fields use an object. Single identifiers can stay primitive:
+  `forUser(userId)`, `getProfile(userId)` and scoped `delete(id)`.
+- Repositories accept the query-method shape of a database or transaction,
+  without requiring a pool or `close()`. Use cases own transaction boundaries.
+- Owners come from authenticated sessions or validated task contexts. Inserts
+  assign ownership explicitly rather than spreading arbitrary input into SQL.
+- Scopes are independent closures; business methods return data, not builders.
+- Services retain decisions, pagination and `observeOperation`. Small queries
+  can remain in services without introducing a repository.
+- Resource owners retain `close()`; API context only exposes business methods.
+
+## Task names and public entry points
+
+Include the task name in public subpaths while keeping producer/consumer roles
+separate. Physical files stay under `users/jobs/profile-read.*.ts`.
+
+| Current export | Target export |
+| --- | --- |
+| `business/users/jobs/contract` | `business/users/jobs/profile-read/contract` |
+| `business/users/jobs/producer` | `business/users/jobs/profile-read/producer` |
+| `business/users/jobs/worker` | `business/users/jobs/profile-read/worker` |
+| `business/users/jobs/status` | Internal producer helper |
+
+All paths above use the `@my-better-t-app/` prefix. Factories share the task prefix:
+`createProfileReadClient`, `createProfileReadProcessor`, `createProfileReadWorker`.
+The client owns enqueue and owner-scoped status lookup; derive types from factories.
+
+Business is currently a private workspace package, so all callers can migrate in
+one change before removing old entries. If external consumers are discovered,
+retain re-export aliases for a defined transition window. HTTP compatibility
+aliases remain. Keep Redis queue `user-profile` and task `profile` unchanged so
+pending jobs continue to use the existing contract.
+
+## Explicit consumer registration
+
+These types live in Worker runtime. `WorkerServices` lists concrete process
+services; `WorkerResources` owns that collection, shared readiness and cleanup.
+
+```ts
+type Consumer = {
+  waitUntilReady(): Promise<unknown>;
+  run(): Promise<void>;
+  isRunning(): boolean;
+  readonly client: Promise<{
+    status: string;
+    get(key: string): Promise<string | null>;
+  }>;
+  close(force?: boolean): Promise<void>;
+};
+
+type ConsumerDefinition = {
+  name: string;
+  concurrency?: number;
+  create(options: {
+    redisUrl: string;
+    services: WorkerServices;
+    concurrency: number;
+    logger: Logger;
+  }): Consumer;
+};
+
+const consumerDefinitions = [
+  {
+    name: USER_PROFILE_QUEUE,
+    create: ({ redisUrl, services, concurrency, logger }) =>
+      createProfileReadWorker({
+        redisUrl,
+        usersService: services.usersService,
+        concurrency,
+        logger,
+      }),
+  },
+] satisfies readonly ConsumerDefinition[];
+```
+
+`WorkerFactories.consumerDefinitions` replaces the single `createWorker` injection
+point. Each synchronous factory returns a handle with error listeners installed.
+Business Worker factories hardcode `autorun: false` and stop exposing that switch
+to callers; runtime alone starts execution loops, while registrations only wire
+dependencies. Factories own rollback before returning a handle; runtime immediately
+records every returned handle for cleanup.
+
+Validate configuration, a nonempty registry, stable unique names, and default/
+override integer concurrency of 1–100 before resource allocation. Existing
+`WORKER_CONCURRENCY` remains the per-consumer default; total process concurrency
+is the sum across consumers. Review pool/memory capacity when adding consumers.
+Use stable queue names from business contracts, never instance or user IDs.
+
+## Multiple-consumer lifecycle
+
+Track internal `starting`, `running`, `closing`, `closed` and `failed` states to
+handle concurrent events consistently.
+
+| Phase | Shared behavior |
+| --- | --- |
+| Shared resources | Create database/services and check database readiness; do not create consumers on failure |
+| Consumer creation | Call factories sequentially, recording each returned handle; a later constructor failure still closes earlier handles |
+| Readiness barrier | Wait for all `waitUntilReady()` calls concurrently; do not run any consumer before all pass |
+| Execution | Start every loop and immediately observe each Promise before returning runtime |
+| Group readiness | Only while running: check the database once, then all consumers' running state, Redis state and bounded read probes concurrently; delete the heartbeat on any failure |
+| Graceful close | Enter closing synchronously and stop heartbeat; close consumers concurrently, then close shared database after all drains complete, then flush telemetry |
+| Startup rollback | Force-close every created consumer, collecting cleanup results with allSettled, then release shared resources; retain startup and cleanup failures |
+| Failed exit | A failed or timed-out graceful close enters forced nonzero process termination; never report successful draining |
+
+Preserve phase-based startup timeouts: one `WORKER_STARTUP_TIMEOUT_MS` for the
+database check and one shared deadline for all consumer readiness, independent of
+consumer count. Bound startup rollback with existing `WORKER_SHUTDOWN_TIMEOUT_MS`.
+Shutdown uses one process budget with the entry's hard-exit timer, not a full
+budget per consumer.
+
+Change startup to `startWorker({ config, factories, logger, signal })`, with
+optional test factories, logger and AbortSignal. The entry owns an AbortController:
+on exit signals, cancel startup progression before starting idempotent shutdown.
+Runtime checks cancellation at waits and creation/run boundaries. Cancellation
+interrupts readiness waits and rolls back owned resources; it does not claim to
+cancel driver I/O, and all pending Promises remain observed. Once running,
+`runtime.close()` owns shutdown. Expected startup cancellation during shutdown is
+not a new business failure; cleanup failure still produces a nonzero exit.
+
+BullMQ's [`close()` waits for active jobs and has no built-in timeout](https://docs.bullmq.io/guide/workers/graceful-shutdown).
+The normal path must drain every consumer before releasing their shared database.
+After close failure/timeout, active jobs may be interrupted: attempt connection
+aborts and terminate unsuccessfully, relying on retryable/idempotent work rather
+than treating disconnection as completion.
+
+`close()` caches and returns the same Promise. One failed close must not skip
+other close attempts. Never close the shared database in the background before
+all normal drains finish; if stopping cannot be confirmed, let forced process
+termination release resources. On cleanup errors, the entry must guarantee
+eventual nonzero termination, not merely set exitCode and clear its hard timer
+while connections remain open.
+
+`runtime.done` aggregates execution loops:
+
+- A rejection or unexpected normal completion while running is fatal, identifies
+  its stable consumer name, and triggers whole-process shutdown from the entry.
+- A normal job failure follows BullMQ retry policy and is not a loop failure.
+- Normal completion while closing is expected; rejections remain shutdown errors.
+- Observe each loop and the aggregate immediately, before the entry subscribes.
+  Collect every loop result during shutdown so later failures are not lost.
+
+Keep the existing heartbeat interface: a shared 2-second group probe, every
+5 seconds, with 15-second freshness. One unhealthy consumer invalidates group
+health. Fatal loop failures exit for deployment-managed restart; this proposal
+does not introduce per-consumer automatic restart inside the process.
+
+## Observability conventions
+
+- Preserve metric names, normalized HTTP routes and native BullMQ propagation;
+  avoid duplicate spans during structural changes.
+- Lifecycle logs carry stable consumer/phase fields. Job logs retain job ID,
+  request ID, attempt and outcome.
+- Any new consumer-state metrics use static registration names and bounded states,
+  never request/user/job IDs as labels.
+- Detach queue observers and await observations before closing their clients;
+  shut down the SDK after business resources. Exporters remain outside readiness.
+- Runtime enriches failures with identity; the process entry owns the final
+  exception log. Retain cleanup errors without logging the same exception at
+  every layer.
+
+## Dependency boundary checks
+
+Add `scripts/check-boundaries.mjs` and `pnpm check:boundaries` in the implementation
+phase, using the existing TypeScript parser without new dependencies. Check
+production src against this internal dependency policy:
+
+| Source | Allowed internal dependencies |
+| --- | --- |
+| apps/web | ui and type-only API client contracts |
+| apps/server | api, business, db, queue, observability |
+| apps/worker | business, db, queue, observability |
+| api | business, db, queue, observability |
+| business | db, queue, observability |
+| db | observability |
+| queue/observability/ui | No other internal packages |
+
+Inspect static imports/exports, literal dynamic imports and type imports. Resolve
+aliases and cross-directory relative paths, enforce public exports, and detect
+package cycles. Exclude fixtures/integration tests that legitimately cross app
+boundaries. Validate current production code before enabling CI, and cover
+allowed/forbidden edges, type-only imports, aliases and relative-path bypasses.
+
+## Rollout
+
+| Step | Deliverable | Completion criteria |
+| --- | --- | --- |
+| 1. Parameters/exports | Named business inputs, task-prefixed factories, new subpaths, caller/type updates | No old internal imports; HTTP/job contracts unchanged; type/business/API tests pass |
+| 2. Consumer runtime | Explicit definitions and shared startup/rollback/readiness/done/close, guaranteed failed exit | Same lifecycle scenarios with one and two consumers; preserve existing single-consumer behavior |
+| 3. Failure/production validation | Concurrent failure regressions and real-service/production package checks | Integration, E2E and production Compose pass; BullMQ patch remains effective |
+| 4. Boundaries/docs | CI dependency checks and updated current extension guides | Adding a comparable task does not change lifecycle algorithms; examples match implementation |
+
+Commit each step separately. Validate the second consumer with test doubles and
+dedicated test queues rather than adding a demonstration queue to production.
+
+Lifecycle test doubles should return controlled long-lived run Promises, settling
+on close or injected failure. Some current `async () => {}` doubles finish at once;
+update them for the new lifecycle semantics rather than allowing unexpected loop
+completion merely to preserve those fixtures.
+Integration tests calling business Worker factories directly must also start and
+observe run Promises explicitly, verifying construction never starts consumption.
+
+## Acceptance scenarios
+
+1. Invalid configuration, empty definitions or duplicate names allocate nothing.
+2. Database readiness gates construction; all Redis readiness gates every run.
+3. A later constructor failure, failed readiness or a stalled connection attempts
+   cleanup for every returned handle and fails startup within its budget.
+4. A loop rejection/unexpected completion rejects done, invalidates health and
+   starts closing other consumers.
+5. Concurrent loop failures retain the first failure's identity and collect later
+   errors without unhandled rejections.
+6. Job retries do not stop the process; enqueue, ownership and traces still work.
+7. Signals during startup, initial heartbeat or execution leave no healthy file;
+   repeated close calls return the same Promise.
+8. Two consumers drain concurrently; database stays available until both finish
+   and closes exactly once afterward.
+9. Failed close never skips other closes; hanging drain exceeds one global budget
+   and exits nonzero without claiming graceful completion.
+10. Rejections during close remain failures; expected normal loop completion does
+    not become a new execution failure.
+11. Collector outages leave operations/readiness functional; consumer metric
+    cardinality grows only with static definitions.
+12. Use dedicated PostgreSQL/Redis for integration/E2E, verify isolated production
+    packages and production Compose, and retain the BullMQ race regression checks.
