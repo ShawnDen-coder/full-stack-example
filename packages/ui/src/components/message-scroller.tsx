@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@my-better-t-app/ui/components/button";
-import { cn } from "@my-better-t-app/ui/lib/utils";
+import { Button } from "@full-stack-example/ui/components/button";
+import { cn } from "@full-stack-example/ui/lib/utils";
 import {
 	MessageScroller as MessageScrollerPrimitive,
 	useMessageScroller,

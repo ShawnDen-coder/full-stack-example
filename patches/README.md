@@ -13,4 +13,4 @@ while the queue's Redis handshake is still running. See the related
 The patch is registered in `pnpm-workspace.yaml` and hashed in `pnpm-lock.yaml`.
 Do not edit installed `node_modules` files. When upgrading BullMQ, remove this
 patch only after an equivalent upstream fix passes `pnpm --filter
-@my-better-t-app/queue test` and the PostgreSQL/Redis integration suite.
+@full-stack-example/queue test` and the PostgreSQL/Redis integration suite.

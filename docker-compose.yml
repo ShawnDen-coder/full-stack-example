@@ -1,4 +1,4 @@
-name: my-better-t-app
+name: full-stack-example
 
 services:
   web:
@@ -37,7 +37,7 @@ services:
     environment:
       REDIS_URL: redis://redis:6379
       CORS_ORIGIN: http://localhost:3001
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/my-better-t-app
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/full-stack-example
     healthcheck:
       test:
         [
@@ -66,7 +66,7 @@ services:
     environment:
       NODE_ENV: production
       REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/my-better-t-app
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/full-stack-example
     depends_on:
       postgres:
         condition: service_healthy
@@ -81,7 +81,7 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
-      - my-better-t-app_redis_data:/data
+      - full-stack-example_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -92,13 +92,13 @@ services:
   postgres:
     image: postgres:18
     environment:
-      POSTGRES_DB: my-better-t-app
+      POSTGRES_DB: full-stack-example
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - my-better-t-app_postgres_data:/var/lib/postgresql
+      - full-stack-example_postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -107,5 +107,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  my-better-t-app_redis_data:
-  my-better-t-app_postgres_data:
+  full-stack-example_redis_data:
+  full-stack-example_postgres_data:

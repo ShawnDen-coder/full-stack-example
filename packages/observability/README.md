@@ -1,4 +1,4 @@
-# @my-better-t-app/observability
+# @full-stack-example/observability
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [Project](../../README.md)
 
@@ -37,13 +37,53 @@ deadlines shared by the server, Worker and business services.
    `./telemetry` export. When adding external runtime vendors, review application
    dependency declarations and isolated production bundles.
 
+## Example: measure generated export size
+
+Suppose a future export feature needs CSV/JSON output-size measurements. Add this
+factory to [src/metrics.ts](src/metrics.ts), where `metrics` is already imported:
+
+```ts
+export function createExportMetrics() {
+  const size = metrics.getMeter("full-stack-example").createHistogram(
+    "exports.result.size",
+    { unit: "By" },
+  );
+  return {
+    recordBytes(format: "csv" | "json", bytes: number) {
+      size.record(bytes, { format });
+    },
+  };
+}
+```
+
+Add `createExportMetrics` to the existing `./metrics` re-export in `src/index.ts`.
+No new package subpath is necessary. This factory is an extension example, not
+an existing export. Create it in the owning service factory, then record after
+generating a document:
+
+```ts
+const exportMetrics = createExportMetrics();
+// Inside the export operation, after generating its CSV string:
+exportMetrics.recordBytes("csv", Buffer.byteLength(csv, "utf8"));
+```
+
+Only `format` is a metric attribute; do not add user IDs, filenames or job IDs.
+Let `observeOperation("exports.generate", work)` measure duration and errors
+around the business operation, rather than duplicating those measurements here.
+Keep SDK creation and shutdown in the application entry.
+
+Extend [telemetry tests](tests/telemetry.test.ts) using the existing in-memory
+metric reader: record 128 bytes, collect, and assert the histogram name, `By`
+unit, value and `format` attribute. Check disabled telemetry and exporter failure
+still allow document generation. No Collector or readiness dependency is added.
+
 ## Verify
 
 Run from the workspace root:
 
 ```bash
-pnpm --filter @my-better-t-app/observability test
-pnpm --filter @my-better-t-app/observability check-types
+pnpm --filter @full-stack-example/observability test
+pnpm --filter @full-stack-example/observability check-types
 ```
 
 Follow [observability operations](../../docs/observability.md) for Collector setup,

@@ -1,5 +1,5 @@
-import { createDb } from "@my-better-t-app/db";
-import { createLogger } from "@my-better-t-app/observability";
+import { createDb } from "@full-stack-example/db";
+import { createLogger } from "@full-stack-example/observability";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 const logger = createLogger("migrate");

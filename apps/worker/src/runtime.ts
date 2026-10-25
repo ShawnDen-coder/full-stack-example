@@ -1,15 +1,15 @@
 import {
 	createUsersService,
 	type UsersService,
-} from "@my-better-t-app/business/users";
-import { USER_PROFILE_QUEUE } from "@my-better-t-app/business/users/jobs/profile-read/contract";
-import { createProfileReadWorker } from "@my-better-t-app/business/users/jobs/profile-read/worker";
-import { createDb } from "@my-better-t-app/db";
+} from "@full-stack-example/business/users";
+import { USER_PROFILE_QUEUE } from "@full-stack-example/business/users/jobs/profile-read/contract";
+import { createProfileReadWorker } from "@full-stack-example/business/users/jobs/profile-read/worker";
+import { createDb } from "@full-stack-example/db";
 import {
 	createLogger,
 	type Logger,
 	withDeadline,
-} from "@my-better-t-app/observability";
+} from "@full-stack-example/observability";
 
 export type WorkerConfig = {
 	DATABASE_URL: string;

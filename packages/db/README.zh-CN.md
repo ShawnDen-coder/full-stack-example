@@ -1,4 +1,4 @@
-# @my-better-t-app/db
+# @full-stack-example/db
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [项目说明](../../README.zh-CN.md)
 
@@ -26,12 +26,39 @@
 5. 每次新增表或能力，都审查 `src/provision.ts`，只授予各进程实际需要的操作。新增 schema 不会自动获得运行角色权限，迁移凭据仅用于部署任务。
 6. 业务查询留在 [business](../business/README.zh-CN.md)。各应用创建和关闭自己的数据库实例；Repository 使用注入的数据库或事务，不拥有连接池。
 
+## 示例：为 Todo 增加可选截止时间
+
+当前 schema 尚无此字段。在 [src/schema/todo.ts](src/schema/todo.ts) 已有的 `drizzle-orm/pg-core` import 中增加 `timestamp`，再向现有表的字段对象中加入可空列：
+
+```ts
+dueAt: timestamp("due_at", { withTimezone: true, mode: "date" }),
+```
+
+保留已有的用户／ID 索引。如果新查询确实按用户和截止时间过滤或排序，再向现有索引数组追加：
+
+```ts
+index("todo_user_due_idx").on(table.userId, table.dueAt),
+```
+
+旧行获得 `NULL`，不猜测历史数据，也不直接增加 NOT NULL 约束。表已有导出，无需新增 `schema/index.ts` 导出或 package 子路径。需要向 API 返回截止时间时，再将 `dueAt` 加入 Repository 的显式投影，同步修改 Service／API 类型、日期校验和前端展示。如果新增的是一张表，还要增加 schema 导出，并审查 `src/provision.ts` 中的运行角色授权。
+
+初始化本地配置后，从根目录执行：
+
+```bash
+pnpm db:generate
+# 审查 packages/db/src/migrations 中新生成的 SQL 和 snapshot，再提交。
+pnpm db:migrate
+pnpm --filter @full-stack-example/db check-types
+```
+
+使用专用测试数据库，分别验证空库初始化和包含旧 Todo 的升级：旧行仍可读取且 `dueAt` 为 `null`，日期可正确写入和读取，其他用户的数据仍不可访问。索引应匹配实际查询计划，不要只为照抄示例而添加。
+
 ## 验证
 
 从工作区根目录执行：
 
 ```bash
-pnpm --filter @my-better-t-app/db check-types
+pnpm --filter @full-stack-example/db check-types
 pnpm test:integration
 ```
 

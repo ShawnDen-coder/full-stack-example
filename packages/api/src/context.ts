@@ -1,8 +1,8 @@
-import type { Auth, Session } from "@my-better-t-app/api/auth";
-import type { TodosService } from "@my-better-t-app/business/todos";
-import type { UsersService } from "@my-better-t-app/business/users";
-import type { ProfileReadClient } from "@my-better-t-app/business/users/jobs/profile-read/producer";
-import type { Logger } from "@my-better-t-app/observability";
+import type { Auth, Session } from "@full-stack-example/api/auth";
+import type { TodosService } from "@full-stack-example/business/todos";
+import type { UsersService } from "@full-stack-example/business/users";
+import type { ProfileReadClient } from "@full-stack-example/business/users/jobs/profile-read/producer";
+import type { Logger } from "@full-stack-example/observability";
 
 export type Services = {
 	usersService: UsersService;

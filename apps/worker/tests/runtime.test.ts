@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createLogger } from "@my-better-t-app/observability";
+import { createLogger } from "@full-stack-example/observability";
 import {
 	type Consumer,
 	startWorker,

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
 const base = process.env.SMOKE_BASE_URL || "http://127.0.0.1:8080";
-const origin = process.env.PUBLIC_APP_URL || "https://starter.test";
+const origin = process.env.PUBLIC_APP_URL || "https://full-stack-example.test";
 const headers = { "Content-Type": "application/json", Origin: origin };
 assert.equal((await fetch(`${base}/todos`)).status, 200);
 const html = await (await fetch(base)).text();

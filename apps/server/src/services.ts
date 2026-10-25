@@ -1,9 +1,9 @@
-import { type AuthConfig, createAuth } from "@my-better-t-app/api/auth";
-import { createTodosService } from "@my-better-t-app/business/todos";
-import { createUsersService } from "@my-better-t-app/business/users";
-import { createProfileReadClient } from "@my-better-t-app/business/users/jobs/profile-read/producer";
-import { createDb } from "@my-better-t-app/db";
-import { createLogger, type Logger } from "@my-better-t-app/observability";
+import { type AuthConfig, createAuth } from "@full-stack-example/api/auth";
+import { createTodosService } from "@full-stack-example/business/todos";
+import { createUsersService } from "@full-stack-example/business/users";
+import { createProfileReadClient } from "@full-stack-example/business/users/jobs/profile-read/producer";
+import { createDb } from "@full-stack-example/db";
+import { createLogger, type Logger } from "@full-stack-example/observability";
 
 export type ServerConfig = {
 	DATABASE_URL: string;

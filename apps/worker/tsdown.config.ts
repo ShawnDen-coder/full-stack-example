@@ -6,7 +6,7 @@ export default defineConfig({
 	outDir: "./dist",
 	clean: true,
 	deps: {
-		alwaysBundle: [/@my-better-t-app\/.*/],
+		alwaysBundle: [/@full-stack-example\/.*/],
 		neverBundle: ["pino", "pg", "bullmq", "bullmq-otel"],
 	},
 });

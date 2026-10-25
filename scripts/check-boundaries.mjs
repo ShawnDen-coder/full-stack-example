@@ -218,7 +218,7 @@ export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
 				if (!path && isAbsolute(specifier)) path = specifier;
 				const target = (path && owner(resolve(path))) || named;
 				if (!target) {
-					if (specifier.startsWith("@my-better-t-app/"))
+					if (specifier.startsWith("@full-stack-example/"))
 						diagnostics.push(
 							`${relative(root, file)}:${line}: unknown internal package ${specifier}`,
 						);

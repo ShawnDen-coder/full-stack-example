@@ -1,4 +1,4 @@
-# @my-better-t-app/observability
+# @full-stack-example/observability
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [项目说明](../../README.zh-CN.md)
 
@@ -24,13 +24,43 @@
 5. SDK 和 exporter 只由应用入口调用 `startTelemetry` 创建。导入 helper 时不启动运行资源，exporter 不成为就绪依赖；先 drain 和关闭资源，再关闭 SDK。
 6. 公共 helper 通过 `src/index.ts` 导出，SDK 启动沿用 `./telemetry` 子路径。新增外部运行依赖时，同时审查应用依赖声明和隔离生产包。
 
+## 示例：记录导出文件大小
+
+假设未来的导出功能需要记录 CSV／JSON 的产物大小，可在 [src/metrics.ts](src/metrics.ts) 中添加下面的工厂，该文件已导入 `metrics`：
+
+```ts
+export function createExportMetrics() {
+  const size = metrics.getMeter("full-stack-example").createHistogram(
+    "exports.result.size",
+    { unit: "By" },
+  );
+  return {
+    recordBytes(format: "csv" | "json", bytes: number) {
+      size.record(bytes, { format });
+    },
+  };
+}
+```
+
+将 `createExportMetrics` 加入 `src/index.ts` 已有的 `./metrics` re-export，无需新增 package 子路径。这是扩展示例，当前尚未导出此工厂。在业务 Service 工厂中创建它，再在生成文件后记录：
+
+```ts
+const exportMetrics = createExportMetrics();
+// 导出操作中，生成 CSV 字符串之后：
+exportMetrics.recordBytes("csv", Buffer.byteLength(csv, "utf8"));
+```
+
+指标属性只有 `format`，不要加入用户 ID、文件名或 job ID。业务操作的耗时和错误交给外层的 `observeOperation("exports.generate", work)`，不在这里重复统计。SDK 创建和退出仍由应用入口负责。
+
+扩展 [telemetry 测试](tests/telemetry.test.ts)，复用已有的内存 metric reader：记录 128 bytes，采集后断言直方图名称、`By` 单位、数值和 `format` 属性；同时确认关闭 telemetry 或 exporter 失败不会阻断文件生成。无需增加 Collector 或就绪依赖。
+
 ## 验证
 
 从工作区根目录执行：
 
 ```bash
-pnpm --filter @my-better-t-app/observability test
-pnpm --filter @my-better-t-app/observability check-types
+pnpm --filter @full-stack-example/observability test
+pnpm --filter @full-stack-example/observability check-types
 ```
 
 Collector 配置、字段和故障场景见[可观测性运维指南](../../docs/observability.zh-CN.md)。BullMQ 上下文传播用真实服务集成测试验证；确认关闭 telemetry 或 Collector 故障仍可执行业务。诊断 Collector 不提供持久化 trace／日志存储。

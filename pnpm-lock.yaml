@@ -115,19 +115,19 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.1
         version: 2.1.5(hono@4.13.13)
-      '@my-better-t-app/api':
+      '@full-stack-example/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@my-better-t-app/business':
+      '@full-stack-example/business':
         specifier: workspace:*
         version: link:../../packages/business
-      '@my-better-t-app/db':
+      '@full-stack-example/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@my-better-t-app/observability':
+      '@full-stack-example/observability':
         specifier: workspace:*
         version: link:../../packages/observability
-      '@my-better-t-app/queue':
+      '@full-stack-example/queue':
         specifier: workspace:*
         version: link:../../packages/queue
       '@opentelemetry/api':
@@ -203,10 +203,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@my-better-t-app/api':
+      '@full-stack-example/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@my-better-t-app/ui':
+      '@full-stack-example/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@orpc/client':
@@ -300,16 +300,16 @@ importers:
 
   apps/worker:
     dependencies:
-      '@my-better-t-app/business':
+      '@full-stack-example/business':
         specifier: workspace:*
         version: link:../../packages/business
-      '@my-better-t-app/db':
+      '@full-stack-example/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@my-better-t-app/observability':
+      '@full-stack-example/observability':
         specifier: workspace:*
         version: link:../../packages/observability
-      '@my-better-t-app/queue':
+      '@full-stack-example/queue':
         specifier: workspace:*
         version: link:../../packages/queue
       '@opentelemetry/api':
@@ -370,16 +370,16 @@ importers:
       '@better-auth/drizzle-adapter':
         specifier: 1.7.7
         version: 1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(@opentelemetry/api@1.10.0)(better-call@1.4.0(zod@4.6.7))(jose@6.2.13)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.4.2)(drizzle-orm@1.0.0-rc.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)(zod@4.6.7))
-      '@my-better-t-app/business':
+      '@full-stack-example/business':
         specifier: workspace:*
         version: link:../business
-      '@my-better-t-app/db':
+      '@full-stack-example/db':
         specifier: workspace:*
         version: link:../db
-      '@my-better-t-app/observability':
+      '@full-stack-example/observability':
         specifier: workspace:*
         version: link:../observability
-      '@my-better-t-app/queue':
+      '@full-stack-example/queue':
         specifier: workspace:*
         version: link:../queue
       '@orpc/client':
@@ -416,13 +416,13 @@ importers:
 
   packages/business:
     dependencies:
-      '@my-better-t-app/db':
+      '@full-stack-example/db':
         specifier: workspace:*
         version: link:../db
-      '@my-better-t-app/observability':
+      '@full-stack-example/observability':
         specifier: workspace:*
         version: link:../observability
-      '@my-better-t-app/queue':
+      '@full-stack-example/queue':
         specifier: workspace:*
         version: link:../queue
       drizzle-orm:
@@ -441,7 +441,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@my-better-t-app/observability':
+      '@full-stack-example/observability':
         specifier: workspace:*
         version: link:../observability
       drizzle-orm:

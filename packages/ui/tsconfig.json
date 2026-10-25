@@ -5,7 +5,7 @@
 		"lib": ["ESNext", "DOM", "DOM.Iterable"],
 		"types": [],
 		"paths": {
-			"@my-better-t-app/ui/*": ["./src/*"]
+			"@full-stack-example/ui/*": ["./src/*"]
 		}
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx"],

@@ -1,5 +1,5 @@
-import { createLogger } from "@my-better-t-app/observability";
-import { startTelemetry } from "@my-better-t-app/observability/telemetry";
+import { createLogger } from "@full-stack-example/observability";
+import { startTelemetry } from "@full-stack-example/observability/telemetry";
 import { ENV } from "./env.server";
 import { startWorkerProcess } from "./lifecycle";
 

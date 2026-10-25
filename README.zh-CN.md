@@ -4,7 +4,7 @@
 
 一个 TypeScript 全栈示例，提供需要登录的个人待办、用户资料，以及由独立 worker 进程执行的后台任务。
 
-项目最初由 [Better T Stack](https://github.com/AmanVarshney01/create-better-t-stack) 生成。前端使用 React 和 TanStack Router；后端在 Node.js 上运行 Hono 和 oRPC，搭配 Better Auth、Drizzle/PostgreSQL 与 BullMQ/Redis。共享 UI 组件使用 shadcn/ui 和 Tailwind CSS。
+前端使用 React 和 TanStack Router；后端在 Node.js 上运行 Hono 和 oRPC，搭配 Better Auth、Drizzle/PostgreSQL 与 BullMQ/Redis。共享 UI 组件使用 shadcn/ui 和 Tailwind CSS。
 
 ## 本地体验
 
@@ -35,6 +35,8 @@ pnpm env:init
 ```
 
 该命令会为各应用创建 `.env` 文件，配置本地应用端口 3000/3001、PostgreSQL 端口 5432 和 Redis 端口 6379，并生成随机认证密钥。输出仅包含文件名。需要时可修改本地配置或通过进程环境变量覆盖；不要提交包含实际配置值的文件。应用配置定义见 `apps/server/.env.schema`、`apps/worker/.env.schema` 和 `apps/web/.env.schema`。
+
+本地数据库和 Compose 项目默认命名为 `full-stack-example`。项目改名时，也要同步修改已有 server／worker 配置值文件中的 `DATABASE_URL`，`env:init` 会保留这些文件。Compose 项目名或卷名变化会使用新的数据卷，因此切换前应单独迁移已有数据。
 
 ```bash
 pnpm infra:up
@@ -107,13 +109,37 @@ pnpm docker:down
 
 [开发指南](docs/development.zh-CN.md) 说明应用接线和运维流程；各包指引列出代码入口、扩展步骤、职责边界和验证命令。共享 TypeScript 配置位于根目录 `tsconfig.base.json`。当前技术栈以各包清单和应用配置为准，命令定义见 [package.json](package.json)。
 
+Todo 重命名、新增后台任务及 DB／queue／observability／UI 的具体扩展步骤，见[模块扩展示例](docs/extension-examples.zh-CN.md)。
+
 具名业务参数、任务入口、消费者注册和包依赖规则，见[扩展约定](docs/extension-design.zh-CN.md)。
 
 提交变更前，执行 `pnpm install`、`pnpm test`、`pnpm check-types`、`pnpm build`、`pnpm check:boundaries` 和 `pnpm exec biome check .`。依赖变更应限定在实际使用它的包中；提交标题使用简洁的 Conventional Commits 格式。
 
+## 版本管理
+
+使用 [Cocogitto](https://docs.cocogitto.io/) 6.4.0 为整个 workspace 管理统一的应用版本，以 `X.Y.Z` Git tag 和根目录 `CHANGELOG.md` 为准。各包 manifest 中的版本不代表应用发布版本，内部包不单独发布。
+
+首次提交前安装 CLI（需要 [Rust/Cargo](https://rustup.rs/)），再安装 workspace 依赖以启用 Husky：
+
+```bash
+cargo install cocogitto --version 6.4.0 --locked
+pnpm install --frozen-lockfile
+```
+
+Husky 通过 `cog verify` 检查每条提交消息；CI 检查全部提交历史，忽略 merge commits。使用 Conventional Commits，例如 `fix(api): handle missing sessions`、`feat(todos): add filtering` 和 `feat(api)!: change the response contract`。`fix` 升 PATCH，`feat` 升 MINOR；1.0.0 之后的破坏性变更升 MAJOR。0.x 开发阶段的自动升版保持在 1.0.0 以下，确认 API 稳定时显式执行 `cog bump --version 1.0.0`。
+
+CI 通过后，在干净且与远端同步的 `master` 分支执行：
+
+```bash
+pnpm release:preview
+pnpm release
+```
+
+预览只输出下一版本，不修改文件或运行发布 hooks。正式升版会依次检查提交格式、lint、包边界、测试、类型和构建，生成／更新 `CHANGELOG.md`，并创建本地版本 commit 和 tag。首次自动发布会分析已有历史。这两个命令都不推送、不发布 npm 包，也不部署应用。审查结果后再一起推送 `master` 和新 tag，例如 `git push --atomic origin master 0.1.0`（将 tag 替换为实际生成的版本）。
+
 ## 验证
 
-CI 会运行代码规范及包依赖检查、离线测试、类型检查、构建、真实服务集成测试、Playwright，以及独立的生产 Compose 冒烟测试。
+CI 会运行 Conventional Commit 检查、代码规范及包依赖检查、离线测试、类型检查、构建、真实服务集成测试、Playwright，以及独立的生产 Compose 冒烟测试。
 
 运行集成测试或浏览器测试前，将 `TEST_DATABASE_URL` 和 `TEST_REDIS_URL` 指向**专用、可随时丢弃的测试服务**，然后执行：
 

@@ -1,6 +1,6 @@
-import type { Database } from "@my-better-t-app/db";
-import { user } from "@my-better-t-app/db/schema/auth";
-import { observeOperation } from "@my-better-t-app/observability";
+import type { Database } from "@full-stack-example/db";
+import { user } from "@full-stack-example/db/schema/auth";
+import { observeOperation } from "@full-stack-example/observability";
 import { eq } from "drizzle-orm";
 
 export function createUsersService({ db }: { db: Database }) {

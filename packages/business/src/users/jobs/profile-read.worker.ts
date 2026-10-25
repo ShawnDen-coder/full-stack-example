@@ -2,12 +2,12 @@ import {
 	createQueueMetrics,
 	type Logger,
 	safeText,
-} from "@my-better-t-app/observability";
+} from "@full-stack-example/observability";
 import {
 	createQueueConnection,
 	createQueueTelemetry,
 	Worker,
-} from "@my-better-t-app/queue";
+} from "@full-stack-example/queue";
 import type { UsersService } from "../service";
 import {
 	USER_PROFILE_QUEUE,

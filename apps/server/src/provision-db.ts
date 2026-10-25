@@ -1,6 +1,6 @@
-import { createDb } from "@my-better-t-app/db";
-import { provisionRuntimeRoles } from "@my-better-t-app/db/provision";
-import { createLogger } from "@my-better-t-app/observability";
+import { createDb } from "@full-stack-example/db";
+import { provisionRuntimeRoles } from "@full-stack-example/db/provision";
+import { createLogger } from "@full-stack-example/observability";
 
 const logger = createLogger("provision-db");
 const migration = process.env.MIGRATION_DATABASE_URL;

@@ -1,0 +1,5 @@
+if ! command -v cog >/dev/null 2>&1; then
+  printf '%s\n' 'Cocogitto is required. See the versioning section in README.md for installation.' >&2
+  exit 1
+fi
+cog verify --file "$1"

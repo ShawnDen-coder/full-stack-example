@@ -1,4 +1,4 @@
-import { type Logger, observePool } from "@my-better-t-app/observability";
+import { type Logger, observePool } from "@full-stack-example/observability";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 

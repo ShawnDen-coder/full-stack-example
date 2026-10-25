@@ -1,9 +1,9 @@
-import { type Logger, observeQueue } from "@my-better-t-app/observability";
+import { type Logger, observeQueue } from "@full-stack-example/observability";
 import {
 	createQueueConnection,
 	createQueueTelemetry,
 	Queue,
-} from "@my-better-t-app/queue";
+} from "@full-stack-example/queue";
 import {
 	profileReadJobOptions,
 	USER_PROFILE_QUEUE,

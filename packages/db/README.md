@@ -1,4 +1,4 @@
-# @my-better-t-app/db
+# @full-stack-example/db
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [Project](../../README.md)
 
@@ -40,12 +40,51 @@ relations, one migration history, and deployment-only runtime role provisioning.
    Applications create/close their own database instances; repositories can use
    an injected database or transaction without owning its connection pool.
 
+## Example: add an optional Todo due date
+
+This schema extension is not present today. In
+[src/schema/todo.ts](src/schema/todo.ts), add `timestamp` to the existing
+`drizzle-orm/pg-core` import, then add a nullable column to the existing table's
+column object:
+
+```ts
+dueAt: timestamp("due_at", { withTimezone: true, mode: "date" }),
+```
+
+Keep the existing owner/ID index. If the new query actually filters or orders by
+owner and due date, append this index to the table's existing index array:
+
+```ts
+index("todo_user_due_idx").on(table.userId, table.dueAt),
+```
+
+Existing rows get `NULL`; there is no guessed backfill or new NOT NULL constraint.
+The table is already exported, so no new `schema/index.ts` export or package
+subpath is needed. Add `dueAt` to the repository's explicit projection only when
+the API should return it, then update service/API types, date validation and web
+rendering together. A new table, unlike this new column, also needs explicit
+schema exports and reviewed runtime grants in `src/provision.ts`.
+
+From the root, with local configuration initialized:
+
+```bash
+pnpm db:generate
+# Review the new SQL and snapshot under packages/db/src/migrations, then commit them.
+pnpm db:migrate
+pnpm --filter @full-stack-example/db check-types
+```
+
+Test an empty database and an upgrade containing existing Todos: old rows remain
+readable with `dueAt: null`, dates round-trip correctly, and foreign-user rows
+remain inaccessible. Use a dedicated test database for these checks. The new
+index should match the actual query plan; do not add one solely for this example.
+
 ## Verify
 
 Run from the workspace root:
 
 ```bash
-pnpm --filter @my-better-t-app/db check-types
+pnpm --filter @full-stack-example/db check-types
 pnpm test:integration
 ```
 

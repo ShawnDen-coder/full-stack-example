@@ -1,6 +1,6 @@
+import { createApi } from "@full-stack-example/api/create-api";
+import { type Logger, withDeadline } from "@full-stack-example/observability";
 import { serve } from "@hono/node-server";
-import { createApi } from "@my-better-t-app/api/create-api";
-import { type Logger, withDeadline } from "@my-better-t-app/observability";
 import { createServices, type ServerConfig } from "./services";
 
 export type RuntimeConfig = ServerConfig & {

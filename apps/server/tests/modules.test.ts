@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { mock, test } from "node:test";
+import type { Session } from "@full-stack-example/api/auth";
+import type { ContextDependencies } from "@full-stack-example/api/context";
+import { createApi } from "@full-stack-example/api/create-api";
+import type { AppRouterClient } from "@full-stack-example/api/routers/index";
+import { createTodosService } from "@full-stack-example/business/todos";
+import { createDb } from "@full-stack-example/db";
+import { createLogger } from "@full-stack-example/observability";
+import { createQueueConnection } from "@full-stack-example/queue";
 import { serve } from "@hono/node-server";
-import type { Session } from "@my-better-t-app/api/auth";
-import type { ContextDependencies } from "@my-better-t-app/api/context";
-import { createApi } from "@my-better-t-app/api/create-api";
-import type { AppRouterClient } from "@my-better-t-app/api/routers/index";
-import { createTodosService } from "@my-better-t-app/business/todos";
-import { createDb } from "@my-better-t-app/db";
-import { createLogger } from "@my-better-t-app/observability";
-import { createQueueConnection } from "@my-better-t-app/queue";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 
@@ -429,7 +429,7 @@ test("structured logs redact credentials and retain request correlation and stac
 
 test("queue degradation has a separate readiness endpoint and maps job errors to 503", async () => {
 	const { ProfileJobsUnavailableError } = await import(
-		"@my-better-t-app/business/users/jobs/profile-read/producer"
+		"@full-stack-example/business/users/jobs/profile-read/producer"
 	);
 	const f = await fixture();
 	try {

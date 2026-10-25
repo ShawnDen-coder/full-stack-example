@@ -4,7 +4,7 @@
 
 A TypeScript full-stack example with authenticated personal todos, user profiles, and background jobs running in a separate worker process.
 
-Originally scaffolded with [Better T Stack](https://github.com/AmanVarshney01/create-better-t-stack). The stack uses React and TanStack Router on the frontend, Hono and oRPC on Node.js, Better Auth, Drizzle/PostgreSQL, and BullMQ/Redis. Shared UI components use shadcn/ui and Tailwind CSS.
+The stack uses React and TanStack Router on the frontend, Hono and oRPC on Node.js, Better Auth, Drizzle/PostgreSQL, and BullMQ/Redis. Shared UI components use shadcn/ui and Tailwind CSS.
 
 ## Try it locally
 
@@ -39,6 +39,11 @@ This creates app-owned `.env` files for local ports 3000/3001, PostgreSQL on
 only. Change local values or supply process environment overrides when needed;
 never commit value files. `apps/server/.env.schema`, `apps/worker/.env.schema`
 and `apps/web/.env.schema` document application configuration.
+
+The default local database and Compose project are named `full-stack-example`.
+When renaming the project, also update `DATABASE_URL` in existing server/worker
+value files; `env:init` preserves them. Renaming Compose projects or volumes
+selects new volumes, so migrate existing data explicitly before switching.
 
 ```bash
 pnpm infra:up
@@ -138,14 +143,55 @@ each package guide lists its entry points, extension steps, boundaries and check
 Root `tsconfig.base.json` owns shared TypeScript settings. Package manifests and
 application configuration define the current stack; commands live in [package.json](package.json).
 
+Follow the [module extension examples](docs/extension-examples.md) for a Todo
+rename, a new background job, and focused DB/queue/observability/UI changes.
+
 See the [extension contract](docs/extension-design.md) for named business inputs,
 task-specific exports, consumer registration and dependency boundaries.
 
 Before contributing, run `pnpm install`, `pnpm test`, `pnpm check-types`, `pnpm build`, `pnpm check:boundaries`, and `pnpm exec biome check .`. Keep dependency changes scoped to the owning package and use concise conventional commit subjects.
 
+## Versioning
+
+[Cocogitto](https://docs.cocogitto.io/) 6.4.0 manages one application version for
+the entire workspace, recorded as an `X.Y.Z` Git tag and in the root
+`CHANGELOG.md`. Workspace manifest versions are not release versions; packages
+are not published independently.
+
+Install the CLI before committing (requires [Rust/Cargo](https://rustup.rs/)),
+then install workspace dependencies to activate Husky:
+
+```bash
+cargo install cocogitto --version 6.4.0 --locked
+pnpm install --frozen-lockfile
+```
+
+Husky checks each commit message with `cog verify`; CI checks the entire commit
+history, ignoring merge commits. Use
+Conventional Commits such as `fix(api): handle missing sessions`,
+`feat(todos): add filtering`, and `feat(api)!: change the response contract`.
+`fix` increments PATCH, `feat` increments MINOR, and breaking changes increment
+MAJOR after 1.0.0. During 0.x development, automatic bumps stay below 1.0.0;
+use `cog bump --version 1.0.0` when intentionally declaring the API stable.
+
+Release from a clean, up-to-date `master` checkout after CI passes:
+
+```bash
+pnpm release:preview
+pnpm release
+```
+
+The preview prints the next version without changing files or running release
+hooks. The release runs commit, lint, boundary, test, type and build checks,
+generates/updates `CHANGELOG.md`, and creates a local version commit and tag.
+The first automatic release considers the existing history. Neither command
+pushes changes, publishes packages, or deploys the application. Review the
+result before pushing `master` and the new tag together, for example
+`git push --atomic origin master 0.1.0` (replace the tag with the generated one).
+
 ## Validation
 
-CI runs lint, package dependency checks, offline tests, type checks, builds, real-service integration tests,
+CI runs Conventional Commit checks, lint, package dependency checks, offline tests, type checks, builds, real-service integration tests,
 Playwright and an independent production Compose smoke test.
 
 For integration/browser tests, set `TEST_DATABASE_URL` and `TEST_REDIS_URL` to

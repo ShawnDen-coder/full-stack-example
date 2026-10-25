@@ -4,6 +4,8 @@
 
 状态：已实现。本文描述当前业务接口、消费者运行时和 CI 依赖边界；各包 README 提供对应的扩展步骤。
 
+[扩展示例](extension-examples.zh-CN.md)将这些约定应用到待实现的 Todo 和后台任务扩展，不表示当前已提供这些新功能。
+
 ## 目标与范围
 
 新增普通业务按“业务实现 → 应用注入 → API 路由”扩展；新增后台任务按“业务任务实现 → 显式注册消费者”扩展。生命周期逻辑不随消费者数量重复编写。
@@ -65,7 +67,7 @@ await profileJobs.getProfileReadJob({ userId, jobId });
 | `business/users/jobs/worker` | `business/users/jobs/profile-read/worker` |
 | `business/users/jobs/status` | 改为 producer 使用的内部 helper |
 
-表中路径前缀均为 `@my-better-t-app/`。工厂统一任务前缀：`createProfileReadClient`、`createProfileReadProcessor`、`createProfileReadWorker`；client 同时提供入队和归属受限的状态查询。对应类型从工厂推导。
+表中路径前缀均为 `@full-stack-example/`。工厂统一任务前缀：`createProfileReadClient`、`createProfileReadProcessor`、`createProfileReadWorker`；client 同时提供入队和归属受限的状态查询。对应类型从工厂推导。
 
 business 是私有 workspace 包，全部调用方已同步迁移，旧内部入口已移除。HTTP 兼容别名继续保留。Redis 中的 `user-profile` 队列和 `profile` 任务名不变，已有任务继续使用原契约。
 
