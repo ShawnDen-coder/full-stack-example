@@ -126,6 +126,8 @@ backup, recovery, logging and validation procedures.
 
 ## Development
 
+Start with the [architecture diagrams](docs/development.md#architecture-overview) to follow runtime connections, authenticated requests and background jobs.
+
 | Location | Responsibility | Extension guide |
 | --- | --- | --- |
 | `apps/web` | React frontend and file-based routes | [Application wiring](docs/development.md#application-extension-entry-points) |

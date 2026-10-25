@@ -223,6 +223,44 @@ per-consumer automatic restart inside the process.
 existing TypeScript parser without new dependencies. It checks production src
 against this internal dependency policy:
 
+Arrows below point from an importer to an allowed internal dependency. This is the
+CI allowlist, so an edge does not mean that import is currently used or that an HTTP
+call occurs. The dotted web-to-API edge permits only the router's type contract;
+Worker has no API dependency.
+
+<!-- mermaid:id=package-dependencies -->
+```mermaid
+flowchart TB
+  web["apps/web"]
+  server["apps/server"]
+  worker["apps/worker"]
+  api["packages/api"]
+  business["packages/business"]
+  db["packages/db"]
+  queue["packages/queue"]
+  observability["packages/observability"]
+  ui["packages/ui"]
+  web --> ui
+  web -.->|Types only| api
+  server --> api
+  server --> business
+  server --> db
+  server --> queue
+  server --> observability
+  worker --> business
+  worker --> db
+  worker --> queue
+  worker --> observability
+  api --> business
+  api --> db
+  api --> queue
+  api --> observability
+  business --> db
+  business --> queue
+  business --> observability
+  db --> observability
+```
+
 | Source | Allowed internal dependencies |
 | --- | --- |
 | apps/web | ui and type-only API client contracts |

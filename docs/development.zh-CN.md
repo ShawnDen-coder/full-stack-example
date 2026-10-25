@@ -4,6 +4,90 @@
 
 [返回 README](../README.zh-CN.md)
 
+## 架构导览
+
+先看运行架构，再跟随一次 Todo 请求和一次后台任务。以下图示描述当前实现；[扩展示例](extension-examples.zh-CN.md)介绍待实现的新增功能。源码允许的 import 方向见[包依赖图](extension-design.zh-CN.md#依赖边界检查)。
+
+### 运行架构
+
+实线箭头表示与进程或存储通信，虚线箭头表示可选的 telemetry 导出。响应沿原连接返回，图中省略。
+
+<!-- mermaid:id=runtime-topology -->
+```mermaid
+flowchart LR
+  web["apps/web - React SPA"]
+  server["apps/server - Hono + oRPC"]
+  worker["apps/worker - BullMQ"]
+  postgres["PostgreSQL"]
+  redis["Redis - BullMQ"]
+  collector["可选 OTLP Collector"]
+  web -->|通过 HTTP 认证 / RPC| server
+  server -->|会话 / 业务数据| postgres
+  server -->|入队 / 查询任务状态| redis
+  worker -->|消费 / 保存结果| redis
+  worker -->|读取用户资料| postgres
+  server -.->|Trace / 指标| collector
+  worker -.->|Trace / 指标| collector
+```
+
+前端运行在浏览器中。生产环境由 Nginx 提供 SPA 并将 API 请求代理到 Server；图中省略代理和 TLS 终止层。Server 和 Worker 各自拥有数据库连接和服务实例。Server 负责生产任务，Worker 独立消费，无需调用 API。OTLP 导出可选，不能成为就绪依赖。数据库与队列分别如何检查就绪，见[运行时与日志](#运行时与日志)。
+
+### 已认证的 Todo 请求
+
+`todo.setCompleted` 成功路径依次经过认证、业务规则和限制用户归属的 Repository：
+
+<!-- mermaid:id=todo-request -->
+```mermaid
+sequenceDiagram
+  participant web as apps/web
+  participant api as Hono / oRPC
+  participant auth as Better Auth
+  participant service as TodosService
+  participant repo as Scoped Repository
+  participant postgres as PostgreSQL
+  web->>api: todo.setCompleted&#40;&#123; id, completed &#125;&#41;
+  api->>auth: 从请求头解析会话
+  auth-->>api: session.user.id
+  api->>service: setCompleted，使用会话 userId
+  service->>repo: forUser&#40;userId&#41;.setCompleted&#40;&#123; id, completed &#125;&#41;
+  repo->>postgres: UPDATE todos WHERE id = ... AND user_id = ...
+  postgres-->>repo: 更新后的行
+  repo-->>service: 当前用户的 Todo
+  service-->>api: 操作结果
+  api-->>web: &#123; id, text, completed &#125;
+```
+
+API context 通过 Better Auth 解析 session，Better Auth 使用注入的数据库。`protectedProcedure` 对未认证请求返回 `UNAUTHORIZED`。路由从 session 获取 `userId`，`forUser(userId)` 将用户归属绑定到 SQL 读写。不存在和属于其他用户的 Todo 均返回 `NOT_FOUND`。新增 Todo 操作也遵循这些边界，见 [Todo 扩展示例](extension-examples.zh-CN.md#案例一重命名-todo)。
+
+### 读取用户资料的后台任务
+
+图中展示一次成功入队、处理，以及稍后的状态查询。两次 RPC 调用前，API 均会解析 session；图中省略这部分认证步骤。
+
+<!-- mermaid:id=profile-job -->
+```mermaid
+sequenceDiagram
+  participant web as apps/web
+  participant api as API / ProfileReadClient
+  participant redis as Redis / BullMQ
+  participant worker as apps/worker
+  participant postgres as PostgreSQL
+  web->>api: users.enqueueProfileRead&#40;&#41;
+  api->>redis: 入队 profile，携带会话 userId 和 requestId
+  redis-->>api: job.id
+  api-->>web: &#123; id &#125;
+  worker->>redis: 从 user-profile 队列领取任务
+  redis-->>worker: &#123; userId, requestId &#125;
+  worker->>postgres: 校验载荷，再调用 UsersService.getProfile&#40;userId&#41;
+  postgres-->>worker: 用户资料或 null
+  worker->>redis: 标记完成并保存结果
+  web->>api: users.getProfileReadJob&#40;&#123; id &#125;&#41;
+  api->>redis: 读取任务并校验会话用户归属
+  redis-->>api: 当前用户的任务状态和结果
+  api-->>web: 状态和已完成结果
+```
+
+Worker 校验任务载荷，并使用自己的 `UsersService` 实例。队列名为 `user-profile`，任务名为 `profile`。状态查询检查任务归属，不存在或属于其他用户的任务返回 `NOT_FOUND`。客户端可在完成前轮询，此时 `result` 为 `null`；用户已不存在时，成功完成的读取也可能返回 `null`。任务可能重试，处理函数需要能承受重复执行。新增消费者的显式注册步骤，见[新任务扩展示例](extension-examples.zh-CN.md#案例二新增后台任务)。
+
 ## 包扩展指引
 
 先确定改动归属，再阅读对应指引中的代码入口、公共导出、扩展步骤和验证命令：[API](../packages/api/README.zh-CN.md)、[业务](../packages/business/README.zh-CN.md)、[数据库](../packages/db/README.zh-CN.md)、[队列](../packages/queue/README.zh-CN.md)、[可观测性](../packages/observability/README.zh-CN.md)、[UI](../packages/ui/README.zh-CN.md)。

@@ -160,6 +160,41 @@ BullMQ 的 [`close()` 会等待正在处理的任务，且自身没有超时](ht
 
 `scripts/check-boundaries.mjs`（`pnpm check:boundaries`）已接入 CI，使用已安装的 TypeScript 解析器，无需新增依赖。生产 `src` 按以下规则检查：
 
+箭头从导入方指向允许依赖的内部包。这是 CI 的允许列表；有连线不表示当前已经使用该 import，也不表示 HTTP 调用。web 指向 API 的虚线仅允许路由类型契约；Worker 不依赖 API。
+
+<!-- mermaid:id=package-dependencies -->
+```mermaid
+flowchart TB
+  web["apps/web"]
+  server["apps/server"]
+  worker["apps/worker"]
+  api["packages/api"]
+  business["packages/business"]
+  db["packages/db"]
+  queue["packages/queue"]
+  observability["packages/observability"]
+  ui["packages/ui"]
+  web --> ui
+  web -.->|仅类型| api
+  server --> api
+  server --> business
+  server --> db
+  server --> queue
+  server --> observability
+  worker --> business
+  worker --> db
+  worker --> queue
+  worker --> observability
+  api --> business
+  api --> db
+  api --> queue
+  api --> observability
+  business --> db
+  business --> queue
+  business --> observability
+  db --> observability
+```
+
 | 来源 | 允许依赖的内部包 |
 | --- | --- |
 | `apps/web` | ui，以及仅类型导入的 API 客户端契约 |
