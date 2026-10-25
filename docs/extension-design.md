@@ -1,8 +1,8 @@
 # Extension contract
 
-[English](extension-design.md) · [简体中文](extension-design.zh-CN.md) · [Development guide](development.md)
+[English](extension-design.md) · [简体中文](extension-design.zh-CN.md) · [Development guide](development.md) · [Project overview](../README.md)
 
-Status: implemented. This document describes the current business interfaces,
+This document describes the current business interfaces,
 consumer runtime and CI boundaries. Package READMEs provide focused extension steps.
 The [extension examples](extension-examples.md) apply these contracts to proposed
 Todo and background-job additions, without claiming those additions exist today.
@@ -14,9 +14,9 @@ and API routing. Extend background work through business-owned task implementati
 and explicit consumer registration. Lifecycle algorithms are shared across consumers.
 
 Keep the six shared packages. Standardize comparable factories and business calls
-while retaining database, UI and infrastructure-specific interfaces. Preserve HTTP
-payloads/results and compatibility aliases, Redis queue/task names, retry/retention
-policies and database schema. No database migration or queue recreation is required.
+while retaining database, UI and infrastructure-specific interfaces. Changes to public
+HTTP payloads/results, compatibility aliases, queue/task names, retry/retention policies,
+or database schema require a separate compatibility and migration assessment.
 
 ## Ownership and composition
 

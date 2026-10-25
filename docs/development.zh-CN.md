@@ -1,8 +1,8 @@
 # 开发指南
 
-[English](development.md) · [简体中文](development.zh-CN.md)
+[English](development.md) · [简体中文](development.zh-CN.md) · [项目说明](../README.zh-CN.md)
 
-[返回 README](../README.zh-CN.md)
+本页说明运行架构与应用接线。具体改动见[扩展示例](extension-examples.zh-CN.md)，部署与恢复见[运维指南](operations.zh-CN.md)，检查与发布见[贡献指南](../CONTRIBUTING.zh-CN.md)。
 
 ## 架构导览
 
@@ -30,7 +30,7 @@ flowchart LR
   worker -.->|Trace / 指标| collector
 ```
 
-前端运行在浏览器中。生产环境由 Nginx 提供 SPA 并将 API 请求代理到 Server；图中省略代理和 TLS 终止层。Server 和 Worker 各自拥有数据库连接和服务实例。Server 负责生产任务，Worker 独立消费，无需调用 API。OTLP 导出可选，不能成为就绪依赖。数据库与队列分别如何检查就绪，见[运行时与日志](#运行时与日志)。
+前端运行在浏览器中。生产环境由 Nginx 提供 SPA 并将 API 请求代理到 Server；图中省略代理和 TLS 终止层。Server 和 Worker 各自拥有数据库连接和服务实例。Server 负责生产任务，Worker 独立消费，无需调用 API。OTLP 导出可选，不能成为就绪依赖。数据库与队列分别如何检查就绪，见[运行时与日志](operations.zh-CN.md#运行时与日志)。
 
 ### 已认证的 Todo 请求
 
@@ -90,11 +90,18 @@ Worker 校验任务载荷，并使用自己的 `UsersService` 实例。队列名
 
 ## 包扩展指引
 
-先确定改动归属，再阅读对应指引中的代码入口、公共导出、扩展步骤和验证命令：[API](../packages/api/README.zh-CN.md)、[业务](../packages/business/README.zh-CN.md)、[数据库](../packages/db/README.zh-CN.md)、[队列](../packages/queue/README.zh-CN.md)、[可观测性](../packages/observability/README.zh-CN.md)、[UI](../packages/ui/README.zh-CN.md)。
+先确定改动归属，再阅读对应包的代码入口、扩展步骤和验证方法：
 
-具体改动先看[模块扩展示例](extension-examples.zh-CN.md)：如何贯通 business／API／web 重命名 Todo，或增加独立注册的后台任务。各包指引也包含针对该模块的扩展示例和检查方法。
+| 包 | 职责 |
+| --- | --- |
+| [API](../packages/api/README.zh-CN.md) | HTTP、认证和 oRPC 过程 |
+| [Business](../packages/business/README.zh-CN.md) | 业务服务、Scoped Repository 和业务任务 |
+| [DB](../packages/db/README.zh-CN.md) | 数据库工厂、schema、迁移和运行角色授权 |
+| [Queue](../packages/queue/README.zh-CN.md) | 通用 BullMQ 连接和 telemetry |
+| [Observability](../packages/observability/README.zh-CN.md) | 日志、trace、指标和 deadline |
+| [UI](../packages/ui/README.zh-CN.md) | 共享基础组件和样式 |
 
-[扩展约定](extension-design.zh-CN.md) 说明统一的具名业务参数、任务公共入口、多消费者生命周期和 CI 包依赖规则。
+跨包改动跟随[扩展示例](extension-examples.zh-CN.md)；具名参数、任务入口、消费者生命周期和依赖规则见[扩展约定](extension-design.zh-CN.md)。共享 TypeScript 配置位于根目录 `tsconfig.base.json`，不要求每个业务特性都新增一个包。
 
 ## 应用扩展入口
 
@@ -142,24 +149,33 @@ Vite 集成和 Node 服务启动入口会加载 Varlock。Node 部署产物包�
 
 使用 Varlock 的独立 Node 工具应从所属应用的目录运行，以加载该应用的配置定义和环境文件。`env:generate` 只生成 TypeScript 文件，不会为后续命令初始化环境变量值。
 
+`pnpm env:init` 创建开发配置：Web/API 使用 3001/3000，PostgreSQL/Redis 使用 5432/6379，并生成随机认证密钥，只输出文件名。已有文件保留，可修改本地值或通过进程环境覆盖。默认本地数据库和 Compose 项目名均为 `full-stack-example`；项目改名时需同步已有 server/worker 配置中的 `DATABASE_URL`，切换 Compose 项目或卷名之前需迁移数据。
+
+`REDIS_URL` 默认使用 `redis://localhost:6379`；容器使用 `redis://redis:6379`，Redis 开启持久化和 `noeviction`。Worker 使用与 API 相同的数据库和 Redis，通过自己的 `.env.schema` 配置，不需要 Better Auth 密钥。
+
 ## 生成 Better Auth 表结构
 
 修改认证插件或表结构相关选项后，在项目根目录运行 `pnpm run auth:generate`。该脚本会进入所属应用目录，通过 `varlock run` 执行 Better Auth CLI，并从 `src/auth-schema.ts` 加载认证实例。审查生成的表结构变更，再通过 ORM 的迁移流程应用到数据库。
 
 ## 应用组装
 
-应用采用 [claude-vps](https://github.com/grmkris/claude-vps/tree/d972236) 中的显式工厂和依赖注入模式：
+应用使用显式工厂和依赖注入。依赖的创建和关闭由进程负责，仅导入模块不会建立连接或启动消费。
 
-- `apps/server/src/index.ts` 负责进程启动和退出，创建 API 运行时并启动 Hono HTTP 服务，不启动队列消费者。
-- `apps/worker/src/index.ts` 启动独立 Node.js 消费进程；`apps/worker/src/runtime.ts` 创建该进程的数据库和用户服务，检查依赖就绪后启动用户资料 worker。
-- `apps/server/src/services.ts` 为每个进程创建一组数据库、Better Auth、队列客户端、用户服务和 Todo 服务。仅导入模块不会建立连接或启动 worker。
-- `packages/api/src/create-api.ts` 导出 `createApi(...)`，接收已初始化的依赖。它将 Better Auth 挂载到 `/api/auth/*`，oRPC 挂载到 `/rpc`，OpenAPI 挂载到 `/api-reference`，并提供 `/health` 存活检查和 `/ready` 依赖就绪检查。存活检查和未匹配的 URL 不会解析会话。
-- `packages/api/src/context.ts` 解析请求会话，并向过程提供服务。`protectedProcedure` 在调用业务服务之前要求用户完成认证。
-- `packages/business/src/users` 通过注入的数据库读取用户资料，`packages/business/src/todos` 提供 Todo 服务；两者的 HTTP 路由都调用注入的服务。`packages/business/src/users/jobs` 管理任务契约、生产者配置、保留策略、重试和归属检查，`packages/queue` 仅负责通用连接和 BullMQ telemetry。worker 工厂位于 `packages/business/src/users/jobs`，与 HTTP 请求复用同一套服务工厂，但各进程分别创建自己的实例和连接。
+| 入口 | 负责内容 |
+| --- | --- |
+| `apps/server/src/index.ts` | 启动 Hono HTTP 服务，管理 API 进程退出 |
+| `apps/server/src/services.ts` | 创建数据库、Better Auth、队列 client 和业务服务 |
+| `apps/worker/src/runtime.ts` | 创建独立数据库与服务，显式注册并启动消费者 |
+| `packages/api/src/create-api.ts` | 接收已初始化的依赖，返回 Hono 应用 |
+| `packages/api/src/context.ts` | 解析 session，向 procedure 提供业务服务 |
 
-Todo API 要求登录，每项操作都限定在当前会话用户的数据范围内。users API 同样要求登录，始终从会话中取得用户 ID，不提供用户列表或任意用户查询接口。
+Hono 处理路由、CORS、请求日志和 HTTP 错误，oRPC Fetch adapter 处理业务过程，Better Auth 使用 Fetch handler。Server 通过 `@hono/node-server` 监听；运行时是 Node.js。CORS 覆盖认证、RPC、接口文档、健康检查和 preflight。
 
-登录后的客户端可通过现有的类型安全 oRPC 客户端验证完整的服务与队列调用链路：
+`createApi` 挂载 `/api/auth/*`、`/rpc`、`/api-reference` 和健康路由。存活检查与未匹配 URL 不解析 session。Better Auth 接收显式数据库和配置，Cookie 安全使用其 URL／环境默认规则，本地 HTTP 可用，生产使用 HTTPS。认证 schema 生成入口只初始化数据库和认证。
+
+Todo 和 users 过程要求登录，从 session 取得用户 ID。业务逻辑通过 `context.services` 调用；同一服务工厂可供 API 和 Worker 复用，各进程使用独立实例。
+
+登录后的客户端可调用：
 
 ```ts
 const profile = await client.users.me();
@@ -167,37 +183,9 @@ const job = await client.users.enqueueProfileRead();
 const status = await client.users.getProfileReadJob({ id: job.id });
 ```
 
-示例后台任务读取当前用户资料，只返回 `id`、`name` 和 `emailVerified`。调用者只能查看自己的任务；任务不存在或属于其他用户时，均返回 `NOT_FOUND`。完成结果保留一小时，超过 1,000 条时可能提前清理；失败任务最多保留一天，上限同样为 1,000 条。清理在后续任务结束时触发。
+示例任务只返回 `id`、`name`、`emailVerified`。查询自己的任务，未完成或用户已不存在时 `result` 为 `null`；不存在或属于其他用户时返回 `NOT_FOUND`。完成结果最多保留一小时／1,000 条，失败任务最多保留一天／1,000 条；清理由后续任务完成触发。轮询需设置 deadline。
 
-`REDIS_URL` 定义在 `apps/server/.env.schema` 中，本机开发默认使用 `redis://localhost:6379`。Docker Compose 将其覆盖为 `redis://redis:6379`，启用 Redis 持久化和 `noeviction` 策略，API 等待 PostgreSQL，Worker 同时等待 PostgreSQL 和 Redis。Redis 凭据应保存在被 Git 忽略的本地环境配置中，或由部署环境的密钥管理服务提供。
-
-Better Auth 接收显式传入的数据库和配置对象。Cookie 安全属性遵循 Better Auth 根据 URL 和运行环境确定的默认值，因此本地 HTTP 开发不需要强制使用跨站 Secure Cookie。生产环境应使用 HTTPS。认证表结构生成入口只初始化数据库和认证实例，不启动队列、worker 或 HTTP 服务。
-
-收到 `SIGINT` 或 `SIGTERM` 后，API 停止接收新请求，再关闭队列连接和 PostgreSQL 连接池。独立 worker 停止领取任务，等待正在执行的任务结束，然后关闭自己的 PostgreSQL 连接池。worker 的 Redis 请求允许无限重试，HTTP 生产者的请求重试次数则有上限。可选的 `msgpackr-extract` 原生构建已禁用，运行时使用其 JavaScript 实现。
-
-新增模块时，先导出服务工厂，在 `createServices` 中实例化，将具体服务类型加入 `Services`，再在 `packages/api/src/routers/index.ts` 挂载 oRPC 路由。新增后台任务时，定义类型化任务契约，并在所属业务包中提供 worker 工厂，最后在 worker 运行时中显式注册并负责关闭它。
-
-## 独立 worker
-
-API 请求将任务写入 Redis，`apps/worker` 使用共享的队列名、任务名和 Zod 载荷定义消费任务。worker 直接调用用户服务，不经过 HTTP 或浏览器会话。worker 包不依赖 API 或认证包。仅导入其运行时或用户资料 worker 工厂，不会建立连接或开始消费。
-
-本地开发时，在被 Git 忽略的 `apps/worker/.env` 中设置 worker 的 `DATABASE_URL`，也可通过进程环境变量提供。worker 应与 API 使用相同的数据库和 Redis。它拥有独立的 `.env.schema`，不需要 Better Auth 密钥。然后运行：
-
-```bash
-pnpm infra:up
-pnpm db:migrate
-pnpm dev
-```
-
-`pnpm dev` 通过 pnpm workspace 同时启动前端、API 和 worker。需要单独重启或调试消费者时，使用 `pnpm dev:worker`。生产环境通过 `pnpm start:worker` 运行已构建的入口；Docker Compose 提供独立的 `worker` 服务，使用自己的镜像，不向宿主机发布 HTTP 端口。
-
-运行时先检查 PostgreSQL，再以 `autorun: false` 创建全部已注册消费者，等待所有 Redis 连接就绪后才开始消费。`WORKER_STARTUP_TIMEOUT_MS` 默认 10,000 毫秒，分别限制各个就绪阶段的等待时间。就绪前失败时，在退出预算内回滚已返回的消费者和共享资源；退出信号会取消启动等待。启动过程不会创建或重置任何调度配置。
-
-`WORKER_CONCURRENCY` 默认为每个消费者 5，允许 1–100 的整数；进程总并发是各注册项之和，增加消费者时应评估连接池和内存容量。退出操作是幂等的，会等待活动任务结束后再关闭数据库。`WORKER_SHUTDOWN_TIMEOUT_MS` 默认 30,000 毫秒；超时后进程以失败状态退出，由 BullMQ 恢复停滞任务。Compose 为容器预留 40 秒退出时间；任务耗时较长时，应同时提高这两个值。重试或进程故障可能导致同一任务再次执行，因此业务处理函数必须能承受重复执行。示例任务只读取数据。
-
-当前实现覆盖了所参考调度方案中的进程与生命周期管理部分。调度配置、持久化、暂停与恢复，以及调度器状态协调属于独立的应用功能，此处尚未实现。
-
-HTTP 应用使用 Hono 和 oRPC Fetch 适配器。Better Auth 直接通过自己的 Fetch handler 挂载。`createApi()` 返回可安全导入、不会自行启动服务的 Hono 应用，`apps/server` 通过 `@hono/node-server` 启动它。Hono 处理路由、CORS、请求日志和 HTTP 错误，oRPC 管理业务过程。CORS 覆盖认证、RPC、文档和健康检查路径，包括预检请求。运行环境仍为 Node.js 和 pnpm，没有使用 Bun 配置或脚本。
+新增 Service 时，在 business 暴露工厂，在 `createServices` 创建，将服务类型加入 API `Services` 并注册 router。后台任务的契约和 Worker 工厂归所属业务包，消费者在 `apps/worker/src/runtime.ts` 显式注册。具体步骤见[扩展示例](extension-examples.zh-CN.md)，启动、重试和关闭预算见[Worker 运行限制](operations.zh-CN.md#worker-运行限制)。
 
 ## 完整模块示例
 
@@ -208,33 +196,3 @@ HTTP 应用使用 Hono 和 oRPC Fetch 适配器。Better Auth 直接通过自己
 `todo.list({ cursor?, limit? })` 返回 `{ items, nextCursor }`，按 ID 降序排列。每页默认 20 条，最多 100 条；游标为上一页最后一条记录的 ID。文本会去除首尾空白，长度限制为 1–500 个字符。创建和切换完成状态操作返回 `{ id, text, completed }`，删除操作返回 `{ id }`。旧的 `todo.getAll` 接口已移除。引入新的查询方式时，应同时增加相应索引和经过审查的迁移，并使用 PostgreSQL 验证。
 
 需要登录的页面放在 `_auth` 布局下，查询键包含当前用户 ID。身份发生变化时，会话边界组件会取消并清除查询缓存，使路由上下文失效；来自旧身份的延迟 RPC 响应会被拒绝。收到 `UNAUTHORIZED` 响应后，清除私有状态并跳转到登录页，返回地址仅接受经过校验的相对路径。写操作统一显示错误通知，页面可通过自己的 `onError` 覆盖。不要自动重试写操作。
-
-## 运行时与日志
-
-API 和 worker 各自管理客户端及退出流程。API 在 PostgreSQL 就绪后监听端口；队列可用性由 `/ready/jobs` 单独检查。`/health` 表示进程能够响应，`/ready` 在两秒内检查数据库，在退出排空阶段或依赖故障时返回 503。就绪检查不会解析会话。它用于探测依赖状态，不能代替迁移校验或队列积压监控。
-
-API 默认启动超时为 10 秒，退出超时为 30 秒；Compose 为 API 和 worker 预留 40 秒。按进程配置 `DB_POOL_MAX`，默认值为 10；通过 `DB_QUERY_TIMEOUT_MS` 同时限制客户端查询等待时间和数据库语句执行时间，默认 10 秒。部署多个副本时，应统筹计算数据库连接总数。worker 的启动与退出超时独立于查询超时。
-
-Pino 将 JSON 日志输出到 stdout，包含 `service`、请求 ID、耗时和状态码。HTTP 响应通过 `X-Request-ID` 返回请求 ID，队列任务会携带该 ID，并在完成或失败时记录任务 ID。数据库和 Redis 驱动异常仅序列化经过脱敏的消息和堆栈。不要记录请求体、认证头、会话对象、完整配置对象或 SQL 绑定参数。将日志接入部署平台的采集系统，对持续出现的 503、任务失败和不断增长的队列延迟设置告警。
-
-## 生产升级与恢复
-
-通过 Varlock 加载 `deploy/.env.schema` 中定义的生产配置。`pnpm docker:up` 会在替换应用容器前执行一次新的迁移任务。API 更新后会重新创建前端容器，让 Nginx 重新解析当前上游地址。生产 Node 镜像以 `node` 用户运行，只携带构建后的应用代码和生产依赖。本地配置值文件不会复制到镜像层中。
-
-发布涉及数据库结构的变更前，使用部署环境管理的凭据执行 `pg_dump -Fc`，创建 PostgreSQL 逻辑备份，并存放在宿主机之外。通过 `pg_restore` 将备份恢复到新的空数据库，验证恢复流程。为队列任务保留 Redis AOF 数据卷，并确保处理函数能承受重复执行。仅保存在同一台机器上的备份，或从未验证过的恢复流程，都不足以支持可靠恢复。
-
-回滚应用时，只有此前验证过的镜像版本仍兼容当前数据库结构，才能重新部署它。系统不会自动执行破坏性的反向迁移。恢复数据库时，先停止生产者和消费者，将备份恢复到新数据库，检查表结构和数据归属，再让服务连接该数据库。在恢复消费者之前，核对并处理队列中的任务。不要在生产升级过程中执行 `docker compose down -v`。
-
-## 质量检查
-
-GitHub Actions 使用 Node 24、pnpm 11.0.9 和已提交的锁文件进行验证。离线测试覆盖 HTTP 边界、就绪检查、日志脱敏和 worker 生命周期。集成测试使用真实 PostgreSQL/Redis、已提交的迁移和 Better Auth，并验证任务重试、连接中断和 SIGTERM 退出。Playwright 覆盖账号切换（包括延迟响应）、写入失败和会话过期。生产冒烟测试验证构建后的 Nginx/API/worker 整体链路、Secure Cookie 和 SPA 深层路由。发布保护测试确保迁移失败后不会继续替换应用容器。
-
-Husky 对暂存文件运行 lint-staged，对提交消息运行 Cocogitto；CLI 安装和应用统一发布流程见[版本管理指南](../README.zh-CN.md#版本管理)。以 CI 结果作为最终依据，本地钩子不能替代 CI。保持 `.node-version`、Node 类型定义和 Docker 运行时版本一致。依赖升级，尤其是 Drizzle RC 版本变更，必须通过完整验证流程，不要与无关功能变更混在一起。
-
-## 本轮结构与运行边界
-
-共享包收敛为 api、business、db、queue、observability、ui 六个。Auth 工厂位于 api，users/Todo 位于 business，TypeScript 共享配置移至根目录。推荐 API 名称为 `todo.setCompleted`、`users.enqueueProfileRead`、`users.getProfileReadJob`，旧名称保留为兼容别名。
-
-生产使用三个独立 URL：schema owner 的 `MIGRATION_DATABASE_URL`、app_server 的 `DATABASE_URL`、app_worker 的 `WORKER_DATABASE_URL`。迁移后执行角色配置，成功后才更新应用。新增表时应审查 `packages/db/src/provision.ts` 的显式授权。迁移语句默认上限 300 秒，锁等待上限 5 秒，与请求查询超时独立。遗留 Todo 数据不自动分配归属或删除。
-
-核心 `/ready` 只检查数据库，队列能力由 `/ready/jobs` 检查，Worker 容器另有健康心跳。类型检查单独生成路由，不再执行 Vite build。参见[可观测性运维指南](observability.zh-CN.md)。

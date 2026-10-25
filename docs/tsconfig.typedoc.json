@@ -1,0 +1,20 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true
+	},
+	"include": [],
+	"exclude": [
+		"../packages/**/tests/**",
+		"../packages/**/dist/**",
+		"../packages/ui/**"
+	],
+	"files": [
+		"../packages/api/src/routers/index.ts",
+		"../packages/business/src/todos/service.ts",
+		"../packages/business/src/users/service.ts",
+		"../packages/db/src/index.ts",
+		"../packages/queue/src/index.ts",
+		"../packages/observability/src/index.ts"
+	]
+}

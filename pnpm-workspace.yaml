@@ -1,11 +1,13 @@
 packages:
   - apps/*
   - packages/*
+  - docs
 allowBuilds:
   esbuild: true
   sharp: true
   msgpackr-extract: false
   protobufjs: false
+  vue-demi: true
 catalog:
   zod: ^4.5.4
   typescript: ^6.0.3
