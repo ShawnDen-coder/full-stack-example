@@ -38,7 +38,8 @@
 		"test:integration": "pnpm --filter server test:integration",
 		"test:e2e": "pnpm --filter web test:e2e",
 		"telemetry:up": "docker compose -f docker-compose.yml -f compose.observability.yml up -d otel-collector",
-		"telemetry:down": "docker compose -f docker-compose.yml -f compose.observability.yml stop otel-collector"
+		"telemetry:down": "docker compose -f docker-compose.yml -f compose.observability.yml stop otel-collector",
+		"check:boundaries": "node scripts/check-boundaries.mjs"
 	},
 	"dependencies": {
 		"zod": "catalog:"

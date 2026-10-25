@@ -71,6 +71,7 @@ remain inaccessible, and new API writes always bind the authenticated user.
 | `pnpm test:e2e` | Run Playwright account isolation and CRUD scenarios |
 | `pnpm check-types` | Generate route types and check workspace types |
 | `pnpm build` | Build applications |
+| `pnpm check:boundaries` | Check package dependencies and public exports |
 | `pnpm exec biome check .` | Check lint and formatting without changing files |
 | `pnpm check` | Apply Biome fixes |
 | `pnpm db:studio` | Inspect the database |
@@ -137,14 +138,14 @@ each package guide lists its entry points, extension steps, boundaries and check
 Root `tsconfig.base.json` owns shared TypeScript settings. Package manifests and
 application configuration define the current stack; commands live in [package.json](package.json).
 
-See the proposed [unified extension design](docs/extension-design.md) for the next
-iteration of business interfaces and multiple-consumer composition.
+See the [extension contract](docs/extension-design.md) for named business inputs,
+task-specific exports, consumer registration and dependency boundaries.
 
-Before contributing, run `pnpm install`, `pnpm test`, `pnpm check-types`, `pnpm build`, and `pnpm exec biome check .`. Keep dependency changes scoped to the owning package and use concise conventional commit subjects.
+Before contributing, run `pnpm install`, `pnpm test`, `pnpm check-types`, `pnpm build`, `pnpm check:boundaries`, and `pnpm exec biome check .`. Keep dependency changes scoped to the owning package and use concise conventional commit subjects.
 
 ## Validation
 
-CI runs lint, offline tests, type checks, builds, real-service integration tests,
+CI runs lint, package dependency checks, offline tests, type checks, builds, real-service integration tests,
 Playwright and an independent production Compose smoke test.
 
 For integration/browser tests, set `TEST_DATABASE_URL` and `TEST_REDIS_URL` to

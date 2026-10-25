@@ -1,8 +1,8 @@
-# 扩展方式统一设计
+# 扩展约定
 
 [English](extension-design.md) · [简体中文](extension-design.zh-CN.md) · [开发指南](development.zh-CN.md)
 
-状态：设计提案。本文描述目标接口和实施顺序，尚未修改运行代码；当前用法仍以各包 README 和实际导出为准。
+状态：已实现。本文描述当前业务接口、消费者运行时和 CI 依赖边界；各包 README 提供对应的扩展步骤。
 
 ## 目标与范围
 
@@ -18,7 +18,7 @@
 | [API context](../packages/api/src/context.ts) 与路由 | 服务能力类型、身份、输入校验、RPC 错误 | 注入业务方法并挂载路由 |
 | [server services](../apps/server/src/services.ts) | 创建并拥有数据库和任务 client | 新能力接线、就绪检查和资源关闭 |
 | [Worker runtime](../apps/worker/src/runtime.ts) | 消费者协议、显式注册列表、组装和生命周期 | 新消费者增加一个定义；新业务依赖才扩展资源组装 |
-| [Worker entry](../apps/worker/src/index.ts) 与心跳 | 信号、致命失败、进程退出、停止心跳、最终 deadline | 维护一次进程级退出流程 |
+| [Worker entry](../apps/worker/src/index.ts)、[lifecycle](../apps/worker/src/lifecycle.ts) 与心跳 | 信号、致命失败、进程退出、停止心跳、最终 deadline | 维护一次进程级退出流程 |
 | db／queue／observability／ui | 各自的基础设施或共享能力 | 只在能力本身变化时修改 |
 
 消费者协议归应用运行时所有，业务包继续返回原生 BullMQ Worker，使用结构类型匹配协议；业务代码不导入应用类型。queue 继续提供通用连接和 telemetry，不存储业务注册表。
@@ -27,7 +27,7 @@
 
 业务 Service、Repository 和任务工厂统一使用单个具名依赖对象。基础设施的 `createDb(config, options)` 和 `createLogger(...)` 可以保留现有调用约定。
 
-目标用法：
+用法：
 
 ```ts
 const service = createTodosService({ db });
@@ -58,7 +58,7 @@ await profileJobs.getProfileReadJob({ userId, jobId });
 
 任务名进入公共子路径，角色保持分开。物理文件仍沿用 `users/jobs/profile-read.*.ts`，无需增加目录或 barrel。
 
-| 当前导出 | 目标导出 |
+| 已移除入口 | 当前入口 |
 | --- | --- |
 | `business/users/jobs/contract` | `business/users/jobs/profile-read/contract` |
 | `business/users/jobs/producer` | `business/users/jobs/profile-read/producer` |
@@ -67,7 +67,7 @@ await profileJobs.getProfileReadJob({ userId, jobId });
 
 表中路径前缀均为 `@my-better-t-app/`。工厂统一任务前缀：`createProfileReadClient`、`createProfileReadProcessor`、`createProfileReadWorker`；client 同时提供入队和归属受限的状态查询。对应类型从工厂推导。
 
-当前 business 是私有 workspace 包，可在一次变更中更新全部调用方并移除旧入口；若实施时发现外部消费者，先保留重导出别名并安排移除窗口。HTTP 兼容别名不受此内部迁移影响。Redis 中的 `user-profile` 队列和 `profile` 任务名不变，已有任务继续使用原契约。
+business 是私有 workspace 包，全部调用方已同步迁移，旧内部入口已移除。HTTP 兼容别名继续保留。Redis 中的 `user-profile` 队列和 `profile` 任务名不变，已有任务继续使用原契约。
 
 ## 显式消费者注册
 
@@ -110,7 +110,7 @@ const consumerDefinitions = [
 ] satisfies readonly ConsumerDefinition[];
 ```
 
-注册表与测试注入通过 `WorkerFactories.consumerDefinitions` 接入，替换当前单个 `createWorker`。`create` 同步返回已安装错误监听器的句柄。业务 Worker 工厂内部固定 `autorun: false`，不再对调用方暴露该开关，runtime 是唯一启动运行循环的主体；注册项只组装依赖。工厂返回前内部失败的局部回滚由工厂负责；返回后的资源立即加入 runtime 的清理集合。
+注册表与测试注入通过 `WorkerFactories.consumerDefinitions` 接入，已替换原有单个 `createWorker`。`create` 同步返回已安装错误监听器的句柄。业务 Worker 工厂内部固定 `autorun: false`，不再对调用方暴露该开关，runtime 是唯一启动运行循环的主体；注册项只组装依赖。工厂返回前内部失败的局部回滚由工厂负责；返回后的资源立即加入 runtime 的清理集合。
 
 创建任何资源前，验证配置、非空注册表、稳定且唯一的 `name`、默认及覆盖并发值；并发值沿用 1–100 的整数范围。默认继续使用 `WORKER_CONCURRENCY`，表示每个消费者的并发；同进程总上限是各消费者并发之和，新增消费者时须评估数据库池和内存容量。`name` 使用业务契约中的稳定队列名，不包含实例或用户 ID。
 
@@ -131,7 +131,7 @@ const consumerDefinitions = [
 
 保留当前启动超时的阶段语义：数据库检查使用一次 `WORKER_STARTUP_TIMEOUT_MS`，全部消费者共用另一次就绪 deadline，不随消费者数量累加。启动回滚受已有 `WORKER_SHUTDOWN_TIMEOUT_MS` 约束，避免清理挂起阻止启动失败返回。关闭也只使用一个进程预算，入口保留硬退出定时器；不为每个消费者分别增加完整关闭预算。
 
-启动入口改为 `startWorker({ config, factories, logger, signal })`，其中测试工厂、logger 和 `AbortSignal` 可省略。进程入口拥有 `AbortController`，收到退出信号时先取消启动推进，再进入幂等退出流程；runtime 在每个等待及创建／运行边界检查取消。取消会中断就绪等待并触发已创建资源回滚，不宣称能取消数据库驱动的底层 I/O；所有未结束 Promise 仍需有拒绝处理。进入运行阶段后由 `runtime.close()` 管理退出。预期退出引发的启动取消不算新的业务故障，清理失败仍使进程非零退出。
+启动入口使用 `startWorker({ config, factories, logger, signal })`，其中测试工厂、logger 和 `AbortSignal` 可省略。进程入口拥有 `AbortController`，收到退出信号时先取消启动推进，再进入幂等退出流程；runtime 在每个等待及创建／运行边界检查取消。取消会中断就绪等待并触发已创建资源回滚，不宣称能取消数据库驱动的底层 I/O；所有未结束 Promise 仍需有拒绝处理。进入运行阶段后由 `runtime.close()` 管理退出。预期退出引发的启动取消不算新的业务故障，清理失败仍使进程非零退出。
 
 BullMQ 的 [`close()` 会等待正在处理的任务，且自身没有超时](https://docs.bullmq.io/guide/workers/graceful-shutdown)。正常路径必须等待所有消费者 drain，再释放共享数据库。关闭报错或超时后，执行中的任务可能被中断，按失败退出处理；尝试中止相关连接并结束进程，恢复依赖任务可重试／幂等，不把强制断连当作任务已完成。
 
@@ -156,7 +156,7 @@ BullMQ 的 [`close()` 会等待正在处理的任务，且自身没有超时](ht
 
 ## 依赖边界检查
 
-后续增加 `scripts/check-boundaries.mjs` 和 `pnpm check:boundaries`，使用已安装的 TypeScript 解析器，无需新增依赖。生产 `src` 按以下规则检查：
+`scripts/check-boundaries.mjs`（`pnpm check:boundaries`）已接入 CI，使用已安装的 TypeScript 解析器，无需新增依赖。生产 `src` 按以下规则检查：
 
 | 来源 | 允许依赖的内部包 |
 | --- | --- |
@@ -170,18 +170,15 @@ BullMQ 的 [`close()` 会等待正在处理的任务，且自身没有超时](ht
 
 检查静态 import／export、字面量动态 import 和类型导入；解析别名和跨目录相对路径，阻止通过相对路径绕过包边界或公共 exports，并检测包间循环。测试夹具和集成测试可跨应用访问，不纳入生产依赖图。先在现有代码上验证规则，再接入 CI；为允许／禁止、类型导入、别名及相对路径绕过提供有意义的检查器用例。
 
-## 实施顺序
+## 实现与验证
 
-| 步骤 | 交付内容 | 完成标准 |
-| --- | --- | --- |
-| 1. 参数与导出 | 具名业务参数、任务前缀工厂名、新公共子路径、全部调用方和类型更新 | 无旧内部路径引用；HTTP 和任务契约不变；类型、业务及 API 测试通过 |
-| 2. 多消费者运行时 | 显式注册列表、统一启动／回滚／健康／done／关闭、入口最终失败退出 | 同一组生命周期测试可运行 1 个和 2 个消费者；现有单消费者行为保留 |
-| 3. 故障与生产验证 | 新增并发故障回归用例，复用真实服务和生产包验证 | 集成、E2E 和生产 Compose 检查通过，BullMQ 补丁仍有效 |
-| 4. 边界与文档 | 依赖检查接入 CI，更新各包指引和当前实现状态 | 新增同类任务无需修改生命周期算法；文档示例与实现一致 |
+- 业务参数、任务工厂和导出已与全部调用方同步迁移。
+- runtime 管理消费者列表；[lifecycle](../apps/worker/src/lifecycle.ts) 管理取消、心跳、telemetry flush 和最终进程退出。
+- [运行时测试](../apps/worker/tests/runtime.test.ts) 使用可控长期循环验证一个和两个消费者；[进程测试](../apps/worker/tests/lifecycle.test.ts) 覆盖启动取消、初次心跳和真实子进程硬退出。
+- [集成测试](../apps/server/tests/integration/application.test.ts) 使用独立测试队列，验证两个原生 Worker drain 时仍可完成数据库操作。直接调用工厂的测试显式启动并观察暂停构造的 Worker。
+- [边界检查测试](../scripts/check-boundaries.test.mjs) 覆盖允许／禁止依赖、类型导入、公共导出、别名、路径绕过和循环。
 
-每一步单独提交，不增加演示业务或额外队列到生产注册表；第二个消费者使用测试替身及独立测试队列验证。
-
-生命周期测试中的 `run()` 替身应返回可控的长期 Promise，在关闭或注入故障时才结束；当前部分替身的 `async () => {}` 会立即完成，需要随新生命周期语义更新，不能为兼容替身而放过运行循环意外结束。直接调用业务 Worker 工厂的集成测试也改为显式启动并观察运行 Promise，验证工厂只构造、不自动消费。
+生产仍只注册资料读取消费者，第二个消费者仅存在于测试中。修改这些约定时执行下列验收检查；真实服务及生产部署验证由 CI 执行，不属于离线测试套件。
 
 ## 验收用例
 

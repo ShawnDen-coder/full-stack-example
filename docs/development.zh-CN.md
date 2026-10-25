@@ -8,7 +8,7 @@
 
 先确定改动归属，再阅读对应指引中的代码入口、公共导出、扩展步骤和验证命令：[API](../packages/api/README.zh-CN.md)、[业务](../packages/business/README.zh-CN.md)、[数据库](../packages/db/README.zh-CN.md)、[队列](../packages/queue/README.zh-CN.md)、[可观测性](../packages/observability/README.zh-CN.md)、[UI](../packages/ui/README.zh-CN.md)。
 
-[扩展方式统一设计](extension-design.zh-CN.md) 提议统一业务参数、任务公共入口和多消费者生命周期。它是设计提案，上述各包指引仍描述当前实现。
+[扩展约定](extension-design.zh-CN.md) 说明统一的具名业务参数、任务公共入口、多消费者生命周期和 CI 包依赖规则。
 
 ## 应用扩展入口
 
@@ -16,7 +16,7 @@
 | --- | --- | --- |
 | `apps/web` | `src/routes` 路由、应用专用组件和 `src/utils/orpc.ts` | 受保护页面放在 `_auth` 下，用户数据 query key 包含身份；保留加载、错误和空状态。`pnpm check-types` 会生成路由类型。 |
 | `apps/server` | `src/services.ts` 组装依赖，`src/runtime.ts` / `src/index.ts` 管理进程 | 将新服务接入 API 的 `Services` 类型；为进程拥有的资源补齐就绪检查和关闭逻辑。消费者仍由 Worker 进程启动。 |
-| `apps/worker` | `src/runtime.ts` 显式组装资源和消费者，`src/index.ts` 管理健康和退出 | 当前运行时只有一个 profile 消费者。增加消费者时要扩展工厂／资源类型，并汇总消费者的就绪、运行失败和 drain；仅新增 import 不会完成注册。 |
+| `apps/worker` | `src/runtime.ts` 的资源组装和 `consumerDefinitions` 注册表；`src/lifecycle.ts` 的进程健康／退出 | 新消费者添加一个显式定义，复用全组就绪、运行故障和并行 drain；有新依赖时才扩展共享资源。 |
 
 应用配置写入各自的 `.env.schema`，通过 `pnpm env:generate` 重新生成类型。当前直接维护运行配置和包清单，不通过脚手架 CLI 修改技术栈。
 
@@ -105,9 +105,9 @@ pnpm dev
 
 `pnpm dev` 通过 pnpm workspace 同时启动前端、API 和 worker。需要单独重启或调试消费者时，使用 `pnpm dev:worker`。生产环境通过 `pnpm start:worker` 运行已构建的入口；Docker Compose 提供独立的 `worker` 服务，使用自己的镜像，不向宿主机发布 HTTP 端口。
 
-运行时先检查 PostgreSQL，再以 `autorun: false` 创建 worker，等待 Redis 就绪后开始消费。`WORKER_STARTUP_TIMEOUT_MS` 默认 10,000 毫秒，分别限制各个就绪阶段的等待时间。就绪前发生失败时，会关闭尚未运行的 worker 和数据库连接，并以失败状态退出。启动过程不会创建或重置任何调度配置。
+运行时先检查 PostgreSQL，再以 `autorun: false` 创建全部已注册消费者，等待所有 Redis 连接就绪后才开始消费。`WORKER_STARTUP_TIMEOUT_MS` 默认 10,000 毫秒，分别限制各个就绪阶段的等待时间。就绪前失败时，在退出预算内回滚已返回的消费者和共享资源；退出信号会取消启动等待。启动过程不会创建或重置任何调度配置。
 
-`WORKER_CONCURRENCY` 默认为 5，允许 1–100 的整数。退出操作是幂等的，会等待活动任务结束后再关闭数据库。`WORKER_SHUTDOWN_TIMEOUT_MS` 默认 30,000 毫秒；超时后进程以失败状态退出，由 BullMQ 恢复停滞任务。Compose 为容器预留 40 秒退出时间；任务耗时较长时，应同时提高这两个值。重试或进程故障可能导致同一任务再次执行，因此业务处理函数必须能承受重复执行。示例任务只读取数据。
+`WORKER_CONCURRENCY` 默认为每个消费者 5，允许 1–100 的整数；进程总并发是各注册项之和，增加消费者时应评估连接池和内存容量。退出操作是幂等的，会等待活动任务结束后再关闭数据库。`WORKER_SHUTDOWN_TIMEOUT_MS` 默认 30,000 毫秒；超时后进程以失败状态退出，由 BullMQ 恢复停滞任务。Compose 为容器预留 40 秒退出时间；任务耗时较长时，应同时提高这两个值。重试或进程故障可能导致同一任务再次执行，因此业务处理函数必须能承受重复执行。示例任务只读取数据。
 
 当前实现覆盖了所参考调度方案中的进程与生命周期管理部分。调度配置、持久化、暂停与恢复，以及调度器状态协调属于独立的应用功能，此处尚未实现。
 
@@ -117,7 +117,7 @@ HTTP 应用使用 Hono 和 oRPC Fetch 适配器。Better Auth 直接通过自己
 
 以 `packages/business/src/todos` 作为增删改查模块的参考。其工厂接收数据库，`createServices` 将服务注入 `context.services`。路由负责校验输入，对不存在和属于其他用户的资源统一返回 `NOT_FOUND`。不要接受浏览器传入的资源所属用户 ID。
 
-`repository.ts` 负责 SQL、字段投影和用户范围：`createTodosRepository(db).forUser(session.user.id)` 返回的操作始终按该用户过滤，创建时也固定填入该用户 ID。方法返回执行结果，不暴露可修改的查询构造器。每个 scope 使用独立闭包，共享 repository 不存储可变的当前用户。`service.ts` 保留分页、业务判断和原有操作级 span、指标。Repository 工厂可接收数据库或事务，不负责创建和关闭连接。归属规则重复时再引入 scoped repository，简单模块无需额外层次，也不引入通用基类。这是应用层约束，直接使用原始数据库仍然可以绕过。
+`repository.ts` 负责 SQL、字段投影和用户范围：`createTodosRepository({ db }).forUser(session.user.id)` 返回的操作始终按该用户过滤，创建时也固定填入该用户 ID。方法返回执行结果，不暴露可修改的查询构造器。每个 scope 使用独立闭包，共享 repository 不存储可变的当前用户。`service.ts` 保留分页、业务判断和原有操作级 span、指标。Repository 工厂可接收数据库或事务，不负责创建和关闭连接。归属规则重复时再引入 scoped repository，简单模块无需额外层次，也不引入通用基类。这是应用层约束，直接使用原始数据库仍然可以绕过。
 
 `todo.list({ cursor?, limit? })` 返回 `{ items, nextCursor }`，按 ID 降序排列。每页默认 20 条，最多 100 条；游标为上一页最后一条记录的 ID。文本会去除首尾空白，长度限制为 1–500 个字符。创建和切换完成状态操作返回 `{ id, text, completed }`，删除操作返回 `{ id }`。旧的 `todo.getAll` 接口已移除。引入新的查询方式时，应同时增加相应索引和经过审查的迁移，并使用 PostgreSQL 验证。
 

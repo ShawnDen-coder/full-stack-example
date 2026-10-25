@@ -1,10 +1,9 @@
-# Unified extension design
+# Extension contract
 
 [English](extension-design.md) · [简体中文](extension-design.zh-CN.md) · [Development guide](development.md)
 
-Status: proposal. This document defines target interfaces and rollout steps;
-runtime code has not changed. Package READMEs and actual exports still describe
-the current implementation.
+Status: implemented. This document describes the current business interfaces,
+consumer runtime and CI boundaries. Package READMEs provide focused extension steps.
 
 ## Goals and scope
 
@@ -25,7 +24,7 @@ policies and database schema. No database migration or queue recreation is requi
 | [API context](../packages/api/src/context.ts) and routers | Service capabilities, identity, input validation and RPC errors | Inject operations and mount routers |
 | [server services](../apps/server/src/services.ts) | Database and task client creation/ownership | Wire capabilities, readiness and cleanup |
 | [Worker runtime](../apps/worker/src/runtime.ts) | Consumer protocol, explicit definitions, composition and lifecycle | One definition per new consumer; resource composition changes only for new dependencies |
-| [Worker entry](../apps/worker/src/index.ts) and heartbeat | Signals, fatal failures, process exit, heartbeat removal and final deadline | One process-level exit path |
+| [Worker entry](../apps/worker/src/index.ts), [lifecycle](../apps/worker/src/lifecycle.ts) and heartbeat | Signals, fatal failures, process exit, heartbeat removal and final deadline | One process-level exit path |
 | db/queue/observability/ui | Their infrastructure or shared capabilities | Changes only when the capability itself changes |
 
 The consumer protocol belongs to the application runtime. Business factories keep
@@ -38,7 +37,7 @@ Business Service, Repository and task factories take one named dependency object
 Infrastructure interfaces such as `createDb(config, options)` and `createLogger(...)`
 can retain their existing conventions.
 
-Target usage:
+Usage:
 
 ```ts
 const service = createTodosService({ db });
@@ -74,7 +73,7 @@ await profileJobs.getProfileReadJob({ userId, jobId });
 Include the task name in public subpaths while keeping producer/consumer roles
 separate. Physical files stay under `users/jobs/profile-read.*.ts`.
 
-| Current export | Target export |
+| Removed export | Current export |
 | --- | --- |
 | `business/users/jobs/contract` | `business/users/jobs/profile-read/contract` |
 | `business/users/jobs/producer` | `business/users/jobs/profile-read/producer` |
@@ -85,11 +84,9 @@ All paths above use the `@my-better-t-app/` prefix. Factories share the task pre
 `createProfileReadClient`, `createProfileReadProcessor`, `createProfileReadWorker`.
 The client owns enqueue and owner-scoped status lookup; derive types from factories.
 
-Business is currently a private workspace package, so all callers can migrate in
-one change before removing old entries. If external consumers are discovered,
-retain re-export aliases for a defined transition window. HTTP compatibility
-aliases remain. Keep Redis queue `user-profile` and task `profile` unchanged so
-pending jobs continue to use the existing contract.
+Business is a private workspace package: callers have migrated and the old internal
+exports are removed. HTTP compatibility aliases remain. Redis queue `user-profile`
+and task `profile` are unchanged; pending jobs use the same contract.
 
 ## Explicit consumer registration
 
@@ -168,7 +165,7 @@ consumer count. Bound startup rollback with existing `WORKER_SHUTDOWN_TIMEOUT_MS
 Shutdown uses one process budget with the entry's hard-exit timer, not a full
 budget per consumer.
 
-Change startup to `startWorker({ config, factories, logger, signal })`, with
+Startup uses `startWorker({ config, factories, logger, signal })`, with
 optional test factories, logger and AbortSignal. The entry owns an AbortController:
 on exit signals, cancel startup progression before starting idempotent shutdown.
 Runtime checks cancellation at waits and creation/run boundaries. Cancellation
@@ -201,8 +198,8 @@ while connections remain open.
 
 Keep the existing heartbeat interface: a shared 2-second group probe, every
 5 seconds, with 15-second freshness. One unhealthy consumer invalidates group
-health. Fatal loop failures exit for deployment-managed restart; this proposal
-does not introduce per-consumer automatic restart inside the process.
+health. Fatal loop failures exit for deployment-managed restart; there is no
+per-consumer automatic restart inside the process.
 
 ## Observability conventions
 
@@ -220,9 +217,9 @@ does not introduce per-consumer automatic restart inside the process.
 
 ## Dependency boundary checks
 
-Add `scripts/check-boundaries.mjs` and `pnpm check:boundaries` in the implementation
-phase, using the existing TypeScript parser without new dependencies. Check
-production src against this internal dependency policy:
+`scripts/check-boundaries.mjs` (`pnpm check:boundaries`) runs in CI and uses the
+existing TypeScript parser without new dependencies. It checks production src
+against this internal dependency policy:
 
 | Source | Allowed internal dependencies |
 | --- | --- |
@@ -240,24 +237,23 @@ package cycles. Exclude fixtures/integration tests that legitimately cross app
 boundaries. Validate current production code before enabling CI, and cover
 allowed/forbidden edges, type-only imports, aliases and relative-path bypasses.
 
-## Rollout
+## Implementation and verification
 
-| Step | Deliverable | Completion criteria |
-| --- | --- | --- |
-| 1. Parameters/exports | Named business inputs, task-prefixed factories, new subpaths, caller/type updates | No old internal imports; HTTP/job contracts unchanged; type/business/API tests pass |
-| 2. Consumer runtime | Explicit definitions and shared startup/rollback/readiness/done/close, guaranteed failed exit | Same lifecycle scenarios with one and two consumers; preserve existing single-consumer behavior |
-| 3. Failure/production validation | Concurrent failure regressions and real-service/production package checks | Integration, E2E and production Compose pass; BullMQ patch remains effective |
-| 4. Boundaries/docs | CI dependency checks and updated current extension guides | Adding a comparable task does not change lifecycle algorithms; examples match implementation |
+- Business parameters, task names and exports have migrated together with all callers.
+- Runtime owns the consumer list; [lifecycle](../apps/worker/src/lifecycle.ts) owns
+  cancellation, heartbeat, telemetry flushing and final process termination.
+- [Runtime tests](../apps/worker/tests/runtime.test.ts) use controlled long-lived
+  loops for one/two consumers. [Process tests](../apps/worker/tests/lifecycle.test.ts)
+  cover startup cancellation, initial heartbeat and a real child hard exit.
+- [Integration tests](../apps/server/tests/integration/application.test.ts) use
+  dedicated queues to verify two native Workers can finish database work while
+  draining. Factory tests explicitly start and observe the paused Worker.
+- [Boundary tests](../scripts/check-boundaries.test.mjs) cover allowed/forbidden
+  edges, type imports, exports, aliases, path bypasses and cycles.
 
-Commit each step separately. Validate the second consumer with test doubles and
-dedicated test queues rather than adding a demonstration queue to production.
-
-Lifecycle test doubles should return controlled long-lived run Promises, settling
-on close or injected failure. Some current `async () => {}` doubles finish at once;
-update them for the new lifecycle semantics rather than allowing unexpected loop
-completion merely to preserve those fixtures.
-Integration tests calling business Worker factories directly must also start and
-observe run Promises explicitly, verifying construction never starts consumption.
+Production still registers only the profile consumer. The second consumer exists
+only in tests. Run the acceptance checks below when changing these contracts;
+real-service and production validation run in CI, not in the offline test suite.
 
 ## Acceptance scenarios
 
