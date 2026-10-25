@@ -80,6 +80,9 @@ catalogs:
       specifier: ^4.5.4
       version: 4.6.7
 
+patchedDependencies:
+  bullmq@5.81.5: e11112c71bb461bc7cfdf25db8f4d36ce61995f5a5e3faeddc3800ae2a891faf
+
 importers:
 
   .:
@@ -162,7 +165,7 @@ importers:
         version: 1.7.7(@opentelemetry/api@1.10.0)(drizzle-kit@1.0.0-rc.4)(drizzle-orm@1.0.0-rc.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)(zod@4.6.7))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)
       bullmq:
         specifier: 'catalog:'
-        version: 5.81.5
+        version: 5.81.5(patch_hash=e11112c71bb461bc7cfdf25db8f4d36ce61995f5a5e3faeddc3800ae2a891faf)
       bullmq-otel:
         specifier: 'catalog:'
         version: 1.3.1
@@ -332,7 +335,7 @@ importers:
         version: 3.0.0(@opentelemetry/api@1.10.0)
       bullmq:
         specifier: 'catalog:'
-        version: 5.81.5
+        version: 5.81.5(patch_hash=e11112c71bb461bc7cfdf25db8f4d36ce61995f5a5e3faeddc3800ae2a891faf)
       bullmq-otel:
         specifier: 'catalog:'
         version: 1.3.1
@@ -502,7 +505,7 @@ importers:
     dependencies:
       bullmq:
         specifier: 'catalog:'
-        version: 5.81.5
+        version: 5.81.5(patch_hash=e11112c71bb461bc7cfdf25db8f4d36ce61995f5a5e3faeddc3800ae2a891faf)
       bullmq-otel:
         specifier: 'catalog:'
         version: 1.3.1
@@ -5883,13 +5886,13 @@ snapshots:
   bullmq-otel@1.3.1:
     dependencies:
       '@opentelemetry/api': 1.10.0
-      bullmq: 5.81.5
+      bullmq: 5.81.5(patch_hash=e11112c71bb461bc7cfdf25db8f4d36ce61995f5a5e3faeddc3800ae2a891faf)
       tslib: 2.8.1
     transitivePeerDependencies:
       - redis
       - supports-color
 
-  bullmq@5.81.5:
+  bullmq@5.81.5(patch_hash=e11112c71bb461bc7cfdf25db8f4d36ce61995f5a5e3faeddc3800ae2a891faf):
     dependencies:
       cron-parser: 4.9.0
       ioredis: 5.11.1

@@ -6,7 +6,8 @@
 	},
 	"scripts": {
 		"build": "tsc -b",
-		"check-types": "tsc -b"
+		"check-types": "tsc -b",
+		"test": "node --test tests/*.test.mjs"
 	},
 	"dependencies": {
 		"bullmq": "catalog:",

@@ -35,6 +35,8 @@ catalog:
 
 # Deploy isolated production dependencies without copying the workspace.
 injectWorkspacePackages: true
+patchedDependencies:
+  bullmq@5.81.5: patches/bullmq@5.81.5.patch
 syncInjectedDepsAfterScripts:
   - build
   - check-types
