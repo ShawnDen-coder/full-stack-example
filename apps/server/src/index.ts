@@ -1,5 +1,5 @@
-import { createLogger, withDeadline } from "@my-better-t-app/observability";
-import { startTelemetry } from "@my-better-t-app/observability/telemetry";
+import { createLogger, withDeadline } from "@full-stack-example/observability";
+import { startTelemetry } from "@full-stack-example/observability/telemetry";
 import { ENV } from "./env.server";
 import { startServer } from "./runtime";
 

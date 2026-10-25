@@ -1,5 +1,5 @@
 {
-	"name": "@my-better-t-app/observability",
+	"name": "@full-stack-example/observability",
 	"private": true,
 	"type": "module",
 	"exports": {

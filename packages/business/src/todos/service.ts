@@ -1,5 +1,5 @@
-import type { Database } from "@my-better-t-app/db";
-import { observeOperation } from "@my-better-t-app/observability";
+import type { Database } from "@full-stack-example/db";
+import { observeOperation } from "@full-stack-example/observability";
 import { createTodosRepository } from "./repository";
 
 export function createTodosService({ db }: { db: Database }) {

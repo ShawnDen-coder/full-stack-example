@@ -1,13 +1,13 @@
-import { Button } from "@my-better-t-app/ui/components/button";
+import { Button } from "@full-stack-example/ui/components/button";
 import {
 	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
-} from "@my-better-t-app/ui/components/card";
-import { Checkbox } from "@my-better-t-app/ui/components/checkbox";
-import { Input } from "@my-better-t-app/ui/components/input";
+} from "@full-stack-example/ui/components/card";
+import { Checkbox } from "@full-stack-example/ui/components/checkbox";
+import { Input } from "@full-stack-example/ui/components/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Trash2 } from "lucide-react";

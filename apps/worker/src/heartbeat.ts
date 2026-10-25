@@ -1,5 +1,5 @@
 import { rename, rm, writeFile } from "node:fs/promises";
-import { withDeadline } from "@my-better-t-app/observability";
+import { withDeadline } from "@full-stack-example/observability";
 
 export const HEARTBEAT_FILE = "/tmp/full-stack-worker-ready.json";
 

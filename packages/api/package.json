@@ -1,5 +1,5 @@
 {
-	"name": "@my-better-t-app/api",
+	"name": "@full-stack-example/api",
 	"type": "module",
 	"exports": {
 		"./auth": "./src/auth.ts",
@@ -13,7 +13,7 @@
 		"check-types": "tsc -b"
 	},
 	"dependencies": {
-		"@my-better-t-app/db": "workspace:*",
+		"@full-stack-example/db": "workspace:*",
 		"@orpc/client": "catalog:",
 		"@orpc/openapi": "catalog:",
 		"@orpc/server": "catalog:",
@@ -21,13 +21,13 @@
 		"@types/pg": "catalog:",
 		"drizzle-orm": "catalog:",
 		"zod": "catalog:",
-		"@my-better-t-app/queue": "workspace:*",
+		"@full-stack-example/queue": "workspace:*",
 		"hono": "^4.13.7",
-		"@my-better-t-app/observability": "workspace:*",
+		"@full-stack-example/observability": "workspace:*",
 		"@better-auth/core": "1.7.7",
 		"@better-auth/drizzle-adapter": "1.7.7",
 		"better-auth": "catalog:",
-		"@my-better-t-app/business": "workspace:*"
+		"@full-stack-example/business": "workspace:*"
 	},
 	"devDependencies": {
 		"typescript": "catalog:"

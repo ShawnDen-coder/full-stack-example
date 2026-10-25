@@ -1,4 +1,4 @@
-# @my-better-t-app/queue
+# @full-stack-example/queue
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [Project](../../README.md)
 
@@ -35,13 +35,49 @@ To add a task, extend business, wire its producer in
 consumer in [Worker runtime](../../apps/worker/src/runtime.ts). This package has
 no task registration table, and adding a contract alone does not start a consumer.
 
+## Example: make the connection timeout configurable
+
+Suppose several producers/consumers need a different Redis connection timeout.
+Extend the existing `createQueueConnection` factory in [src/index.ts](src/index.ts)
+with an optional third parameter (this option does not exist yet):
+
+```ts
+options: { connectTimeoutMs?: number } = {},
+```
+
+Before constructing the returned connection object, validate the value:
+
+```ts
+const connectTimeout = options.connectTimeoutMs ?? 5000;
+if (!Number.isInteger(connectTimeout) || connectTimeout <= 0) {
+  throw new Error("Redis connection timeout must be a positive integer");
+}
+```
+
+Replace only `connectTimeout: 5000` with `connectTimeout` in the returned object.
+Keep URL/TLS/credential parsing, producer command deadlines and the Worker's
+`maxRetriesPerRequest: null` behavior. Existing two-argument callers keep working;
+new callers inside business-owned job factories can use:
+
+```ts
+createQueueConnection(redisUrl, "worker", { connectTimeoutMs: 8000 });
+```
+
+Pass a setting through application config and factory parameters if it must vary
+by deployment; do not read app env files in this package. Add tests alongside
+[connection tests](tests/connection.test.mjs) for the default, override, invalid
+values, TLS and both roles. Existing initialization/close regression tests must
+still pass. A new business task instead follows the
+[job example](../../docs/extension-examples.md#case-2-add-a-background-job), without
+adding its contract or registry to queue.
+
 ## Verify
 
 Run from the workspace root:
 
 ```bash
-pnpm --filter @my-better-t-app/queue test
-pnpm --filter @my-better-t-app/queue check-types
+pnpm --filter @full-stack-example/queue test
+pnpm --filter @full-stack-example/queue check-types
 ```
 
 Connection, retry or propagation changes also require `pnpm test:integration`

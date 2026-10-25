@@ -8,6 +8,8 @@
 
 先确定改动归属，再阅读对应指引中的代码入口、公共导出、扩展步骤和验证命令：[API](../packages/api/README.zh-CN.md)、[业务](../packages/business/README.zh-CN.md)、[数据库](../packages/db/README.zh-CN.md)、[队列](../packages/queue/README.zh-CN.md)、[可观测性](../packages/observability/README.zh-CN.md)、[UI](../packages/ui/README.zh-CN.md)。
 
+具体改动先看[模块扩展示例](extension-examples.zh-CN.md)：如何贯通 business／API／web 重命名 Todo，或增加独立注册的后台任务。各包指引也包含针对该模块的扩展示例和检查方法。
+
 [扩展约定](extension-design.zh-CN.md) 说明统一的具名业务参数、任务公共入口、多消费者生命周期和 CI 包依赖规则。
 
 ## 应用扩展入口
@@ -39,7 +41,7 @@ npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
 按以下方式导入共享组件：
 
 ```tsx
-import { Button } from "@my-better-t-app/ui/components/button";
+import { Button } from "@full-stack-example/ui/components/button";
 ```
 
 ### 添加应用专用区块
@@ -143,7 +145,7 @@ Pino 将 JSON 日志输出到 stdout，包含 `service`、请求 ID、耗时和�
 
 GitHub Actions 使用 Node 24、pnpm 11.0.9 和已提交的锁文件进行验证。离线测试覆盖 HTTP 边界、就绪检查、日志脱敏和 worker 生命周期。集成测试使用真实 PostgreSQL/Redis、已提交的迁移和 Better Auth，并验证任务重试、连接中断和 SIGTERM 退出。Playwright 覆盖账号切换（包括延迟响应）、写入失败和会话过期。生产冒烟测试验证构建后的 Nginx/API/worker 整体链路、Secure Cookie 和 SPA 深层路由。发布保护测试确保迁移失败后不会继续替换应用容器。
 
-Husky/lint-staged 只处理暂存文件；以 CI 结果作为最终依据，本地钩子不能替代 CI。保持 `.node-version`、Node 类型定义和 Docker 运行时版本一致。依赖升级，尤其是 Drizzle RC 版本变更，必须通过完整验证流程，不要与无关功能变更混在一起。
+Husky 对暂存文件运行 lint-staged，对提交消息运行 Cocogitto；CLI 安装和应用统一发布流程见[版本管理指南](../README.zh-CN.md#版本管理)。以 CI 结果作为最终依据，本地钩子不能替代 CI。保持 `.node-version`、Node 类型定义和 Docker 运行时版本一致。依赖升级，尤其是 Drizzle RC 版本变更，必须通过完整验证流程，不要与无关功能变更混在一起。
 
 ## 本轮结构与运行边界
 

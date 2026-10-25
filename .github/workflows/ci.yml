@@ -2,13 +2,25 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [master]
 permissions:
   contents: read
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  conventional-commits:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Check Conventional Commits
+        uses: cocogitto/cocogitto-action@v4
+        with:
+          command: check
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -17,10 +29,10 @@ jobs:
         image: postgres:18
         env:
           POSTGRES_PASSWORD: integration-only
-          POSTGRES_DB: starter_test
+          POSTGRES_DB: full_stack_example_test
         ports: [5432:5432]
         options: >-
-          --health-cmd "pg_isready -U postgres -d starter_test"
+          --health-cmd "pg_isready -U postgres -d full_stack_example_test"
           --health-interval 5s --health-timeout 3s --health-retries 20
       redis:
         image: redis:7-alpine
@@ -29,7 +41,7 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 3s --health-retries 20
     env:
-      TEST_DATABASE_URL: postgresql://postgres:integration-only@127.0.0.1:5432/starter_test
+      TEST_DATABASE_URL: postgresql://postgres:integration-only@127.0.0.1:5432/full_stack_example_test
       TEST_REDIS_URL: redis://127.0.0.1:6379
     steps:
       - uses: actions/checkout@v4
@@ -61,13 +73,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      PUBLIC_APP_URL: https://starter.test
+      PUBLIC_APP_URL: https://full-stack-example.test
       BETTER_AUTH_SECRET: compose-smoke-only-secret-at-least-32-characters
       POSTGRES_PASSWORD: compose-smoke-only
       MIGRATION_DATABASE_URL: postgresql://postgres:compose-smoke-only@postgres:5432/app
       DATABASE_URL: postgresql://app_server:compose-server-only@postgres:5432/app
       WORKER_DATABASE_URL: postgresql://app_worker:compose-worker-only@postgres:5432/app
-      COMPOSE_PROJECT_NAME: starter-smoke
+      COMPOSE_PROJECT_NAME: full-stack-example-smoke
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

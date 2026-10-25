@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { type TestContext, test } from "node:test";
-import { createDb } from "@my-better-t-app/db";
+import { createDb } from "@full-stack-example/db";
 import { createTodosRepository } from "../src/todos/repository";
 
 type Query = { text: string; values: unknown[] };

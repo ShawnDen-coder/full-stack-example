@@ -1,5 +1,5 @@
 {
-	"name": "@my-better-t-app/queue",
+	"name": "@full-stack-example/queue",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"

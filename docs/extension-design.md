@@ -4,6 +4,8 @@
 
 Status: implemented. This document describes the current business interfaces,
 consumer runtime and CI boundaries. Package READMEs provide focused extension steps.
+The [extension examples](extension-examples.md) apply these contracts to proposed
+Todo and background-job additions, without claiming those additions exist today.
 
 ## Goals and scope
 
@@ -80,7 +82,7 @@ separate. Physical files stay under `users/jobs/profile-read.*.ts`.
 | `business/users/jobs/worker` | `business/users/jobs/profile-read/worker` |
 | `business/users/jobs/status` | Internal producer helper |
 
-All paths above use the `@my-better-t-app/` prefix. Factories share the task prefix:
+All paths above use the `@full-stack-example/` prefix. Factories share the task prefix:
 `createProfileReadClient`, `createProfileReadProcessor`, `createProfileReadWorker`.
 The client owns enqueue and owner-scoped status lookup; derive types from factories.
 

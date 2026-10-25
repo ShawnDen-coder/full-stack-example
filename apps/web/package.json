@@ -14,8 +14,8 @@
 		"routes:generate": "node scripts/generate-routes.mjs"
 	},
 	"dependencies": {
-		"@my-better-t-app/api": "workspace:*",
-		"@my-better-t-app/ui": "workspace:*",
+		"@full-stack-example/api": "workspace:*",
+		"@full-stack-example/ui": "workspace:*",
 		"@orpc/client": "catalog:",
 		"@orpc/server": "catalog:",
 		"@orpc/tanstack-query": "^1.15.6",

@@ -12,6 +12,10 @@ public exports, extension steps and focused checks:
 [database](../packages/db/README.md), [queue](../packages/queue/README.md),
 [observability](../packages/observability/README.md), [UI](../packages/ui/README.md).
 
+For concrete changes, start with the [module extension examples](extension-examples.md):
+rename a Todo across business/API/web, or add a separately registered background
+job. Each package guide also includes a focused extension example and checks.
+
 The [extension contract](extension-design.md) describes named business inputs,
 task-specific exports, the multiple-consumer lifecycle and CI dependency rules.
 
@@ -46,7 +50,7 @@ npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
 Import shared components like this:
 
 ```tsx
-import { Button } from "@my-better-t-app/ui/components/button";
+import { Button } from "@full-stack-example/ui/components/button";
 ```
 
 ### Add app-specific blocks
@@ -254,8 +258,10 @@ sessions. The production smoke test exercises the built Nginx/API/worker stack,
 secure cookies and a deep SPA route. Deployment guard tests ensure failed
 migrations prevent subsequent application replacement.
 
-Use Husky/lint-staged for staged files only. CI is authoritative; local hooks do
-not replace it. Keep `.node-version`, Node type definitions and Docker runtimes
+Husky runs lint-staged on staged files and Cocogitto on commit messages. See the
+[versioning guide](../README.md#versioning) for CLI installation and unified
+application releases. CI is authoritative; local hooks do not replace it.
+Keep `.node-version`, Node type definitions and Docker runtimes
 aligned. Dependency upgrades, especially Drizzle RC changes, must pass the full
 pipeline; do not combine them with unrelated feature changes.
 

@@ -1,7 +1,7 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { Button } from "@my-better-t-app/ui/components/button";
-import { cn } from "@my-better-t-app/ui/lib/utils";
+import { Button } from "@full-stack-example/ui/components/button";
+import { cn } from "@full-stack-example/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 

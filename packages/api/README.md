@@ -1,4 +1,4 @@
-# @my-better-t-app/api
+# @full-stack-example/api
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [Project](../../README.md)
 
@@ -35,12 +35,47 @@ Auth plugin/schema changes start in `src/auth.ts`; follow
 [auth schema generation](../../docs/development.md#better-auth-schema-generation),
 then the [database migration workflow](../db/README.md).
 
+## Example: expose todo.rename
+
+After adding the [business rename method](../business/README.md#example-rename-an-owned-todo),
+insert this property into `todoRouter` in [src/routers/todo.ts](src/routers/todo.ts).
+The file already imports `z`, `ORPCError` and `protectedProcedure`:
+
+```ts
+rename: protectedProcedure
+  .input(z.object({
+    id: z.number().int().positive(),
+    text: z.string().trim().min(1).max(500),
+  }))
+  .handler(async ({ input, context }) => {
+    const updated = await context.services.todosService.rename({
+      userId: context.session.user.id,
+      id: input.id,
+      text: input.text,
+    });
+    if (!updated) throw new ORPCError("NOT_FOUND");
+    return updated;
+  }),
+```
+
+This operation is not implemented in the current router. Once added, the existing
+`appRouter.todo` registration and inferred client expose
+`client.todo.rename({ id: 7, text: "Book tickets" })`. There is no `userId`
+input, new service instance or hand-written client interface. See the
+[web example](../../docs/extension-examples.md#case-1-rename-a-todo) for callers.
+
+Extend [server module tests](../../apps/server/tests/modules.test.ts): unauthenticated
+requests fail; whitespace is trimmed; empty/overlong text and invalid IDs are
+rejected; the service receives the session user ID. Test both missing and foreign
+Todos as `NOT_FOUND` with dedicated database integration tests. Update typed
+service fakes when their `TodosService` contract gains `rename`.
+
 ## Verify
 
 Run from the workspace root:
 
 ```bash
-pnpm --filter @my-better-t-app/api check-types
+pnpm --filter @full-stack-example/api check-types
 pnpm --filter server test
 ```
 

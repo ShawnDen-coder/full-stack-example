@@ -1,4 +1,4 @@
-import { type Logger, withDeadline } from "@my-better-t-app/observability";
+import { type Logger, withDeadline } from "@full-stack-example/observability";
 import { startHeartbeat } from "./heartbeat";
 import {
 	startWorker,

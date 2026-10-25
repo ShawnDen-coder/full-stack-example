@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { test } from "node:test";
-import { createLogger } from "@my-better-t-app/observability";
+import { createLogger } from "@full-stack-example/observability";
 import { startWorkerProcess } from "../src/lifecycle";
 import { WorkerStartupAbortedError } from "../src/runtime";
 
@@ -131,7 +131,7 @@ test("the hard shutdown deadline terminates a child even when a consumer never d
 }, async () => {
 	const source = `
 import { startWorkerProcess } from ${JSON.stringify(new URL("../src/lifecycle.ts", import.meta.url).href)};
-import { createLogger } from '@my-better-t-app/observability';
+import { createLogger } from '@full-stack-example/observability';
 const logger = createLogger('test'); logger.level = 'silent';
 const worker = startWorkerProcess({
  config: ${JSON.stringify({ ...config, WORKER_SHUTDOWN_TIMEOUT_MS: 30 })}, logger,

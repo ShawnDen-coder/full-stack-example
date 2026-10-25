@@ -1,4 +1,4 @@
-import { Toaster } from "@my-better-t-app/ui/components/sonner";
+import { Toaster } from "@full-stack-example/ui/components/sonner";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
@@ -40,11 +40,11 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 	head: () => ({
 		meta: [
 			{
-				title: "my-better-t-app",
+				title: "full-stack-example",
 			},
 			{
 				name: "description",
-				content: "my-better-t-app is a web application",
+				content: "full-stack-example is a web application",
 			},
 		],
 		links: [

@@ -11,11 +11,11 @@
 		"env:generate": "varlock codegen"
 	},
 	"dependencies": {
-		"@my-better-t-app/db": "workspace:*",
-		"@my-better-t-app/queue": "workspace:*",
+		"@full-stack-example/db": "workspace:*",
+		"@full-stack-example/queue": "workspace:*",
 		"varlock": "catalog:",
-		"@my-better-t-app/observability": "workspace:*",
-		"@my-better-t-app/business": "workspace:*",
+		"@full-stack-example/observability": "workspace:*",
+		"@full-stack-example/business": "workspace:*",
 		"pino": "catalog:",
 		"@opentelemetry/api": "catalog:",
 		"@opentelemetry/sdk-node": "catalog:",

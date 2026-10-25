@@ -1,5 +1,5 @@
 {
-	"name": "@my-better-t-app/business",
+	"name": "@full-stack-example/business",
 	"type": "module",
 	"exports": {
 		"./users": "./src/users/service.ts",
@@ -14,10 +14,10 @@
 		"test": "node --import tsx --test tests/*.test.ts"
 	},
 	"dependencies": {
-		"@my-better-t-app/db": "workspace:*",
+		"@full-stack-example/db": "workspace:*",
 		"drizzle-orm": "catalog:",
-		"@my-better-t-app/queue": "workspace:*",
-		"@my-better-t-app/observability": "workspace:*",
+		"@full-stack-example/queue": "workspace:*",
+		"@full-stack-example/observability": "workspace:*",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

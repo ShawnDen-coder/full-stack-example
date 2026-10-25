@@ -1,4 +1,4 @@
-import type { AppRouterClient } from "@my-better-t-app/api/routers/index";
+import type { AppRouterClient } from "@full-stack-example/api/routers/index";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";

@@ -1,5 +1,5 @@
 {
-	"name": "@my-better-t-app/db",
+	"name": "@full-stack-example/db",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
@@ -21,7 +21,7 @@
 		"drizzle-orm": "catalog:",
 		"pg": "catalog:",
 		"zod": "catalog:",
-		"@my-better-t-app/observability": "workspace:*"
+		"@full-stack-example/observability": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/pg": "catalog:",

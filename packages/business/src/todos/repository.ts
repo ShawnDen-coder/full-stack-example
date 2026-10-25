@@ -1,5 +1,5 @@
-import type { Database } from "@my-better-t-app/db";
-import { todo } from "@my-better-t-app/db/schema/todo";
+import type { Database } from "@full-stack-example/db";
+import { todo } from "@full-stack-example/db/schema/todo";
 import { and, desc, eq, lt } from "drizzle-orm";
 
 // A database or transaction can execute these operations; the repository owns neither.

@@ -3,7 +3,7 @@ import {
 	observeHttp,
 	traceRequest,
 	withDeadline,
-} from "@my-better-t-app/observability";
+} from "@full-stack-example/observability";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { isProcedure, ORPCError, onError } from "@orpc/server";

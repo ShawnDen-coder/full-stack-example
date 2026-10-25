@@ -5,7 +5,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter worker build
 RUN pnpm --filter worker deploy --prod --ignore-scripts /out
-RUN find /out/node_modules -path "*/@my-better-t-app/*/src" -type d -prune -exec rm -rf {} +
+RUN find /out/node_modules -path "*/@full-stack-example/*/src" -type d -prune -exec rm -rf {} +
 
 FROM node:24-slim AS runner
 ENV NODE_ENV=production

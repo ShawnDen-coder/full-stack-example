@@ -16,7 +16,7 @@ function fixture(t) {
 		put(
 			`${id}/package.json`,
 			JSON.stringify({
-				name: `@my-better-t-app/${id.split("/")[1]}`,
+				name: `@full-stack-example/${id.split("/")[1]}`,
 				exports: {
 					".": "./src/index.ts",
 					"./routers/index": "./src/routers/index.ts",
@@ -46,30 +46,33 @@ test("allows public exports, wildcard UI entries and type-only API contracts", (
 	f.put(
 		"apps/web/src/client.ts",
 		`
-import type { Client } from '@my-better-t-app/api/routers/index';
-import { type Other } from '@my-better-t-app/api/routers/index';
-export type { Client as Alias } from '@my-better-t-app/api/routers/index';
-type Dynamic = import('@my-better-t-app/api/routers/index').Client;
-import { Button } from '@my-better-t-app/ui/components/button';
+import type { Client } from '@full-stack-example/api/routers/index';
+import { type Other } from '@full-stack-example/api/routers/index';
+export type { Client as Alias } from '@full-stack-example/api/routers/index';
+type Dynamic = import('@full-stack-example/api/routers/index').Client;
+import { Button } from '@full-stack-example/ui/components/button';
 import { value } from '@/index';`,
 	);
 	f.put(
 		"packages/business/src/service.ts",
-		"import { value } from '@my-better-t-app/db';",
+		"import { value } from '@full-stack-example/db';",
 	);
 	assert.deepEqual(f.check(), []);
 });
 
 test("rejects forbidden edges, private exports and API runtime imports from web", (t) => {
 	const f = fixture(t);
-	f.put("apps/worker/src/private.ts", "export * from '@my-better-t-app/api';");
+	f.put(
+		"apps/worker/src/private.ts",
+		"export * from '@full-stack-example/api';",
+	);
 	f.put(
 		"apps/web/src/leak.ts",
-		"import { Client } from '@my-better-t-app/api/routers/index';",
+		"import { Client } from '@full-stack-example/api/routers/index';",
 	);
 	f.put(
 		"apps/server/src/private.ts",
-		"import { secret } from '@my-better-t-app/business/src/private';",
+		"import { secret } from '@full-stack-example/business/src/private';",
 	);
 	const errors = f.check();
 	assert.ok(
@@ -86,10 +89,10 @@ test("checks dynamic imports, re-exports, require and type dependencies", (t) =>
 	f.put(
 		"packages/ui/src/leak.ts",
 		`
-const db = import('@my-better-t-app/db');
-export type { Secret } from '@my-better-t-app/api';
-const worker = require('@my-better-t-app/business');
-import foo = require('@my-better-t-app/queue');`,
+const db = import('@full-stack-example/db');
+export type { Secret } from '@full-stack-example/api';
+const worker = require('@full-stack-example/business');
+import foo = require('@full-stack-example/queue');`,
 	);
 	assert.equal(
 		f.check().filter((error) => error.includes("dependency on")).length,
@@ -134,11 +137,11 @@ test("detects package cycles even when both edges are individually permitted", (
 	const f = fixture(t);
 	f.put(
 		"packages/api/src/index.ts",
-		"import type { A } from '@my-better-t-app/business';",
+		"import type { A } from '@full-stack-example/business';",
 	);
 	f.put(
 		"packages/business/src/index.ts",
-		"import type { B } from '@my-better-t-app/api';",
+		"import type { B } from '@full-stack-example/api';",
 	);
 	const errors = f.check({ ...boundaryRules, "packages/business": ["api"] });
 	assert.deepEqual(errors, [
@@ -150,10 +153,10 @@ test("test fixtures are excluded and new production workspaces require a policy"
 	const f = fixture(t);
 	f.put(
 		"apps/web/tests/integration.ts",
-		"import { db } from '@my-better-t-app/db';",
+		"import { db } from '@full-stack-example/db';",
 	);
 	assert.deepEqual(f.check(), []);
-	f.put("packages/new/package.json", '{"name":"@my-better-t-app/new"}');
+	f.put("packages/new/package.json", '{"name":"@full-stack-example/new"}');
 	f.put("packages/new/src/index.ts", "export {};");
 	assert.deepEqual(f.check(), ["packages/new: missing dependency policy"]);
 });
@@ -166,10 +169,10 @@ test("aliases cannot redirect public-looking package names to private or foreign
 			compilerOptions: {
 				moduleResolution: "bundler",
 				paths: {
-					"@my-better-t-app/ui/components/button": [
+					"@full-stack-example/ui/components/button": [
 						"../../packages/db/src/index.ts",
 					],
-					"@my-better-t-app/ui/components/private": [
+					"@full-stack-example/ui/components/private": [
 						"../../packages/ui/src/private.ts",
 					],
 				},
@@ -180,8 +183,8 @@ test("aliases cannot redirect public-looking package names to private or foreign
 	f.put(
 		"apps/web/src/leak.ts",
 		`
-import { value } from '@my-better-t-app/ui/components/button';
-import { privateValue } from '@my-better-t-app/ui/components/private';`,
+import { value } from '@full-stack-example/ui/components/button';
+import { privateValue } from '@full-stack-example/ui/components/private';`,
 	);
 	const errors = f.check();
 	assert.ok(

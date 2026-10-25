@@ -1,6 +1,6 @@
 // Better Auth CLI entry: importing this file never starts queues, workers, or HTTP.
-import { createAuth } from "@my-better-t-app/api/auth";
-import { createDb } from "@my-better-t-app/db";
+import { createAuth } from "@full-stack-example/api/auth";
+import { createDb } from "@full-stack-example/db";
 import { ENV } from "./env.server";
 
 export const auth = createAuth({

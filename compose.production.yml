@@ -26,7 +26,7 @@ services:
       retries: 20
     restart: unless-stopped
   migrate:
-    image: ${COMPOSE_PROJECT_NAME:-starter}-server
+    image: ${COMPOSE_PROJECT_NAME:-full-stack-example}-server
     init: true
     environment:
       DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set migration owner URL}
@@ -38,7 +38,7 @@ services:
         condition: service_healthy
     restart: "no"
   provision:
-    image: ${COMPOSE_PROJECT_NAME:-starter}-server
+    image: ${COMPOSE_PROJECT_NAME:-full-stack-example}-server
     init: true
     environment:
       MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set migration owner URL}
@@ -50,7 +50,7 @@ services:
         condition: service_completed_successfully
     restart: "no"
   server:
-    image: ${COMPOSE_PROJECT_NAME:-starter}-server
+    image: ${COMPOSE_PROJECT_NAME:-full-stack-example}-server
     build:
       context: .
       dockerfile: apps/server/Dockerfile

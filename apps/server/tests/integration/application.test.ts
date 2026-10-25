@@ -3,12 +3,12 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { createApi } from "@my-better-t-app/api/create-api";
-import type { AppRouterClient } from "@my-better-t-app/api/routers/index";
-import { createDb } from "@my-better-t-app/db";
-import { user } from "@my-better-t-app/db/schema/auth";
-import { todo } from "@my-better-t-app/db/schema/todo";
-import { createLogger } from "@my-better-t-app/observability";
+import { createApi } from "@full-stack-example/api/create-api";
+import type { AppRouterClient } from "@full-stack-example/api/routers/index";
+import { createDb } from "@full-stack-example/db";
+import { user } from "@full-stack-example/db/schema/auth";
+import { todo } from "@full-stack-example/db/schema/todo";
+import { createLogger } from "@full-stack-example/observability";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { eq } from "drizzle-orm";
@@ -370,7 +370,7 @@ test("failed jobs use bounded retries and expose no internal failure details", {
 	timeout: 15000,
 }, async () => {
 	const { createProfileReadWorker } = await import(
-		"@my-better-t-app/business/users/jobs/profile-read/worker"
+		"@full-stack-example/business/users/jobs/profile-read/worker"
 	);
 	const runtime = createServices(config, logger);
 	let attempts = 0;
@@ -442,7 +442,7 @@ test("production runtime roles can perform their work but cannot change schema o
 	timeout: 20000,
 }, async () => {
 	const { provisionRuntimeRoles } = await import(
-		"@my-better-t-app/db/provision"
+		"@full-stack-example/db/provision"
 	);
 	const admin = createDb(config, { logger });
 	const serverUrl = new URL(config.DATABASE_URL);
@@ -499,9 +499,9 @@ test("native BullMQ telemetry preserves producer trace context through Redis and
 	timeout: 20000,
 }, async () => {
 	const { startTelemetry } = await import(
-		"@my-better-t-app/observability/telemetry"
+		"@full-stack-example/observability/telemetry"
 	);
-	const { traceRequest } = await import("@my-better-t-app/observability");
+	const { traceRequest } = await import("@full-stack-example/observability");
 	const spans: { name: string; spanContext(): { traceId: string } }[] = [];
 	const telemetry = startTelemetry(
 		"integration",
@@ -575,7 +575,7 @@ test("two real consumers drain together before their shared PostgreSQL pool clos
 	timeout: 20000,
 }, async () => {
 	const { Queue, Worker, createQueueConnection } = await import(
-		"@my-better-t-app/queue"
+		"@full-stack-example/queue"
 	);
 	const db = createDb(config, { logger });
 	const gates = [Promise.withResolvers<void>(), Promise.withResolvers<void>()];
