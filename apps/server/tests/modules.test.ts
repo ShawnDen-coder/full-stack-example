@@ -67,11 +67,11 @@ async function fixture(currentSession: Session | null = session) {
 				},
 			},
 			profileJobs: {
-				enqueueProfileRead: async (id) => {
+				enqueueProfileRead: async ({ userId: id }) => {
 					calls.push(`enqueue:${id}`);
 					return { id: "job-1" };
 				},
-				getProfileReadJob: async (id, userId) => {
+				getProfileReadJob: async ({ jobId: id, userId }) => {
 					calls.push(`job:${id}:${userId}`);
 					return null;
 				},
@@ -429,7 +429,7 @@ test("structured logs redact credentials and retain request correlation and stac
 
 test("queue degradation has a separate readiness endpoint and maps job errors to 503", async () => {
 	const { ProfileJobsUnavailableError } = await import(
-		"@my-better-t-app/business/users/jobs/producer"
+		"@my-better-t-app/business/users/jobs/profile-read/producer"
 	);
 	const f = await fixture();
 	try {

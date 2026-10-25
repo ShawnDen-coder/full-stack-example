@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createUserProfileProcessor } from "../src/users/jobs/profile-read.processor";
+import { createProfileReadProcessor } from "../src/users/jobs/profile-read.processor";
 import { getProfileReadJob } from "../src/users/jobs/profile-read.status";
 
 const profile = {
@@ -76,7 +76,7 @@ test("unfinished jobs hide stored results", async () => {
 });
 
 test("worker validates payloads and returns only the intended profile fields", async () => {
-	const process = createUserProfileProcessor({
+	const process = createProfileReadProcessor({
 		usersService: { getProfile: async () => profile },
 	});
 	assert.deepEqual(await process({ userId: "user-1" }), {
@@ -85,7 +85,7 @@ test("worker validates payloads and returns only the intended profile fields", a
 		emailVerified: true,
 	});
 	await assert.rejects(() => process({ userId: "" }));
-	const missing = createUserProfileProcessor({
+	const missing = createProfileReadProcessor({
 		usersService: { getProfile: async () => null },
 	});
 	assert.equal(await missing({ userId: "deleted" }), null);

@@ -1,14 +1,14 @@
 import type { Auth, Session } from "@my-better-t-app/api/auth";
 import type { TodosService } from "@my-better-t-app/business/todos";
 import type { UsersService } from "@my-better-t-app/business/users";
-import type { ProfileJobClient } from "@my-better-t-app/business/users/jobs/producer";
+import type { ProfileReadClient } from "@my-better-t-app/business/users/jobs/profile-read/producer";
 import type { Logger } from "@my-better-t-app/observability";
 
 export type Services = {
 	usersService: UsersService;
 	todosService: TodosService;
 	profileJobs: Pick<
-		ProfileJobClient,
+		ProfileReadClient,
 		"enqueueProfileRead" | "getProfileReadJob"
 	>;
 };

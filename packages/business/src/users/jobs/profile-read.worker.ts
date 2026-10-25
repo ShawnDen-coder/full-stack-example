@@ -15,24 +15,22 @@ import {
 	type UserProfileJobData,
 	type UserProfileJobResult,
 } from "./profile-read.contract";
-import { createUserProfileProcessor } from "./profile-read.processor";
+import { createProfileReadProcessor } from "./profile-read.processor";
 
-export { createUserProfileProcessor } from "./profile-read.processor";
+export { createProfileReadProcessor } from "./profile-read.processor";
 
-export function createUserProfileWorker({
+export function createProfileReadWorker({
 	redisUrl,
 	usersService,
 	concurrency = 5,
-	autorun = true,
 	logger,
 }: {
 	redisUrl: string;
 	usersService: UsersService;
 	concurrency?: number;
-	autorun?: boolean;
 	logger?: Logger;
 }) {
-	const processProfile = createUserProfileProcessor({ usersService });
+	const processProfile = createProfileReadProcessor({ usersService });
 	const jobMetrics = createQueueMetrics(USER_PROFILE_QUEUE);
 	const worker = new Worker<UserProfileJobData, UserProfileJobResult>(
 		USER_PROFILE_QUEUE,
@@ -79,7 +77,7 @@ export function createUserProfileWorker({
 		{
 			connection: createQueueConnection(redisUrl, "worker"),
 			concurrency,
-			autorun,
+			autorun: false,
 			telemetry: createQueueTelemetry(),
 		},
 	);

@@ -3,12 +3,17 @@ import { observeOperation } from "@my-better-t-app/observability";
 import { createTodosRepository } from "./repository";
 
 export function createTodosService({ db }: { db: Database }) {
-	const repository = createTodosRepository(db);
+	const repository = createTodosRepository({ db });
 	return {
-		async list(
-			userId: string,
-			{ cursor, limit }: { cursor?: number; limit: number },
-		) {
+		async list({
+			userId,
+			cursor,
+			limit,
+		}: {
+			userId: string;
+			cursor?: number;
+			limit: number;
+		}) {
 			const rows = await observeOperation("todos.list", async () =>
 				repository.forUser(userId).list({ cursor, limit: limit + 1 }),
 			);
@@ -18,17 +23,25 @@ export function createTodosService({ db }: { db: Database }) {
 				nextCursor: rows.length > limit ? (items.at(-1)?.id ?? null) : null,
 			};
 		},
-		async create(userId: string, text: string) {
+		async create({ userId, text }: { userId: string; text: string }) {
 			return observeOperation("todos.create", async () =>
 				repository.forUser(userId).create({ text }),
 			);
 		},
-		async setCompleted(userId: string, id: number, completed: boolean) {
+		async setCompleted({
+			userId,
+			id,
+			completed,
+		}: {
+			userId: string;
+			id: number;
+			completed: boolean;
+		}) {
 			return observeOperation("todos.setCompleted", async () =>
-				repository.forUser(userId).setCompleted(id, completed),
+				repository.forUser(userId).setCompleted({ id, completed }),
 			);
 		},
-		async delete(userId: string, id: number) {
+		async delete({ userId, id }: { userId: string; id: number }) {
 			return observeOperation("todos.delete", async () =>
 				repository.forUser(userId).delete(id),
 			);

@@ -5,7 +5,7 @@ import {
 	userProfileJobSchema,
 } from "./profile-read.contract";
 
-export function createUserProfileProcessor({
+export function createProfileReadProcessor({
 	usersService,
 }: {
 	usersService: UsersService;

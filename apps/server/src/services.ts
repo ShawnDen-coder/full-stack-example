@@ -1,7 +1,7 @@
 import { type AuthConfig, createAuth } from "@my-better-t-app/api/auth";
 import { createTodosService } from "@my-better-t-app/business/todos";
 import { createUsersService } from "@my-better-t-app/business/users";
-import { createProfileJobClient } from "@my-better-t-app/business/users/jobs/producer";
+import { createProfileReadClient } from "@my-better-t-app/business/users/jobs/profile-read/producer";
 import { createDb } from "@my-better-t-app/db";
 import { createLogger, type Logger } from "@my-better-t-app/observability";
 
@@ -25,7 +25,7 @@ export function createServices(
 		logger,
 		role: "server",
 	});
-	let profileJobs: ReturnType<typeof createProfileJobClient>;
+	let profileJobs: ReturnType<typeof createProfileReadClient>;
 	try {
 		const authConfig: AuthConfig = {
 			db,
@@ -34,7 +34,7 @@ export function createServices(
 			trustedOrigins: [config.CORS_ORIGIN],
 		};
 		const auth = createAuth(authConfig);
-		profileJobs = createProfileJobClient({
+		profileJobs = createProfileReadClient({
 			redisUrl: config.REDIS_URL,
 			logger,
 		});

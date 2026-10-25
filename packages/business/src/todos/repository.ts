@@ -6,7 +6,7 @@ import { and, desc, eq, lt } from "drizzle-orm";
 type TodoExecutor = Pick<Database, "select" | "insert" | "update" | "delete">;
 const fields = { id: todo.id, text: todo.text, completed: todo.completed };
 
-export function createTodosRepository(db: TodoExecutor) {
+export function createTodosRepository({ db }: { db: TodoExecutor }) {
 	return {
 		// Bind once per scope. Never store the current user on the shared repository.
 		forUser(userId: string) {
@@ -34,7 +34,13 @@ export function createTodosRepository(db: TodoExecutor) {
 					if (!created) throw new Error("Todo insert returned no row");
 					return created;
 				},
-				async setCompleted(id: number, completed: boolean) {
+				async setCompleted({
+					id,
+					completed,
+				}: {
+					id: number;
+					completed: boolean;
+				}) {
 					const [updated] = await db
 						.update(todo)
 						.set({ completed })

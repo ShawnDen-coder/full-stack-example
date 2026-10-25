@@ -29,3 +29,24 @@ test("worker heartbeat appears only after successful dependency checks and is re
 		await rm(directory, { recursive: true, force: true });
 	}
 });
+
+test("cancelling the initial probe cannot leave a fresh heartbeat", async () => {
+	const directory = await mkdtemp(join(tmpdir(), "worker-cancel-"));
+	const file = join(directory, "ready.json");
+	const controller = new AbortController();
+	const probe = Promise.withResolvers<void>();
+	try {
+		const startup = startHeartbeat(
+			() => probe.promise,
+			file,
+			controller.signal,
+		);
+		controller.abort();
+		probe.resolve();
+		const heartbeat = await startup;
+		await assert.rejects(readFile(file), { code: "ENOENT" });
+		await heartbeat.close();
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
+});

@@ -7,8 +7,15 @@ export const HEARTBEAT_FILE = "/tmp/full-stack-worker-ready.json";
 export async function startHeartbeat(
 	checkReady: () => Promise<void>,
 	file = HEARTBEAT_FILE,
+	signal?: AbortSignal,
 ) {
-	let running = true;
+	let running = !signal?.aborted;
+	let interval: ReturnType<typeof setInterval> | undefined;
+	const stop = () => {
+		running = false;
+		clearInterval(interval);
+	};
+	signal?.addEventListener("abort", stop, { once: true });
 	let probing: Promise<void> | undefined;
 	const probe = () => {
 		if (probing) return probing;
@@ -31,12 +38,14 @@ export async function startHeartbeat(
 	};
 	await rm(file, { force: true });
 	await probe();
-	const interval = setInterval(() => void probe(), 5000);
-	interval.unref();
+	if (running) {
+		interval = setInterval(() => void probe(), 5000);
+		interval.unref();
+	}
 	return {
 		async close() {
-			running = false;
-			clearInterval(interval);
+			stop();
+			signal?.removeEventListener("abort", stop);
 			await probing;
 			await rm(file, { force: true });
 		},
