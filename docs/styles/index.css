@@ -1,3 +1,5 @@
+@import "./fonts/fonts.css";
+
 html:root {
 	--rp-c-brand: #245c4a;
 	--rp-c-brand-light: #31785f;
@@ -16,8 +18,14 @@ html:root {
 	--rp-code-block-bg: var(--rp-c-bg-soft);
 	--rp-code-block-shadow: none;
 	--rp-radius: 6px;
-	--rp-font-family-base:
-		-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif;
+	--rp-font-family-base: "JetBrains Mono", "Sarasa Term SC", monospace;
+	--rp-font-family-mono: var(--rp-font-family-base);
+}
+
+/* Scalar defines its own font variables inside the API reference. */
+.scalar-api-reference {
+	--scalar-font: var(--rp-font-family-base);
+	--scalar-font-code: var(--rp-font-family-mono);
 }
 
 html.rp-dark {
