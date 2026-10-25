@@ -8,6 +8,8 @@
 
 先确定改动归属，再阅读对应指引中的代码入口、公共导出、扩展步骤和验证命令：[API](../packages/api/README.zh-CN.md)、[业务](../packages/business/README.zh-CN.md)、[数据库](../packages/db/README.zh-CN.md)、[队列](../packages/queue/README.zh-CN.md)、[可观测性](../packages/observability/README.zh-CN.md)、[UI](../packages/ui/README.zh-CN.md)。
 
+[扩展方式统一设计](extension-design.zh-CN.md) 提议统一业务参数、任务公共入口和多消费者生命周期。它是设计提案，上述各包指引仍描述当前实现。
+
 ## 应用扩展入口
 
 | 应用 | 修改入口 | 需要同步处理 |

@@ -106,6 +106,8 @@ pnpm docker:down
 
 [开发指南](docs/development.zh-CN.md) 说明应用接线和运维流程；各包指引列出代码入口、扩展步骤、职责边界和验证命令。共享 TypeScript 配置位于根目录 `tsconfig.base.json`。当前技术栈以各包清单和应用配置为准，命令定义见 [package.json](package.json)。
 
+下一步业务接口和多消费者组装的收敛方案，见[扩展方式统一设计提案](docs/extension-design.zh-CN.md)。
+
 提交变更前，执行 `pnpm install`、`pnpm test`、`pnpm check-types`、`pnpm build` 和 `pnpm exec biome check .`。依赖变更应限定在实际使用它的包中；提交标题使用简洁的 Conventional Commits 格式。
 
 ## 验证
