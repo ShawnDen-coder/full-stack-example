@@ -7,6 +7,9 @@ code. The proposed operations below are not already available. Apply each case
 as one coordinated change; snippets explicitly identify their insertion points.
 Commands run from the repository root unless stated otherwise.
 
+Read the [architecture diagrams](development.md#architecture-overview) first to
+trace the current Todo request and profile-job flow before extending them.
+
 ## Choose an example
 
 | Change | Start here | Result to verify |

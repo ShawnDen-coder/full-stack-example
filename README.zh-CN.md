@@ -95,6 +95,8 @@ pnpm docker:down
 
 ## 开发
 
+先阅读[架构图解](docs/development.zh-CN.md#架构导览)，了解运行连接、已认证请求和后台任务的流转。
+
 | 路径 | 职责 | 扩展指引 |
 | --- | --- | --- |
 | `apps/web` | React 前端和文件路由 | [应用接线](docs/development.zh-CN.md#应用扩展入口) |

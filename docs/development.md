@@ -4,6 +4,111 @@
 
 [Back to README](../README.md)
 
+## Architecture overview
+
+Read the runtime view first, then follow a Todo request and a background job.
+These diagrams describe the current implementation; the [extension examples](extension-examples.md)
+show proposed additions. For allowed source imports, see the
+[package dependency graph](extension-design.md#dependency-boundary-checks).
+
+### Runtime topology
+
+Solid arrows show communication with a process or store; dotted arrows show optional
+telemetry export. Responses use the same connections and are omitted here.
+
+<!-- mermaid:id=runtime-topology -->
+```mermaid
+flowchart LR
+  web["apps/web - React SPA"]
+  server["apps/server - Hono + oRPC"]
+  worker["apps/worker - BullMQ"]
+  postgres["PostgreSQL"]
+  redis["Redis - BullMQ"]
+  collector["Optional OTLP collector"]
+  web -->|Auth / RPC over HTTP| server
+  server -->|Sessions / business data| postgres
+  server -->|Enqueue / job status| redis
+  worker -->|Consume / store results| redis
+  worker -->|Read user profiles| postgres
+  server -.->|Traces / metrics| collector
+  worker -.->|Traces / metrics| collector
+```
+
+The web app runs in the browser. In production, Nginx serves the SPA and proxies API
+requests to Server; this proxy and TLS termination are omitted from the view.
+Server and Worker each own their database connections and service instances.
+Server produces jobs; Worker consumes them without calling the API. OTLP export is
+optional and never a readiness dependency. See [runtime and logs](#runtime-and-logs)
+for the separate database and queue readiness checks.
+
+### Authenticated Todo request
+
+The successful `todo.setCompleted` path crosses authentication, business rules and
+an owner-scoped repository:
+
+<!-- mermaid:id=todo-request -->
+```mermaid
+sequenceDiagram
+  participant web as apps/web
+  participant api as Hono / oRPC
+  participant auth as Better Auth
+  participant service as TodosService
+  participant repo as Scoped Repository
+  participant postgres as PostgreSQL
+  web->>api: todo.setCompleted&#40;&#123; id, completed &#125;&#41;
+  api->>auth: Resolve session from headers
+  auth-->>api: session.user.id
+  api->>service: setCompleted with session userId
+  service->>repo: forUser&#40;userId&#41;.setCompleted&#40;&#123; id, completed &#125;&#41;
+  repo->>postgres: UPDATE todos WHERE id = ... AND user_id = ...
+  postgres-->>repo: Updated row
+  repo-->>service: Owned Todo
+  service-->>api: Operation result
+  api-->>web: &#123; id, text, completed &#125;
+```
+
+API context resolves the session through Better Auth, which uses the injected
+database. `protectedProcedure` rejects missing authentication with `UNAUTHORIZED`.
+The router takes `userId` from the session, and `forUser(userId)` binds ownership to
+SQL reads and writes. Missing or foreign Todos produce `NOT_FOUND`. New Todo operations
+follow these boundaries; see the [Todo extension case](extension-examples.md#case-1-rename-a-todo).
+
+### Profile-read background job
+
+This shows a successful enqueue, processing and later status lookup. The API resolves
+the session before both RPC calls; those authentication steps are omitted here.
+
+<!-- mermaid:id=profile-job -->
+```mermaid
+sequenceDiagram
+  participant web as apps/web
+  participant api as API / ProfileReadClient
+  participant redis as Redis / BullMQ
+  participant worker as apps/worker
+  participant postgres as PostgreSQL
+  web->>api: users.enqueueProfileRead&#40;&#41;
+  api->>redis: Enqueue profile with session userId and requestId
+  redis-->>api: job.id
+  api-->>web: &#123; id &#125;
+  worker->>redis: Reserve job from user-profile queue
+  redis-->>worker: &#123; userId, requestId &#125;
+  worker->>postgres: Validate payload, then UsersService.getProfile&#40;userId&#41;
+  postgres-->>worker: Profile or null
+  worker->>redis: Mark completed and store result
+  web->>api: users.getProfileReadJob&#40;&#123; id &#125;&#41;
+  api->>redis: Read job and verify session ownership
+  redis-->>api: Owned job state and result
+  api-->>web: State and completed result
+```
+
+Worker validates the payload and uses its own `UsersService` instance. The queue is
+`user-profile`, and the task name is `profile`. Status lookup verifies job ownership;
+missing or foreign jobs produce `NOT_FOUND`. Clients can poll before completion;
+`result` remains `null` until completed. A completed read can also return `null` if
+the user no longer exists. Jobs may retry, so processors must tolerate repeated
+execution. See the [new-job extension case](extension-examples.md#case-2-add-a-background-job)
+for explicit consumer registration.
+
 ## Package extension guides
 
 Start with the package that owns the change. Its guide covers code entry points,
