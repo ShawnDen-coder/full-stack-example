@@ -1,0 +1,34 @@
+diff --git a/dist/cjs/classes/redis-connection.js b/dist/cjs/classes/redis-connection.js
+index 4287fbb0fb4630d1dd5565766d1d93d12a603f8a..33d4cf170914266b0b84a5313c611d3aaa8576da 100644
+--- a/dist/cjs/classes/redis-connection.js
++++ b/dist/cjs/classes/redis-connection.js
+@@ -430,9 +430,9 @@ class RedisConnection extends events_1.EventEmitter {
+                     if (status == 'initializing' || force) {
+                         // If we have not still connected to Redis, we need to disconnect.
+                         this._client.disconnect();
+-                        // Suppress any rejection from the in-flight init() so it doesn't
+-                        // become an unhandled rejection after we close the connection.
+-                        (_a = this.initializing) === null || _a === void 0 ? void 0 : _a.catch(() => { });
++                        // Settle init() before removing its error listeners below.
++                        // Its constructor error handler must still have a listener.
++                        await ((_a = this.initializing) === null || _a === void 0 ? void 0 : _a.catch(() => { }));
+                     }
+                     else {
+                         await this._client.quit();
+diff --git a/dist/esm/classes/redis-connection.js b/dist/esm/classes/redis-connection.js
+index ab5e867ccbff67e3884d3f9b6c57137275b7c814..0df3c0508a0950607c408465dddf1cdc1e3dea8c 100644
+--- a/dist/esm/classes/redis-connection.js
++++ b/dist/esm/classes/redis-connection.js
+@@ -427,9 +427,9 @@ export class RedisConnection extends EventEmitter {
+                     if (status == 'initializing' || force) {
+                         // If we have not still connected to Redis, we need to disconnect.
+                         this._client.disconnect();
+-                        // Suppress any rejection from the in-flight init() so it doesn't
+-                        // become an unhandled rejection after we close the connection.
+-                        (_a = this.initializing) === null || _a === void 0 ? void 0 : _a.catch(() => { });
++                        // Settle init() before removing its error listeners below.
++                        // Its constructor error handler must still have a listener.
++                        await ((_a = this.initializing) === null || _a === void 0 ? void 0 : _a.catch(() => { }));
+                     }
+                     else {
+                         await this._client.quit();
