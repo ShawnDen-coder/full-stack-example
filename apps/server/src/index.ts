@@ -1,8 +1,14 @@
-import { createLogger } from "@my-better-t-app/logger";
+import { createLogger, withDeadline } from "@my-better-t-app/observability";
+import { startTelemetry } from "@my-better-t-app/observability/telemetry";
 import { ENV } from "./env.server";
 import { startServer } from "./runtime";
 
-const logger = createLogger("server");
+const telemetry = startTelemetry("server", ENV);
+const logger = createLogger("server", undefined, {
+	level: ENV.LOG_LEVEL,
+	version: ENV.OTEL_SERVICE_VERSION,
+	environment: ENV.NODE_ENV,
+});
 const startup = startServer(ENV, logger);
 let shutdownPromise: Promise<void> | undefined;
 function shutdown() {
@@ -12,7 +18,11 @@ function shutdown() {
 			process.exit(1);
 		}, ENV.SERVER_SHUTDOWN_TIMEOUT_MS);
 		try {
-			await (await startup).close();
+			try {
+				await (await startup).close();
+			} finally {
+				await telemetry.shutdown();
+			}
 		} finally {
 			clearTimeout(timer);
 		}
@@ -31,7 +41,15 @@ void startup
 	.then(() => {
 		if (!shutdownPromise) logger.info({ port: ENV.PORT }, "Server ready");
 	})
-	.catch((err: unknown) => {
+	.catch(async (err: unknown) => {
 		logger.error({ err }, "Server startup failed");
-		process.exit(1);
+		try {
+			await withDeadline(
+				telemetry.shutdown(),
+				3000,
+				"Telemetry shutdown timed out",
+			);
+		} finally {
+			process.exit(1);
+		}
 	});

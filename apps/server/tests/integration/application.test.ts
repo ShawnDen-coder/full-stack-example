@@ -7,12 +7,14 @@ import { createApi } from "@my-better-t-app/api/create-api";
 import type { AppRouterClient } from "@my-better-t-app/api/routers/index";
 import { createDb } from "@my-better-t-app/db";
 import { user } from "@my-better-t-app/db/schema/auth";
-import { createLogger } from "@my-better-t-app/logger";
+import { todo } from "@my-better-t-app/db/schema/todo";
+import { createLogger } from "@my-better-t-app/observability";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { z } from "zod";
+import { createTodosRepository } from "../../../../packages/business/src/todos/repository";
 import { startWorker } from "../../../worker/src/runtime";
 import { startServer } from "../../src/runtime";
 import { createServices } from "../../src/services";
@@ -48,6 +50,68 @@ async function eventually<T>(
 		await new Promise((resolve) => setTimeout(resolve, 50));
 	}
 }
+
+test("scoped Todo repositories isolate owners and participate in transaction rollback", async () => {
+	const db = createDb(config, { logger });
+	const ownerId = randomUUID();
+	const otherId = randomUUID();
+	const rollback = new Error("Rollback repository test data");
+	try {
+		await migrate(db, { migrationsFolder });
+		await assert.rejects(
+			() =>
+				db.transaction(async (tx) => {
+					await tx.insert(user).values(
+						[ownerId, otherId].map((id) => ({
+							id,
+							name: "Repository test",
+							email: `${id}@example.test`,
+						})),
+					);
+					const repository = createTodosRepository(tx);
+					const owner = repository.forUser(ownerId);
+					const other = repository.forUser(otherId);
+					const input = { text: "owner only", userId: otherId };
+					const first = await owner.create(input);
+					const foreign = await other.create({ text: "other only" });
+					const second = await owner.create({ text: "owner second" });
+					const [legacy] = await tx
+						.insert(todo)
+						.values({ text: "ownerless legacy todo" })
+						.returning({ id: todo.id });
+					assert.ok(legacy);
+					const [ownedRows, otherRows] = await Promise.all([
+						owner.list({ limit: 10 }),
+						other.list({ limit: 10 }),
+					]);
+					assert.deepEqual(ownedRows, [second, first]);
+					assert.deepEqual(otherRows, [foreign]);
+					assert.deepEqual(await owner.list({ cursor: second.id, limit: 1 }), [
+						first,
+					]);
+					for (const id of [foreign.id, legacy.id]) {
+						assert.equal(await owner.setCompleted(id, true), null);
+						assert.equal(await owner.delete(id), null);
+					}
+					assert.deepEqual(await other.list({ limit: 10 }), [foreign]);
+					assert.deepEqual(await owner.setCompleted(first.id, true), {
+						...first,
+						completed: true,
+					});
+					assert.deepEqual(await owner.delete(first.id), { id: first.id });
+					assert.deepEqual(await owner.list({ limit: 10 }), [second]);
+					throw rollback;
+				}),
+			(error) => error === rollback,
+		);
+		assert.deepEqual(
+			await db.select().from(user).where(eq(user.id, ownerId)),
+			[],
+		);
+	} finally {
+		await db.close();
+	}
+});
 
 test("migrations, real authentication, owner isolation, pagination and independent worker", {
 	timeout: 60000,
@@ -296,7 +360,7 @@ test("failed jobs use bounded retries and expose no internal failure details", {
 	timeout: 15000,
 }, async () => {
 	const { createUserProfileWorker } = await import(
-		"@my-better-t-app/users/workers/user-profile.worker"
+		"@my-better-t-app/business/users/jobs/worker"
 	);
 	const runtime = createServices(config, logger);
 	let attempts = 0;
@@ -313,19 +377,19 @@ test("failed jobs use bounded retries and expose no internal failure details", {
 	try {
 		await worker.waitUntilReady();
 		const owner = `failure-${randomUUID()}`;
-		const owned = await runtime.services.queueClient.enqueueUserProfile(
+		const owned = await runtime.services.profileJobs.enqueueProfileRead(
 			owner,
 			"retry-test",
 		);
 		const state = await eventually(
-			() => runtime.services.queueClient.getUserProfileJob(owned.id, owner),
+			() => runtime.services.profileJobs.getProfileReadJob(owned.id, owner),
 			(value) => value?.state === "failed",
 		);
 		assert.equal(state?.result, null);
 		assert.ok(!JSON.stringify(state).includes("internal test failure"));
 		assert.equal(attempts, 3);
 		assert.equal(
-			await runtime.services.queueClient.getUserProfileJob(owned.id, "foreign"),
+			await runtime.services.profileJobs.getProfileReadJob(owned.id, "foreign"),
 			null,
 		);
 	} finally {
@@ -349,4 +413,126 @@ test("server startup fails within its deadline when PostgreSQL is unavailable", 
 			logger,
 		),
 	);
+});
+
+test("production runtime roles can perform their work but cannot change schema or read foreign capabilities", {
+	timeout: 20000,
+}, async () => {
+	const { provisionRuntimeRoles } = await import(
+		"@my-better-t-app/db/provision"
+	);
+	const admin = createDb(config, { logger });
+	const serverUrl = new URL(config.DATABASE_URL);
+	serverUrl.username = "app_server";
+	serverUrl.password = `server-test-${randomUUID()}`;
+	const workerUrl = new URL(config.DATABASE_URL);
+	workerUrl.username = "app_worker";
+	workerUrl.password = `worker-test-${randomUUID()}`;
+	let server: ReturnType<typeof createDb> | undefined;
+	let worker: ReturnType<typeof createDb> | undefined;
+	try {
+		await migrate(admin, { migrationsFolder });
+		await provisionRuntimeRoles(admin, {
+			migration: config.DATABASE_URL,
+			server: serverUrl.href,
+			worker: workerUrl.href,
+		});
+		server = createDb({ DATABASE_URL: serverUrl.href }, { logger });
+		worker = createDb({ DATABASE_URL: workerUrl.href }, { logger });
+		const serverClient = server.$client;
+		const workerClient = worker.$client;
+		await server.$client.query('SELECT id FROM public."user" LIMIT 1');
+		await server.$client.query("SELECT id FROM public.todo LIMIT 1");
+		await worker.$client.query(
+			'SELECT id, name, email_verified FROM public."user" LIMIT 1',
+		);
+		await assert.rejects(
+			() =>
+				serverClient.query(
+					"CREATE TABLE public.forbidden_runtime_table(id int)",
+				),
+			{ code: "42501" },
+		);
+		await assert.rejects(
+			() => workerClient.query("SELECT token FROM public.session"),
+			{ code: "42501" },
+		);
+		await assert.rejects(
+			() => workerClient.query("SELECT id FROM public.todo"),
+			{ code: "42501" },
+		);
+		await assert.rejects(
+			() => workerClient.query('UPDATE public."user" SET name = name'),
+			{ code: "42501" },
+		);
+	} finally {
+		await server?.close();
+		await worker?.close();
+		await admin.close();
+	}
+});
+
+test("native BullMQ telemetry preserves producer trace context through Redis and database work", {
+	timeout: 20000,
+}, async () => {
+	const { startTelemetry } = await import(
+		"@my-better-t-app/observability/telemetry"
+	);
+	const { traceRequest } = await import("@my-better-t-app/observability");
+	const spans: { name: string; spanContext(): { traceId: string } }[] = [];
+	const telemetry = startTelemetry(
+		"integration",
+		{ OTEL_ENABLED: true },
+		{
+			traceExporter: {
+				export(items, done) {
+					spans.push(...items);
+					done({ code: 0 });
+				},
+				async shutdown() {},
+			},
+			metricReader: null,
+		},
+	);
+	const runtime = createServices(config, logger);
+	let worker: Awaited<ReturnType<typeof startWorker>> | undefined;
+	try {
+		worker = await startWorker(
+			{ ...config, WORKER_CONCURRENCY: 1, WORKER_STARTUP_TIMEOUT_MS: 5000 },
+			undefined,
+			logger,
+		);
+		const traceId = "abcdef0123456789abcdef0123456789";
+		const owner = `trace-test-${randomUUID()}`;
+		const job = await traceRequest(
+			new Headers({ traceparent: `00-${traceId}-0123456789abcdef-01` }),
+			"integration.enqueueProfileRead",
+			() =>
+				runtime.services.profileJobs.enqueueProfileRead(owner, "trace-test"),
+		);
+		await eventually(
+			() => runtime.services.profileJobs.getProfileReadJob(job.id, owner),
+			(value) => value?.state === "completed",
+		);
+		await eventually(
+			async () => spans,
+			(items) =>
+				items.some(
+					(span) =>
+						span.name === "users.getProfile" &&
+						span.spanContext().traceId === traceId,
+				),
+		);
+		assert.ok(
+			spans.some(
+				(span) =>
+					span.name === "integration.enqueueProfileRead" &&
+					span.spanContext().traceId === traceId,
+			),
+		);
+	} finally {
+		await worker?.close();
+		await runtime.close();
+		await telemetry.shutdown();
+	}
 });

@@ -1,9 +1,12 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-	entry: "./src/index.ts",
+	entry: ["./src/index.ts", "./src/healthcheck.ts"],
 	format: "esm",
 	outDir: "./dist",
 	clean: true,
-	deps: { alwaysBundle: [/@my-better-t-app\/.*/] },
+	deps: {
+		alwaysBundle: [/@my-better-t-app\/.*/],
+		neverBundle: ["pino", "pg", "bullmq", "bullmq-otel"],
+	},
 });

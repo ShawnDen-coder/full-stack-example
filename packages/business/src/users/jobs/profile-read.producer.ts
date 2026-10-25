@@ -1,0 +1,73 @@
+import { type Logger, observeQueue } from "@my-better-t-app/observability";
+import {
+	createQueueConnection,
+	createQueueTelemetry,
+	Queue,
+} from "@my-better-t-app/queue";
+import {
+	profileReadJobOptions,
+	USER_PROFILE_QUEUE,
+	USER_PROFILE_TASK,
+	type UserProfileJobData,
+	type UserProfileJobResult,
+	userProfileJobSchema,
+} from "./profile-read.contract";
+import { getProfileReadJob } from "./profile-read.status";
+
+export class ProfileJobsUnavailableError extends Error {
+	constructor() {
+		super("Profile jobs are temporarily unavailable");
+		this.name = "ProfileJobsUnavailableError";
+	}
+}
+
+export function createProfileJobClient({
+	redisUrl,
+	logger,
+}: {
+	redisUrl: string;
+	logger?: Logger;
+}) {
+	const profileQueue = new Queue<
+		UserProfileJobData,
+		UserProfileJobResult,
+		typeof USER_PROFILE_TASK
+	>(USER_PROFILE_QUEUE, {
+		connection: createQueueConnection(redisUrl),
+		telemetry: createQueueTelemetry(),
+		defaultJobOptions: profileReadJobOptions,
+	});
+	// EventEmitter errors must be handled even when the producer is idle.
+	profileQueue.on("error", (err) =>
+		logger?.error({ err }, "User profile queue connection error"),
+	);
+
+	const stopMetrics = observeQueue(profileQueue, USER_PROFILE_QUEUE);
+	return {
+		async enqueueProfileRead(userId: string, requestId?: string) {
+			const data = userProfileJobSchema.parse({ userId, requestId });
+			const job = await profileQueue.add(USER_PROFILE_TASK, data).catch(() => {
+				throw new ProfileJobsUnavailableError();
+			});
+			if (!job.id) throw new Error("Queue did not return a job ID");
+			logger?.info(
+				{ event: "job.enqueued", job_id: job.id, request_id: requestId },
+				"User profile job enqueued",
+			);
+			return { id: job.id };
+		},
+		getProfileReadJob: (jobId: string, userId: string) =>
+			getProfileReadJob(profileQueue, jobId, userId).catch(() => {
+				throw new ProfileJobsUnavailableError();
+			}),
+		async close() {
+			await stopMetrics();
+			await profileQueue.close();
+		},
+		async checkReady() {
+			await profileQueue.getJobCounts("waiting");
+		},
+	};
+}
+
+export type ProfileJobClient = ReturnType<typeof createProfileJobClient>;

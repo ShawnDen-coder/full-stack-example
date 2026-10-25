@@ -14,8 +14,8 @@
 
 ```ts
 const profile = await client.users.me();
-const job = await client.users.requestProfile();
-const status = await client.users.profileJob({ id: job.id });
+const job = await client.users.enqueueProfileRead();
+const status = await client.users.getProfileReadJob({ id: job.id });
 ```
 
 worker 会读取用户资料，返回 `id`、`name` 和 `emailVerified`。只有任务提交者可以查询该任务。轮询 `profileJob` 直到任务完成；结果仅保留一段时间。
@@ -58,7 +58,7 @@ pnpm dev
 | `pnpm test` | 运行离线 API、worker 和发布保护测试 |
 | `pnpm test:integration` | 使用真实 PostgreSQL/Redis 验证认证、迁移和进程行为 |
 | `pnpm test:e2e` | 通过 Playwright 验证账号隔离和增删改查场景 |
-| `pnpm check-types` | 检查工作区类型，同时构建前端 |
+| `pnpm check-types` | 生成路由类型并检查工作区类型 |
 | `pnpm build` | 构建应用 |
 | `pnpm exec biome check .` | 只读检查代码规范和格式 |
 | `pnpm check` | 应用 Biome 自动修复 |
@@ -69,9 +69,13 @@ pnpm dev
 
 ## 生产部署
 
-目前支持的部署基础是单机 Docker Compose，由外部 HTTPS 反向代理接入。`docker-compose.yml` 用于本地开发，`compose.production.yml` 是独立的生产配置。浏览器的所有请求使用同一个公开 HTTPS 源。
+支持的基线是单机 Docker Compose，前面配置 HTTPS 反向代理。通过进程环境或忽略的 `deploy/.env` 提供 `deploy/.env.schema` 中的值：`PUBLIC_APP_URL`、`BETTER_AUTH_SECRET`、`POSTGRES_PASSWORD` 和三个指向 `postgres:5432/app` 的数据库 URL：
 
-按照 `deploy/.env.schema`，通过环境变量或被 Git 忽略的 `deploy/.env` 提供生产配置：`PUBLIC_APP_URL`、`BETTER_AUTH_SECRET`（至少 32 个字符）、`POSTGRES_PASSWORD` 和 `DATABASE_URL`。数据库 URL 应使用 `postgres:5432/app`、用户 `postgres`，密码须与 `POSTGRES_PASSWORD` 一致；密码中的特殊字符需要进行 URL 编码。生产密码没有默认值，不要复用开发或 CI 凭据。
+- `MIGRATION_DATABASE_URL`：`postgres` schema owner，密码与 `POSTGRES_PASSWORD` 一致，仅供部署任务使用。
+- `DATABASE_URL`：`app_server`，使用独立运行密码。
+- `WORKER_DATABASE_URL`：`app_worker`，使用独立运行密码。
+
+密码需 URL 编码，生产密码没有默认值。部署依次执行 migration、运行角色配置、Server/Worker 更新和 Web 更新。Server 仅获得业务表读写权限，Worker 仅读取用户资料；运行角色没有 DDL 权限。已有数据卷会在角色配置步骤中创建或更新这两个账号。
 
 ```bash
 pnpm docker:up
@@ -93,11 +97,11 @@ pnpm docker:down
 | `apps/web` | React 前端和文件路由 |
 | `apps/server` | Hono API 进程，负责生产队列任务 |
 | `apps/worker` | 独立 BullMQ 消费者及其生命周期管理 |
-| `packages/api`, `packages/auth` | oRPC 过程和 Better Auth 工厂 |
-| `packages/users`, `packages/todos`, `packages/queue` | 业务服务、worker 工厂和类型化队列契约 |
-| `packages/logger` | 结构化日志、敏感信息脱敏和生命周期超时控制 |
+| `packages/api` | oRPC 过程和 Better Auth 工厂 |
+| `packages/business`, `packages/queue` | 业务服务、worker 工厂和类型化队列契约 |
+| `packages/observability` | 结构化日志、敏感信息脱敏和生命周期超时控制 |
 | `packages/db` | PostgreSQL 数据库结构和 Drizzle 配置 |
-| `packages/ui`, `packages/config` | 共享组件、样式和 TypeScript 配置 |
+| `packages/ui`, 根目录 `tsconfig.base.json` | 共享组件、样式和 TypeScript 配置 |
 
 UI 定制、环境类型生成、认证表结构生成、依赖注入、worker 生命周期和新增模块的方法见[开发指南](docs/development.zh-CN.md)。生成器选项记录在 [bts.jsonc](bts.jsonc)，所有命令定义见 [package.json](package.json)。
 
@@ -116,3 +120,11 @@ pnpm test:e2e
 ```
 
 集成测试会执行仓库中的迁移、创建临时账号，并验证数据库故障、worker 重试和进程退出。浏览器测试使用 43100/43101 端口，会在测试数据库中留下测试账号。不要将这些命令指向需要保留数据的开发数据库或生产服务。
+
+## 可观测性
+
+Pino 输出结构化 JSON，自动关联 `trace_id`/`span_id`，并携带 request/job ID。设置 `OTEL_ENABLED=true` 后通过 OTLP/HTTP 导出 traces 和 metrics，默认关闭。`pnpm telemetry:up` 启动可选本地 Collector，Prometheus 指标端点为 `127.0.0.1:8889`。详见[可观测性运维指南](docs/observability.zh-CN.md)。
+
+`/health` 检查进程存活，`/ready` 检查核心数据库，`/ready/jobs` 单独检查队列。Redis 故障时仍可启动 API 并使用认证和 Todo；任务操作返回 `SERVICE_UNAVAILABLE`。Worker 容器通过消费循环、数据库和 Redis 探测更新本地心跳，Compose 等待其健康后才继续发布。
+
+权限集成测试还会配置固定的 app_server/app_worker 角色和 public schema 授权，因此测试 PostgreSQL 实例必须专用。

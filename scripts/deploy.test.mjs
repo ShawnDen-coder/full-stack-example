@@ -6,7 +6,10 @@ const env = {
 	PUBLIC_APP_URL: "https://app.example.test",
 	BETTER_AUTH_SECRET: "test-only-32-character-secret-value",
 	POSTGRES_PASSWORD: "test-only",
-	DATABASE_URL: "postgresql://postgres:test-only@postgres:5432/app",
+	MIGRATION_DATABASE_URL: "postgresql://postgres:test-only@postgres:5432/app",
+	DATABASE_URL: "postgresql://app_server:server-test-only@postgres:5432/app",
+	WORKER_DATABASE_URL:
+		"postgresql://app_worker:worker-test-only@postgres:5432/app",
 };
 
 test("deployment rejects incomplete configuration before running commands", () => {
@@ -42,7 +45,35 @@ test("deployment waits for dependencies and migration before starting applicatio
 		["build"],
 		["up", "-d", "--wait", "postgres", "redis"],
 		["run", "--rm", "migrate"],
+		["run", "--rm", "--no-deps", "provision"],
 		["up", "-d", "--no-deps", "--wait", "server", "worker"],
 		["up", "-d", "--no-deps", "--force-recreate", "--wait", "web"],
 	]);
+});
+
+test("runtime roles and migration owner cannot share credentials or databases", () => {
+	for (const invalid of [
+		{ ...env, DATABASE_URL: env.MIGRATION_DATABASE_URL },
+		{
+			...env,
+			WORKER_DATABASE_URL: "postgresql://app_worker:test@elsewhere:5432/app",
+		},
+		{
+			...env,
+			MIGRATION_DATABASE_URL: "postgresql://postgres:wrong@postgres:5432/app",
+		},
+	])
+		assert.throws(() => validateProductionEnv(invalid));
+});
+test("role provisioning failure prevents application replacement", () => {
+	const calls = [];
+	assert.throws(
+		() =>
+			deploy(env, (_command, args) => {
+				calls.push(args);
+				return { status: args.includes("provision") ? 1 : 0 };
+			}),
+		/Deployment stopped/,
+	);
+	assert.ok(!calls.some((args) => args.includes("server")));
 });

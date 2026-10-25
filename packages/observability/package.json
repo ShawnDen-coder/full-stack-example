@@ -1,0 +1,32 @@
+{
+	"name": "@my-better-t-app/observability",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./telemetry": "./src/telemetry.ts"
+	},
+	"scripts": {
+		"build": "tsc -b",
+		"check-types": "tsc -b",
+		"test": "node --import tsx --test tests/*.test.ts"
+	},
+	"dependencies": {
+		"pino": "catalog:",
+		"@opentelemetry/api": "catalog:",
+		"@opentelemetry/sdk-node": "catalog:",
+		"@opentelemetry/resources": "catalog:",
+		"@opentelemetry/exporter-trace-otlp-http": "catalog:",
+		"@opentelemetry/exporter-metrics-otlp-http": "catalog:",
+		"@opentelemetry/sdk-metrics": "catalog:",
+		"@opentelemetry/sdk-trace": "catalog:"
+	},
+	"devDependencies": {
+		"typescript": "catalog:",
+		"tsx": "^4.23.13"
+	},
+	"files": [
+		"src",
+		"dist"
+	]
+}

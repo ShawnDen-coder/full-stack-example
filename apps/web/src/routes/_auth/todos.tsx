@@ -40,8 +40,8 @@ function TodosRoute() {
 			},
 		}),
 	);
-	const toggleMutation = useMutation(
-		orpc.todo.toggle.mutationOptions({ onSuccess: refresh }),
+	const setCompletedMutation = useMutation(
+		orpc.todo.setCompleted.mutationOptions({ onSuccess: refresh }),
 	);
 	const deleteMutation = useMutation(
 		orpc.todo.delete.mutationOptions({
@@ -53,7 +53,7 @@ function TodosRoute() {
 	);
 	const busy =
 		createMutation.isPending ||
-		toggleMutation.isPending ||
+		setCompletedMutation.isPending ||
 		deleteMutation.isPending;
 	const handleAddTodo = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -108,7 +108,7 @@ function TodosRoute() {
 											checked={todo.completed}
 											disabled={busy}
 											onCheckedChange={() =>
-												toggleMutation.mutate({
+												setCompletedMutation.mutate({
 													id: todo.id,
 													completed: !todo.completed,
 												})

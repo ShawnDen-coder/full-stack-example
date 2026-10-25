@@ -36,14 +36,15 @@
 		"start:worker": "pnpm --filter worker start",
 		"env:init": "node scripts/init-env.mjs",
 		"test:integration": "pnpm --filter server test:integration",
-		"test:e2e": "pnpm --filter web test:e2e"
+		"test:e2e": "pnpm --filter web test:e2e",
+		"telemetry:up": "docker compose -f docker-compose.yml -f compose.observability.yml up -d otel-collector",
+		"telemetry:down": "docker compose -f docker-compose.yml -f compose.observability.yml stop otel-collector"
 	},
 	"dependencies": {
 		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.15",
-		"@my-better-t-app/config": "workspace:*",
 		"@types/node": "^24.0.0",
 		"husky": "^9.1.7",
 		"lint-staged": "^17.6.0",

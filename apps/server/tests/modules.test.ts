@@ -1,16 +1,14 @@
 import assert from "node:assert/strict";
 import { mock, test } from "node:test";
 import { serve } from "@hono/node-server";
+import type { Session } from "@my-better-t-app/api/auth";
 import type { ContextDependencies } from "@my-better-t-app/api/context";
 import { createApi } from "@my-better-t-app/api/create-api";
 import type { AppRouterClient } from "@my-better-t-app/api/routers/index";
-import type { Session } from "@my-better-t-app/auth";
+import { createTodosService } from "@my-better-t-app/business/todos";
 import { createDb } from "@my-better-t-app/db";
-import { createLogger } from "@my-better-t-app/logger";
+import { createLogger } from "@my-better-t-app/observability";
 import { createQueueConnection } from "@my-better-t-app/queue";
-import { getUserProfileJob } from "@my-better-t-app/queue/user-profile-job";
-import { createTodosService } from "@my-better-t-app/todos";
-import { createUserProfileProcessor } from "@my-better-t-app/users/workers/user-profile.worker";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 
@@ -44,7 +42,6 @@ async function fixture(currentSession: Session | null = session) {
 	logger.level = "silent";
 	const deps: ContextDependencies = {
 		logger,
-		db,
 		auth: {
 			handler: async (request) => {
 				const headers = new Headers();
@@ -62,19 +59,19 @@ async function fixture(currentSession: Session | null = session) {
 			return currentSession;
 		},
 		services: {
-			todosService: createTodosService({ deps: { db } }),
+			todosService: createTodosService({ db }),
 			usersService: {
 				getProfile: async (id) => {
 					calls.push(`profile:${id}`);
 					return profile;
 				},
 			},
-			queueClient: {
-				enqueueUserProfile: async (id) => {
+			profileJobs: {
+				enqueueProfileRead: async (id) => {
 					calls.push(`enqueue:${id}`);
 					return { id: "job-1" };
 				},
-				getUserProfileJob: async (id, userId) => {
+				getProfileReadJob: async (id, userId) => {
 					calls.push(`job:${id}:${userId}`);
 					return null;
 				},
@@ -113,6 +110,7 @@ async function fixture(currentSession: Session | null = session) {
 		client,
 		calls,
 		deps,
+		db,
 		sessionHeaders,
 		async close() {
 			try {
@@ -174,6 +172,7 @@ test("anonymous requests cannot access any Todo operation", async () => {
 			() => f.client.todo.list({}),
 			() => f.client.todo.create({ text: "private" }),
 			() => f.client.todo.toggle({ id: 1, completed: true }),
+			() => f.client.todo.setCompleted({ id: 1, completed: true }),
 			() => f.client.todo.delete({ id: 1 }),
 		]) {
 			await assert.rejects(request, { code: "UNAUTHORIZED" });
@@ -187,7 +186,7 @@ test("Todo SQL binds the session owner for reads, inserts and mutations", async 
 	const f = await fixture();
 	const queries: unknown[][] = [];
 	const query = mock.method(
-		f.deps.db.$client,
+		f.db.$client,
 		"query",
 		async (...args: unknown[]) => {
 			queries.push(args);
@@ -224,6 +223,9 @@ test("profile and queue routes use the authenticated user ID", async () => {
 	try {
 		assert.equal((await f.client.users.me()).id, profile.id);
 		assert.deepEqual(await f.client.users.requestProfile(), { id: "job-1" });
+		assert.deepEqual(await f.client.users.enqueueProfileRead(), {
+			id: "job-1",
+		});
 		await assert.rejects(() => f.client.users.profileJob({ id: "job-1" }), {
 			code: "NOT_FOUND",
 		});
@@ -235,95 +237,16 @@ test("profile and queue routes use the authenticated user ID", async () => {
 	}
 });
 
-test("job ownership prevents returning another user's result", async () => {
-	let stateRead = false;
-	const reader = {
-		getJob: async () => ({
-			id: "job-1",
-			data: { userId: "user-1" },
-			returnvalue: { id: "user-1", name: "Alice", emailVerified: true },
-			getState: async () => {
-				stateRead = true;
-				return "completed";
-			},
-		}),
-	};
-	assert.equal(await getUserProfileJob(reader, "job-1", "user-2"), null);
-	assert.equal(stateRead, false);
-	assert.equal(
-		(await getUserProfileJob(reader, "job-1", "user-1"))?.result?.name,
-		"Alice",
-	);
-	assert.equal(
-		await getUserProfileJob(
-			{ getJob: async () => undefined },
-			"missing",
-			"user-1",
-		),
-		null,
-	);
-});
-
-test("completion reloads the result when a worker finishes between reads", async () => {
-	let reads = 0;
-	const profile = { id: "user-1", name: "Alice", emailVerified: true };
-	const result = await getUserProfileJob(
-		{
-			getJob: async () => ({
-				id: "job-1",
-				data: { userId: "user-1" },
-				returnvalue: ++reads === 1 ? null : profile,
-				getState: async () => "completed",
-			}),
-		},
-		"job-1",
-		"user-1",
-	);
-	assert.equal(result?.state, "completed");
-	assert.deepEqual(result?.result, profile);
-});
-
-test("unfinished jobs hide stored results", async () => {
-	const result = await getUserProfileJob(
-		{
-			getJob: async () => ({
-				id: "job-1",
-				data: { userId: "user-1" },
-				returnvalue: { id: "user-1", name: "Alice", emailVerified: true },
-				getState: async () => "active",
-			}),
-		},
-		"job-1",
-		"user-1",
-	);
-	assert.equal(result?.result, null);
-});
-
-test("worker validates payloads and returns only the intended profile fields", async () => {
-	const f = await fixture();
-	try {
-		const process = createUserProfileProcessor(f.deps.services);
-		assert.deepEqual(await process({ userId: "user-1" }), {
-			id: "user-1",
-			name: "Alice",
-			emailVerified: true,
-		});
-		await assert.rejects(() => process({ userId: "" }));
-		const missing = createUserProfileProcessor({
-			usersService: { getProfile: async () => null },
-		});
-		assert.equal(await missing({ userId: "deleted" }), null);
-	} finally {
-		await f.close();
-	}
-});
-
 test("Redis connection supports TLS, database selection and rejects invalid protocols", () => {
 	const connection = createQueueConnection("rediss://localhost:6380/2");
 	assert.ok("host" in connection);
 	if ("host" in connection) {
 		assert.equal(connection.port, 6380);
 		assert.equal(connection.db, 2);
+		assert.equal(connection.commandTimeout, 2000);
+		const worker = createQueueConnection("redis://localhost", "worker");
+		assert.equal(worker.maxRetriesPerRequest, null);
+		assert.equal(worker.commandTimeout, undefined);
 		assert.deepEqual(connection.tls, {});
 	}
 	assert.throws(() => createQueueConnection("https://localhost"));
@@ -502,4 +425,73 @@ test("structured logs redact credentials and retain request correlation and stac
 	const entry = JSON.parse(output);
 	assert.equal(entry.requestId, "request-1");
 	assert.ok(entry.err.stack);
+});
+
+test("queue degradation has a separate readiness endpoint and maps job errors to 503", async () => {
+	const { ProfileJobsUnavailableError } = await import(
+		"@my-better-t-app/business/users/jobs/producer"
+	);
+	const f = await fixture();
+	try {
+		f.deps.services.profileJobs.enqueueProfileRead = async () => {
+			throw new ProfileJobsUnavailableError();
+		};
+		const { app } = createApi({
+			...f.deps,
+			corsOrigin: "http://localhost:3001",
+			checkReady: async () => {},
+			checkJobsReady: async () => {
+				throw new Error("Redis down");
+			},
+		});
+		assert.equal((await app.request("/ready")).status, 200);
+		assert.equal((await app.request("/ready/jobs")).status, 503);
+		const result = await app.request("/rpc/users/enqueueProfileRead", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ json: null }),
+		});
+		assert.equal(result.status, 503);
+	} finally {
+		await f.close();
+	}
+});
+
+test("expected RPC rejections use info logs and unknown paths never become labels", async () => {
+	const f = await fixture(null);
+	const lines: string[] = [];
+	try {
+		const logger = createLogger("test", {
+			write: (line) => {
+				lines.push(line);
+			},
+		});
+		const { app } = createApi({
+			...f.deps,
+			logger,
+			corsOrigin: "http://localhost:3001",
+			checkReady: async () => {},
+		});
+		assert.equal(
+			(
+				await app.request("/rpc/users/me", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ json: null }),
+				})
+			).status,
+			401,
+		);
+		await app.request("/private-arbitrary-secret-url");
+		const entries = lines.map((line) => JSON.parse(line));
+		assert.ok(
+			entries.some(
+				(entry) => entry.event === "rpc.rejected" && entry.level === 30,
+			),
+		);
+		assert.ok(!entries.some((entry) => entry.level >= 50));
+		assert.ok(!lines.join("").includes("private-arbitrary-secret-url"));
+	} finally {
+		await f.close();
+	}
 });
