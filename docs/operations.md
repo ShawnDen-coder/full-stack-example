@@ -7,7 +7,7 @@ Deploy, migrate, tune runtime limits, and recover production services. For local
 ## Production deployment
 
 The supported baseline is one Docker Compose host behind an HTTPS reverse proxy.
-`docker-compose.yml` is for local development; `compose.production.yml` is the
+`container/compose.yml` is for local development; `container/compose.production.yml` is the
 independent production stack. All browser requests use one public HTTPS origin.
 
 Supply production values via the environment or an ignored `deploy/.env` file,

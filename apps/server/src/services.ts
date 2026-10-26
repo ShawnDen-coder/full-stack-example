@@ -1,8 +1,8 @@
 import { type AuthConfig, createAuth } from "@full-stack-example/api/auth";
-import { createTodosService } from "@full-stack-example/business/todos";
-import { createUsersService } from "@full-stack-example/business/users";
-import { createProfileReadClient } from "@full-stack-example/business/users/jobs/profile-read/producer";
 import { createDb } from "@full-stack-example/db";
+import { createTodosService } from "@full-stack-example/domain/todos";
+import { createUsersService } from "@full-stack-example/domain/users";
+import { createProfileReadClient } from "@full-stack-example/domain/users/jobs/profile-read/producer";
 import { createLogger, type Logger } from "@full-stack-example/observability";
 
 export type ServerConfig = {

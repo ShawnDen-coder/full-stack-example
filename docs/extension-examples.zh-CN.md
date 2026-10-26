@@ -10,8 +10,8 @@
 
 | 想做的改动 | 从哪里开始 | 验证结果 |
 | --- | --- | --- |
-| 重命名自己的 Todo | [Business](../packages/business/README.zh-CN.md#示例重命名自己的-todo)、[API](../packages/api/README.zh-CN.md#示例开放-todorename)及下方案例一 | 从用户范围 SQL 到前端类型安全 mutation |
-| 增加后台任务 | [Business 任务示例](../packages/business/README.zh-CN.md#示例增加资料摘要任务)及下方案例二 | Server 入队、独立 Worker 执行、提交者查询状态 |
+| 重命名自己的 Todo | [Domain](../packages/domain/README.zh-CN.md#示例重命名自己的-todo)、[API](../packages/api/README.zh-CN.md#示例开放-todorename)及下方案例一 | 从用户范围 SQL 到前端类型安全 mutation |
+| 增加后台任务 | [Domain 任务示例](../packages/domain/README.zh-CN.md#示例增加资料摘要任务)及下方案例二 | Server 入队、独立 Worker 执行、提交者查询状态 |
 | 增加数据库字段 | [DB 截止时间示例](../packages/db/README.zh-CN.md#示例为-todo-增加可选截止时间) | migration 可审查，升级保留旧数据 |
 | 扩展队列基础设施 | [Queue 超时示例](../packages/queue/README.zh-CN.md#示例允许配置-redis-连接超时) | 两种连接角色保留各自重试行为 |
 | 增加指标 | [Observability 文件大小示例](../packages/observability/README.zh-CN.md#示例记录导出文件大小) | 属性值集合有界，Collector 缺席不影响业务 |
@@ -23,13 +23,13 @@
 
 | 位置 | 具体改动 |
 | --- | --- |
-| `packages/business/src/todos/repository.ts` | 在 `forUser` 中增加 `rename`，复用 `ownedTodo(id)` 和现有投影 |
-| `packages/business/src/todos/service.ts` | 校验／规范文本，为 `todos.rename` 增加观测 |
+| `packages/domain/src/todos/repository.ts` | 在 `forUser` 中增加 `rename`，复用 `ownedTodo(id)` 和现有投影 |
+| `packages/domain/src/todos/service.ts` | 校验／规范文本，为 `todos.rename` 增加观测 |
 | `packages/api/src/routers/todo.ts` | 增加认证后的 `rename` procedure，无匹配资源时返回 `NOT_FOUND` |
 | `apps/server/src/services.ts` | 复用已有的 `createTodosService({ db })` 实例 |
 | `apps/web/src/routes/_auth/todos.tsx` | 增加编辑表单和类型安全 mutation，保留按身份隔离的缓存失效逻辑 |
 
-先完成 [Repository／Service 示例](../packages/business/README.zh-CN.md#示例重命名自己的-todo)，再完成 [API 示例](../packages/api/README.zh-CN.md#示例开放-todorename)。`Services.todosService` 已使用推导出的 `TodosService`，`appRouter.todo` 也已挂载；增加这个操作无需新建 Server client、增加 `Services` 属性或 package export。同步修改测试中的 typed service fake。
+先完成 [Repository／Service 示例](../packages/domain/README.zh-CN.md#示例重命名自己的-todo)，再完成 [API 示例](../packages/api/README.zh-CN.md#示例开放-todorename)。`Services.todosService` 已使用推导出的 `TodosService`，`appRouter.todo` 也已挂载；增加这个操作无需新建 Server client、增加 `Services` 属性或 package export。同步修改测试中的 typed service fake。
 
 在 `TodosRoute` 内、`refresh` 之后，与已有 mutations 并列加入：
 
@@ -50,15 +50,15 @@ renameMutation.mutate({ id: todo.id, text: draftText });
 
 这里的 `todo` 是正在渲染的行，`draftText` 是该行的本地编辑状态，不是新增的 router context 字段。多个表单需要共享忙碌行为时，可使用 [PendingButton 示例](../packages/ui/README.zh-CN.md#示例增加共享-pendingbutton)。失败时保留草稿，沿用已有 mutation 错误提示。缓存前缀仍使用 `["user", userId, "todos"]`，由 `refresh` 使当前用户的所有分页失效；请求中不增加归属用户字段。
 
-如果增加的是一个全新 Service，而不只是现有 Service 的方法，还需要：增加 business package export，在 `createServices` 调用工厂，将具体服务类型加入 API `Services`，将实例放入返回的 `services`，并在 `appRouter` 注册新 router。共享 `db` 的 Service 不负责关闭数据库；新增独立 client 时，要补齐就绪、构造失败回滚和 drain 清理，并在依赖数据库的资源关闭后再关闭数据库。
+如果增加的是一个全新 Service，而不只是现有 Service 的方法，还需要：增加 domain package export，在 `createServices` 调用工厂，将具体服务类型加入 API `Services`，将实例放入返回的 `services`，并在 `appRouter` 注册新 router。共享 `db` 的 Service 不负责关闭数据库；新增独立 client 时，要补齐就绪、构造失败回滚和 drain 清理，并在依赖数据库的资源关闭后再关闭数据库。
 
 运行 `pnpm check-types`、`pnpm check:boundaries` 和 `pnpm test`。配置专用 `TEST_DATABASE_URL`／`TEST_REDIS_URL` 后，运行 `pnpm test:integration` 和 `pnpm test:e2e`。检查 Alice 修改后刷新仍能看到结果，Bob 不能读取或修改 Alice 的 Todo，非法文本不进入 SQL，写入失败保留草稿。测试位置包括现有 Server 测试和 `apps/web/tests/session.spec.ts`。
 
 ## 案例二：新增后台任务
 
-增加独立的 `profile-summary` 任务，读取当前用户资料并返回认证状态摘要。先按 [business 任务示例](../packages/business/README.zh-CN.md#示例增加资料摘要任务)完成五个文件，不改名原有队列，也不改变其待处理任务。
+增加独立的 `profile-summary` 任务，读取当前用户资料并返回认证状态摘要。先按 [domain 任务示例](../packages/domain/README.zh-CN.md#示例增加资料摘要任务)完成五个文件，不改名原有队列，也不改变其待处理任务。
 
-向 `packages/business/package.json` 已有的 `exports` 对象加入：
+向 `packages/domain/package.json` 已有的 `exports` 对象加入：
 
 ```json
 "./users/jobs/profile-summary/contract": "./src/users/jobs/profile-summary.contract.ts",

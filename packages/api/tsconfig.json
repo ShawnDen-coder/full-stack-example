@@ -13,7 +13,7 @@
 			"path": "../db"
 		},
 		{
-			"path": "../business"
+			"path": "../domain"
 		},
 		{
 			"path": "../queue"

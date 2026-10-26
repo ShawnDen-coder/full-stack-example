@@ -19,7 +19,7 @@
 
 Dockerfile
 **/Dockerfile
-docker-compose.yml
+container/compose*.yml
 
 # Env value files stay out of COPY layers. Runtime values come from Compose;
 # public build-time values use build args.

@@ -100,4 +100,4 @@ pnpm --filter web build
 
 Inspect the consuming screen in light/dark themes and with keyboard navigation.
 For authentication or interaction changes, run `pnpm test:e2e` against dedicated
-test services. Shared primitives must not import business, database or server code.
+test services. Shared primitives must not import domain, database or server code.

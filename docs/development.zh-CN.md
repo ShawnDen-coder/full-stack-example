@@ -95,7 +95,7 @@ Worker 校验任务载荷，并使用自己的 `UsersService` 实例。队列名
 | 包 | 职责 |
 | --- | --- |
 | [API](../packages/api/README.zh-CN.md) | HTTP、认证和 oRPC 过程 |
-| [Business](../packages/business/README.zh-CN.md) | 业务服务、Scoped Repository 和业务任务 |
+| [Domain](../packages/domain/README.zh-CN.md) | 业务服务、Scoped Repository 和业务任务 |
 | [DB](../packages/db/README.zh-CN.md) | 数据库工厂、schema、迁移和运行角色授权 |
 | [Queue](../packages/queue/README.zh-CN.md) | 通用 BullMQ 连接和 telemetry |
 | [Observability](../packages/observability/README.zh-CN.md) | 日志、trace、指标和 deadline |
@@ -185,11 +185,11 @@ const status = await client.users.getProfileReadJob({ id: job.id });
 
 示例任务只返回 `id`、`name`、`emailVerified`。查询自己的任务，未完成或用户已不存在时 `result` 为 `null`；不存在或属于其他用户时返回 `NOT_FOUND`。完成结果最多保留一小时／1,000 条，失败任务最多保留一天／1,000 条；清理由后续任务完成触发。轮询需设置 deadline。
 
-新增 Service 时，在 business 暴露工厂，在 `createServices` 创建，将服务类型加入 API `Services` 并注册 router。后台任务的契约和 Worker 工厂归所属业务包，消费者在 `apps/worker/src/runtime.ts` 显式注册。具体步骤见[扩展示例](extension-examples.zh-CN.md)，启动、重试和关闭预算见[Worker 运行限制](operations.zh-CN.md#worker-运行限制)。
+新增 Service 时，在 domain 暴露工厂，在 `createServices` 创建，将服务类型加入 API `Services` 并注册 router。后台任务的契约和 Worker 工厂归所属业务包，消费者在 `apps/worker/src/runtime.ts` 显式注册。具体步骤见[扩展示例](extension-examples.zh-CN.md)，启动、重试和关闭预算见[Worker 运行限制](operations.zh-CN.md#worker-运行限制)。
 
 ## 完整模块示例
 
-以 `packages/business/src/todos` 作为增删改查模块的参考。其工厂接收数据库，`createServices` 将服务注入 `context.services`。路由负责校验输入，对不存在和属于其他用户的资源统一返回 `NOT_FOUND`。不要接受浏览器传入的资源所属用户 ID。
+以 `packages/domain/src/todos` 作为增删改查模块的参考。其工厂接收数据库，`createServices` 将服务注入 `context.services`。路由负责校验输入，对不存在和属于其他用户的资源统一返回 `NOT_FOUND`。不要接受浏览器传入的资源所属用户 ID。
 
 `repository.ts` 负责 SQL、字段投影和用户范围：`createTodosRepository({ db }).forUser(session.user.id)` 返回的操作始终按该用户过滤，创建时也固定填入该用户 ID。方法返回执行结果，不暴露可修改的查询构造器。每个 scope 使用独立闭包，共享 repository 不存储可变的当前用户。`service.ts` 保留分页、业务判断和原有操作级 span、指标。Repository 工厂可接收数据库或事务，不负责创建和关闭连接。归属规则重复时再引入 scoped repository，简单模块无需额外层次，也不引入通用基类。这是应用层约束，直接使用原始数据库仍然可以绕过。
 

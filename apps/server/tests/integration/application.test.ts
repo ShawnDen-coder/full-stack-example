@@ -14,7 +14,7 @@ import { RPCLink } from "@orpc/client/fetch";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { z } from "zod";
-import { createTodosRepository } from "../../../../packages/business/src/todos/repository";
+import { createTodosRepository } from "../../../../packages/domain/src/todos/repository";
 import { startWorker } from "../../../worker/src/runtime";
 import { startServer } from "../../src/runtime";
 import { createServices } from "../../src/services";
@@ -370,7 +370,7 @@ test("failed jobs use bounded retries and expose no internal failure details", {
 	timeout: 15000,
 }, async () => {
 	const { createProfileReadWorker } = await import(
-		"@full-stack-example/business/users/jobs/profile-read/worker"
+		"@full-stack-example/domain/users/jobs/profile-read/worker"
 	);
 	const runtime = createServices(config, logger);
 	let attempts = 0;

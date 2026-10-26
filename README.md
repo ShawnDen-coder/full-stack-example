@@ -36,6 +36,8 @@ The API runs at [localhost:3000](http://localhost:3000), with an [API reference]
 | Check, contribute, or release | [Contributing](CONTRIBUTING.md) |
 
 For package-specific entry points and extension steps:
-[API](packages/api/README.md) · [Business](packages/business/README.md) · [Database](packages/db/README.md) · [Queue](packages/queue/README.md) · [Observability](packages/observability/README.md) · [UI](packages/ui/README.md).
+[API](packages/api/README.md) · [Domain](packages/domain/README.md) · [Database](packages/db/README.md) · [Queue](packages/queue/README.md) · [Observability](packages/observability/README.md) · [UI](packages/ui/README.md).
 
 Commands are defined in [package.json](package.json); shared TypeScript settings live in [tsconfig.base.json](tsconfig.base.json).
+
+Container configuration lives in [container](container/README.md): Compose files, application Dockerfiles, Nginx, and Collector configuration. Images still build from the repository root using its `.dockerignore`; deployment environment configuration stays in `deploy/`.

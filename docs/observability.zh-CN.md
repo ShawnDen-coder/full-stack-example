@@ -11,7 +11,7 @@ pnpm telemetry:up
 OTEL_ENABLED=true pnpm dev
 ```
 
-宿主开发默认向 `http://localhost:4318` 导出。容器使用 `http://otel-collector:4318`，也可以配置外部 `OTEL_EXPORTER_OTLP_ENDPOINT`。生产栈使用可选 Collector 时，将 `compose.observability.yml` 与 `compose.production.yml` 组合运行。
+宿主开发默认向 `http://localhost:4318` 导出。容器使用 `http://otel-collector:4318`，也可以配置外部 `OTEL_EXPORTER_OTLP_ENDPOINT`。生产栈使用可选 Collector 时，将 `container/compose.observability.yml` 与 `container/compose.production.yml` 组合运行。
 
 示例 Collector 在 `http://127.0.0.1:8889/metrics` 提供 Prometheus 指标，在自身日志输出 trace 摘要。它是诊断接收器，不是持久化存储。生产需要将 debug exporter 替换为目标 trace 后端的 OTLP exporter，配置有界发送队列和重试，并由宿主或 Kubernetes 日志代理采集 stdout。Collector 端口应保持内部可见。本仓库不部署日志存储、trace 存储或备份调度器。
 

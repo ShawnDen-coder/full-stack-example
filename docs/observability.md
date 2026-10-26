@@ -19,8 +19,8 @@ OTEL_ENABLED=true pnpm dev
 Host development exports to `http://localhost:4318`. Container deployments use
 `http://otel-collector:4318`, or an explicitly configured external
 `OTEL_EXPORTER_OTLP_ENDPOINT`. The optional Collector is defined in
-`compose.observability.yml`; when using the production stack, combine that file
-with `compose.production.yml` instead of the development Compose file.
+`container/compose.observability.yml`; when using the production stack, combine that file
+with `container/compose.production.yml` instead of the development Compose file.
 
 The example Collector exports metrics at `http://127.0.0.1:8889/metrics` and trace
 summaries to its logs. It is a diagnostic receiver, not durable trace storage.

@@ -69,7 +69,7 @@ export function deploy(env, run = spawnSync) {
 	const compose = (...args) => {
 		const result = run(
 			"docker",
-			["compose", "-f", "compose.production.yml", ...args],
+			["compose", "-f", "container/compose.production.yml", ...args],
 			{ stdio: "inherit", env },
 		);
 		if (result.error) throw result.error;

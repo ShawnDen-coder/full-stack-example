@@ -24,7 +24,7 @@
 3. 保持 Better Auth 生成文件完整。认证相关变更先走[认证表结构生成流程](../../docs/development.zh-CN.md#生成-better-auth-表结构)，再生成数据库迁移。
 4. 从根目录运行 `pnpm db:generate`，审查并提交 SQL 和快照，再执行 `pnpm db:migrate`。用专用测试数据验证空库初始化和旧结构升级；不重写已执行的迁移，也不以 `db:push` 发布。
 5. 每次新增表或能力，都审查 `src/provision.ts`，只授予各进程实际需要的操作。新增 schema 不会自动获得运行角色权限，迁移凭据仅用于部署任务。
-6. 业务查询留在 [business](../business/README.zh-CN.md)。各应用创建和关闭自己的数据库实例；Repository 使用注入的数据库或事务，不拥有连接池。
+6. 业务查询留在 [domain](../domain/README.zh-CN.md)。各应用创建和关闭自己的数据库实例；Repository 使用注入的数据库或事务，不拥有连接池。
 
 ## 示例：为 Todo 增加可选截止时间
 

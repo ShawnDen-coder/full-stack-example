@@ -6,7 +6,7 @@
 
 ## 生产部署
 
-支持的基线是单机 Docker Compose，前面配置 HTTPS 反向代理。`docker-compose.yml` 用于本地开发，`compose.production.yml` 是独立生产栈，浏览器请求使用同一个公开 HTTPS origin。通过进程环境或忽略的 `deploy/.env` 提供 `deploy/.env.schema` 中的值：`PUBLIC_APP_URL`、`BETTER_AUTH_SECRET`（至少 32 个字符）、`POSTGRES_PASSWORD` 和三个指向 `postgres:5432/app` 的数据库 URL：
+支持的基线是单机 Docker Compose，前面配置 HTTPS 反向代理。`container/compose.yml` 用于本地开发，`container/compose.production.yml` 是独立生产栈，浏览器请求使用同一个公开 HTTPS origin。通过进程环境或忽略的 `deploy/.env` 提供 `deploy/.env.schema` 中的值：`PUBLIC_APP_URL`、`BETTER_AUTH_SECRET`（至少 32 个字符）、`POSTGRES_PASSWORD` 和三个指向 `postgres:5432/app` 的数据库 URL：
 
 - `MIGRATION_DATABASE_URL`：`postgres` schema owner，密码与 `POSTGRES_PASSWORD` 一致，仅供部署任务使用。
 - `DATABASE_URL`：`app_server`，使用独立运行密码。
