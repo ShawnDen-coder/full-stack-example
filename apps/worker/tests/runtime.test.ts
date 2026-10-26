@@ -38,6 +38,15 @@ function fixture(count = 2) {
 	const loops = Array.from({ length: count }, () =>
 		Promise.withResolvers<void>(),
 	);
+	const backends = loops.map((_, i) => ({
+		client: Promise.resolve({
+			status: "ready",
+			get: async () => {
+				calls.push(`${i}.probe`);
+				return null;
+			},
+		}),
+	}));
 	const workers: Consumer[] = loops.map((loop, i) => ({
 		waitUntilReady: async () => {
 			calls.push(`${i}.ready`);
@@ -47,13 +56,7 @@ function fixture(count = 2) {
 			return loop.promise;
 		},
 		isRunning: () => true,
-		client: Promise.resolve({
-			status: "ready",
-			get: async () => {
-				calls.push(`${i}.probe`);
-				return null;
-			},
-		}),
+		getBackend: () => at(backends, i),
 		close: async (force = false) => {
 			calls.push(`${i}.${force ? "abort" : "drain"}`);
 			loop.resolve();
@@ -350,7 +353,9 @@ test("each consumer must be consuming and connected for aggregate readiness", as
 	at(f.workers, 1).isRunning = () => false;
 	await assert.rejects(runtime.checkReady, /consumer-1/);
 	at(f.workers, 1).isRunning = () => true;
-	Object.assign(await at(f.workers, 1).client, { status: "reconnecting" });
+	Object.assign(await at(f.workers, 1).getBackend().client, {
+		status: "reconnecting",
+	});
 	await assert.rejects(runtime.checkReady, /consumer-1/);
 	await runtime.close();
 });

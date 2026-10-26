@@ -11,7 +11,6 @@ connection options and the native telemetry adapter; business jobs live elsewher
 | --- | --- |
 | [src/index.ts](src/index.ts) | `createQueueConnection`, `createQueueTelemetry`, Queue/Worker exports |
 | [tests/connection.test.mjs](tests/connection.test.mjs) | Initialization/close race regression tests without Redis |
-| [Dependency patch notes](../../patches/README.md) | The pinned BullMQ lifecycle fix and removal conditions |
 
 ## Extend
 
@@ -26,9 +25,11 @@ connection options and the native telemetry adapter; business jobs live elsewher
    propagation rather than manually storing trace contexts in business payloads.
 4. The creating process owns error listeners and shutdown. Stop queue metric
    observers before closing the queue; do not create clients at module import.
-5. When updating BullMQ, check compatibility with `bullmq-otel` and the
-   [versioned patch](../../patches/README.md). Test early initialization failure
-   and close, not only successful connections.
+5. When updating BullMQ, check compatibility with `bullmq-otel` and the explicit
+   `ioredis` peer dependency. BullMQ 6.4.2 guards late initialization error emissions
+   after close, replacing our former 5.81.5 patch (see [upstream issue #3546](https://github.com/taskforcesh/bullmq/issues/3546)).
+   Test early initialization failure and close, not only successful connections.
+   Worker readiness accesses Redis through `worker.getBackend().client` in v6.
 
 To add a task, extend business, wire its producer in
 [server services](../../apps/server/src/services.ts), and explicitly compose its
@@ -82,5 +83,5 @@ pnpm --filter @full-stack-example/queue check-types
 
 Connection, retry or propagation changes also require `pnpm test:integration`
 with dedicated services. After dependency changes, build and check isolated
-server/worker production deployments so the runtime receives the patched,
-compatible dependency rather than relying on workspace resolution.
+server/worker production deployments so the runtime receives compatible BullMQ,
+telemetry and Redis driver dependencies rather than relying on workspace resolution.

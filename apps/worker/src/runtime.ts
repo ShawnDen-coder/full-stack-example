@@ -33,10 +33,12 @@ export type Consumer = {
 	waitUntilReady(): Promise<unknown>;
 	run(): Promise<void>;
 	isRunning(): boolean;
-	readonly client: Promise<{
-		status: string;
-		get(key: string): Promise<string | null>;
-	}>;
+	getBackend(): {
+		readonly client: Promise<{
+			status: string;
+			get(key: string): Promise<string | null>;
+		}>;
+	};
 	close(force?: boolean): Promise<void>;
 };
 
@@ -304,7 +306,7 @@ export async function startWorker({
 				consumers.map(async ({ name, worker }) => {
 					if (!worker.isRunning())
 						throw consumerError(name, "is not consuming", undefined);
-					const client = await worker.client;
+					const client = await worker.getBackend().client;
 					if (client.status !== "ready")
 						throw consumerError(name, "Redis is not ready", undefined);
 					await client.get("full-stack:worker:health");
