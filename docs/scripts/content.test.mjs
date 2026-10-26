@@ -8,11 +8,11 @@ import { pages, rewriteLink, siteRoute, transformMarkdown } from "./content.ts";
 test("maps both languages to actual site routes and retains anchors", () => {
 	assert.equal(
 		rewriteLink(
-			"../packages/business/README.zh-CN.md#扩展步骤",
+			"../packages/domain/README.zh-CN.md#扩展步骤",
 			"docs/development.zh-CN.md",
 			process.cwd(),
 		),
-		"/modules/business/#扩展步骤",
+		"/modules/domain/#扩展步骤",
 	);
 	assert.equal(
 		rewriteLink(

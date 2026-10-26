@@ -85,10 +85,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: docker compose -f compose.production.yml build
-      - run: docker compose -f compose.production.yml up -d --wait
+      - run: docker compose -f container/compose.production.yml build
+      - run: docker compose -f container/compose.production.yml up -d --wait
       - run: node scripts/smoke-production.mjs
       - if: failure()
-        run: docker compose -f compose.production.yml logs --tail 100
+        run: docker compose -f container/compose.production.yml logs --tail 100
       - if: always()
-        run: docker compose -f compose.production.yml down -v
+        run: docker compose -f container/compose.production.yml down -v

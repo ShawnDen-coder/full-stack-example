@@ -3,15 +3,15 @@ name: full-stack-example
 services:
   web:
     build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+      context: ..
+      dockerfile: container/web/Dockerfile
       args:
         VITE_SERVER_URL: http://localhost:3000
     init: true
     ports:
       - "3001:80"
     env_file:
-      - path: apps/web/.env
+      - path: ../apps/web/.env
         required: false
     depends_on:
       server:
@@ -26,13 +26,13 @@ services:
 
   server:
     build:
-      context: .
-      dockerfile: apps/server/Dockerfile
+      context: ..
+      dockerfile: container/server/Dockerfile
     init: true
     ports:
       - "3000:3000"
     env_file:
-      - path: apps/server/.env
+      - path: ../apps/server/.env
         required: false
     environment:
       REDIS_URL: redis://redis:6379
@@ -57,11 +57,11 @@ services:
 
   worker:
     build:
-      context: .
-      dockerfile: apps/worker/Dockerfile
+      context: ..
+      dockerfile: container/worker/Dockerfile
     init: true
     env_file:
-      - path: apps/worker/.env
+      - path: ../apps/worker/.env
         required: false
     environment:
       NODE_ENV: production

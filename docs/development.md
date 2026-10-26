@@ -116,7 +116,7 @@ Choose the package that owns the change, then read its entry points, extension s
 | Package | Responsibility |
 | --- | --- |
 | [API](../packages/api/README.md) | HTTP, authentication, and oRPC procedures |
-| [Business](../packages/business/README.md) | Services, scoped repositories, and business-owned jobs |
+| [Domain](../packages/domain/README.md) | Services, scoped repositories, and business-owned jobs |
 | [DB](../packages/db/README.md) | Database factory, schema, migrations, and runtime grants |
 | [Queue](../packages/queue/README.md) | Generic BullMQ connections and telemetry |
 | [Observability](../packages/observability/README.md) | Logs, traces, metrics, and deadlines |
@@ -208,11 +208,11 @@ const status = await client.users.getProfileReadJob({ id: job.id });
 
 The example job returns only `id`, `name`, and `emailVerified`. Inspect only your own jobs: `result` is `null` before completion or if the user no longer exists; missing or foreign jobs return `NOT_FOUND`. Completed jobs are retained for up to one hour / 1,000 entries; failed jobs for one day / 1,000 entries. Cleanup happens when later jobs finish. Poll with a deadline.
 
-To add a Service, expose its factory in business, create it in `createServices`, add its type to API `Services`, and register its router. Job contracts and Worker factories belong to the owning business package; register consumers explicitly in `apps/worker/src/runtime.ts`. See [extension examples](extension-examples.md) for the steps and [Worker runtime limits](operations.md#worker-runtime-limits) for startup, retries, and shutdown budgets.
+To add a Service, expose its factory in domain, create it in `createServices`, add its type to API `Services`, and register its router. Job contracts and Worker factories belong to the owning domain package; register consumers explicitly in `apps/worker/src/runtime.ts`. See [extension examples](extension-examples.md) for the steps and [Worker runtime limits](operations.md#worker-runtime-limits) for startup, retries, and shutdown budgets.
 
 ## Complete module example
 
-Use `packages/business/src/todos` as the CRUD reference. Its factory receives a database;
+Use `packages/domain/src/todos` as the CRUD reference. Its factory receives a database;
 `createServices` wires it into `context.services`. Routers validate inputs and
 map a missing or foreign resource to the same `NOT_FOUND` response. Never accept
 an owner ID from the browser. `repository.ts` owns SQL, field projections and the

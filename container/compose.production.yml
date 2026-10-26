@@ -1,3 +1,5 @@
+name: full-stack-example
+
 # TLS terminates at an external reverse proxy forwarding to 127.0.0.1:8080.
 services:
   postgres:
@@ -52,8 +54,8 @@ services:
   server:
     image: ${COMPOSE_PROJECT_NAME:-full-stack-example}-server
     build:
-      context: .
-      dockerfile: apps/server/Dockerfile
+      context: ..
+      dockerfile: container/server/Dockerfile
     init: true
     environment:
       NODE_ENV: production
@@ -80,8 +82,8 @@ services:
     restart: unless-stopped
   worker:
     build:
-      context: .
-      dockerfile: apps/worker/Dockerfile
+      context: ..
+      dockerfile: container/worker/Dockerfile
     init: true
     environment:
       NODE_ENV: production
@@ -106,8 +108,8 @@ services:
     restart: unless-stopped
   web:
     build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+      context: ..
+      dockerfile: container/web/Dockerfile
       args:
         VITE_SERVER_URL: ${PUBLIC_APP_URL:?Set HTTPS PUBLIC_APP_URL}
     ports:

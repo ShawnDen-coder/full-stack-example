@@ -1,7 +1,7 @@
 import type { Auth, Session } from "@full-stack-example/api/auth";
-import type { TodosService } from "@full-stack-example/business/todos";
-import type { UsersService } from "@full-stack-example/business/users";
-import type { ProfileReadClient } from "@full-stack-example/business/users/jobs/profile-read/producer";
+import type { TodosService } from "@full-stack-example/domain/todos";
+import type { UsersService } from "@full-stack-example/domain/users";
+import type { ProfileReadClient } from "@full-stack-example/domain/users/jobs/profile-read/producer";
 import type { Logger } from "@full-stack-example/observability";
 
 export type Services = {

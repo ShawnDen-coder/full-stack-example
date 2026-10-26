@@ -55,8 +55,8 @@ export default defineConfig({
 		pluginTypeDoc({
 			entryPoints: [
 				"packages/api/src/routers/index.ts",
-				"packages/business/src/todos/service.ts",
-				"packages/business/src/users/service.ts",
+				"packages/domain/src/todos/service.ts",
+				"packages/domain/src/users/service.ts",
 				"packages/db/src/index.ts",
 				"packages/queue/src/index.ts",
 				"packages/observability/src/index.ts",

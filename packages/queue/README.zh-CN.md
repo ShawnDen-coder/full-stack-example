@@ -13,7 +13,7 @@
 
 ## 扩展步骤
 
-1. 只有跨业务通用的连接、重试或 telemetry 行为放在本包；队列名、payload、保留策略和 processor 放在 [business 任务模块](../business/README.zh-CN.md)。
+1. 只有跨业务通用的连接、重试或 telemetry 行为放在本包；队列名、payload、保留策略和 processor 放在 [domain 任务模块](../domain/README.zh-CN.md)。
 2. 生产者使用 `createQueueConnection(url)`，限制重试并关闭离线命令缓冲。消费者使用 `createQueueConnection(url, "worker")`，允许阻塞读取和持续重连，不能套用生产者命令超时。修改 URL 解析时保留 TLS、凭据和数据库选择支持。
 3. 生产者和消费者都传入 `createQueueTelemetry()`，复用原生上下文传播，不在业务 payload 中手工保存 trace context。
 4. 创建资源的进程负责错误监听和关闭；关闭队列前先停止指标观察器，导入模块时不创建客户端。

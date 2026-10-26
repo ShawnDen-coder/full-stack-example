@@ -4,7 +4,7 @@ services:
     image: otel/opentelemetry-collector-contrib:0.163.2
     command: ["--config=/etc/otelcol/config.yml"]
     volumes:
-      - ./deploy/observability/collector.yml:/etc/otelcol/config.yml:ro
+      - ./observability/collector.yml:/etc/otelcol/config.yml:ro
     ports:
       - "127.0.0.1:4318:4318"
       - "127.0.0.1:8889:8889"

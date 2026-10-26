@@ -14,8 +14,8 @@ trace the current Todo request and profile-job flow before extending them.
 
 | Change | Start here | Result to verify |
 | --- | --- | --- |
-| Rename an owned Todo | [Business](../packages/business/README.md#example-rename-an-owned-todo), [API](../packages/api/README.md#example-expose-todorename), case 1 below | User-scoped SQL through a typed browser mutation |
-| Add a background job | [Business job](../packages/business/README.md#example-add-a-profile-summary-job), case 2 below | Server enqueues; independent Worker processes; owner reads status |
+| Rename an owned Todo | [Domain](../packages/domain/README.md#example-rename-an-owned-todo), [API](../packages/api/README.md#example-expose-todorename), case 1 below | User-scoped SQL through a typed browser mutation |
+| Add a background job | [Domain job](../packages/domain/README.md#example-add-a-profile-summary-job), case 2 below | Server enqueues; independent Worker processes; owner reads status |
 | Add a database field | [DB due-date example](../packages/db/README.md#example-add-an-optional-todo-due-date) | Reviewed migration and upgrade without losing old rows |
 | Extend queue infrastructure | [Queue timeout example](../packages/queue/README.md#example-make-the-connection-timeout-configurable) | Both connection roles retain their retry behavior |
 | Add a metric | [Observability export-size example](../packages/observability/README.md#example-measure-generated-export-size) | Bounded attributes and working business code without a Collector |
@@ -28,13 +28,13 @@ remains `{ id, text, completed }`. No schema change is involved.
 
 | Location | Concrete change |
 | --- | --- |
-| `packages/business/src/todos/repository.ts` | Add `rename` inside `forUser`, using `ownedTodo(id)` and the existing projection |
-| `packages/business/src/todos/service.ts` | Validate/normalize text and observe `todos.rename` |
+| `packages/domain/src/todos/repository.ts` | Add `rename` inside `forUser`, using `ownedTodo(id)` and the existing projection |
+| `packages/domain/src/todos/service.ts` | Validate/normalize text and observe `todos.rename` |
 | `packages/api/src/routers/todo.ts` | Add the authenticated `rename` procedure and map no match to `NOT_FOUND` |
 | `apps/server/src/services.ts` | Reuse the existing `createTodosService({ db })` instance |
 | `apps/web/src/routes/_auth/todos.tsx` | Add an edit form and typed mutation; preserve identity-scoped cache invalidation |
 
-First apply the [repository/service example](../packages/business/README.md#example-rename-an-owned-todo),
+First apply the [repository/service example](../packages/domain/README.md#example-rename-an-owned-todo),
 then the [API example](../packages/api/README.md#example-expose-todorename).
 `Services.todosService` already uses the inferred `TodosService`, and
 `appRouter.todo` is already mounted. Adding this operation needs no new server
@@ -68,7 +68,7 @@ existing mutation error handler displays the failure. Preserve
 pages for that user. Never add an owner field to the request.
 
 For a genuinely new service rather than a method, the server wiring expands:
-add its business package export, construct its factory in `createServices`, add
+add its domain package export, construct its factory in `createServices`, add
 its concrete type to API `Services`, include the instance in the returned
 `services`, and register its router in `appRouter`. A service sharing `db` must
 not close it. New owned clients need readiness, constructor rollback and drain
@@ -84,10 +84,10 @@ draft. Update the existing server tests and `apps/web/tests/session.spec.ts`.
 
 Create a separate `profile-summary` task that reads the current profile and
 returns a verification summary. Start by implementing the five files described
-in the [business job example](../packages/business/README.md#example-add-a-profile-summary-job).
+in the [domain job example](../packages/domain/README.md#example-add-a-profile-summary-job).
 Do not rename the existing queue or change its pending jobs.
 
-Add these entries to the existing `exports` object in `packages/business/package.json`:
+Add these entries to the existing `exports` object in `packages/domain/package.json`:
 
 ```json
 "./users/jobs/profile-summary/contract": "./src/users/jobs/profile-summary.contract.ts",

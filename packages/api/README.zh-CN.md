@@ -17,7 +17,7 @@
 
 ## 扩展步骤
 
-1. 先在 [business](../business/README.zh-CN.md) 实现操作。将具体服务类型加入 `Services`，在 [server services](../../apps/server/src/services.ts) 中实例化，再注入 `createApi`。
+1. 先在 [domain](../domain/README.zh-CN.md) 实现操作。将具体服务类型加入 `Services`，在 [server services](../../apps/server/src/services.ts) 中实例化，再注入 `createApi`。
 2. 在 `src/routers` 下增加路由，用 Zod 校验输入，再调用 `context.services`。私有数据使用 `protectedProcedure`，归属用户从 `context.session.user.id` 获取。
 3. 资源不存在和属于其他用户时统一返回 `NOT_FOUND`。将已知业务失败转换为稳定的 RPC 错误，不返回数据库驱动的内部错误信息。
 4. 在 `src/routers/index.ts` 注册路由。操作名表达具体含义，例如 `setCompleted`；已有客户端需要时保留兼容别名。
@@ -27,7 +27,7 @@
 
 ## 示例：开放 todo.rename
 
-先实现 [business 的 rename 方法](../business/README.zh-CN.md#示例重命名自己的-todo)，再将下面的属性加入 [src/routers/todo.ts](src/routers/todo.ts) 的 `todoRouter`。该文件已导入 `z`、`ORPCError` 和 `protectedProcedure`：
+先实现 [domain 的 rename 方法](../domain/README.zh-CN.md#示例重命名自己的-todo)，再将下面的属性加入 [src/routers/todo.ts](src/routers/todo.ts) 的 `todoRouter`。该文件已导入 `z`、`ORPCError` 和 `protectedProcedure`：
 
 ```ts
 rename: protectedProcedure

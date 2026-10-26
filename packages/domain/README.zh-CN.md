@@ -1,8 +1,10 @@
-# @full-stack-example/business
+# @full-stack-example/domain
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [项目说明](../../README.zh-CN.md)
 
 负责业务服务、带数据范围的数据访问，以及归属具体业务的任务。HTTP 和 Worker 通过注入依赖复用这些工厂。
+
+本包按领域组织模块，包含服务编排、SQL Repository 和任务适配器，并非严格 DDD 中的纯领域层。
 
 ## 代码入口
 
@@ -24,7 +26,7 @@
 4. 使用 `observeOperation` 包裹有稳定名称的业务操作。RPC 错误和 session 留在 API，仅向 [exports](package.json) 增加调用方需要的子路径。
 5. HTTP 服务通过 [API](../api/README.zh-CN.md) 和 [server services](../../apps/server/src/services.ts) 接线。
 
-新增任务时参考 `users/jobs`：先定义契约、校验输入，再实现 processor、producer 和 Worker 工厂；返回任务状态或结果时检查归属。处理函数须能承受重试，结果字段和保留策略应明确受限。连接复用 [queue 基础设施](../queue/README.zh-CN.md)，消费者在 [Worker runtime](../../apps/worker/src/runtime.ts) 显式注册。任务使用明确的公共入口，如 `@full-stack-example/business/users/jobs/profile-read/producer`（`createProfileReadClient`）和 `.../profile-read/worker`（`createProfileReadWorker`、`createProfileReadProcessor`）。Client 接收 `enqueueProfileRead({ userId, requestId })` 和 `getProfileReadJob({ userId, jobId })`；状态 helper 留在内部。
+新增任务时参考 `users/jobs`：先定义契约、校验输入，再实现 processor、producer 和 Worker 工厂；返回任务状态或结果时检查归属。处理函数须能承受重试，结果字段和保留策略应明确受限。连接复用 [queue 基础设施](../queue/README.zh-CN.md)，消费者在 [Worker runtime](../../apps/worker/src/runtime.ts) 显式注册。任务使用明确的公共入口，如 `@full-stack-example/domain/users/jobs/profile-read/producer`（`createProfileReadClient`）和 `.../profile-read/worker`（`createProfileReadWorker`、`createProfileReadProcessor`）。Client 接收 `enqueueProfileRead({ userId, requestId })` 和 `getProfileReadJob({ userId, jobId })`；状态 helper 留在内部。
 
 Worker 工厂返回原生 Worker，内部固定 `autorun: false`。增加一个 `consumerDefinitions` 注册项即可接入全组就绪、运行失败追踪和并行 drain；只有新增业务依赖时才扩展共享资源组装。`WORKER_CONCURRENCY` 表示每个消费者的并发，总并发要结合数据库池和内存容量评估。详见[扩展约定](../../docs/extension-design.zh-CN.md)。
 
@@ -106,8 +108,8 @@ return profile
 从工作区根目录执行：
 
 ```bash
-pnpm --filter @full-stack-example/business test
-pnpm --filter @full-stack-example/business check-types
+pnpm --filter @full-stack-example/domain test
+pnpm --filter @full-stack-example/domain check-types
 ```
 
 SQL、事务、任务重试或 trace 传播变更，需要使用专用 PostgreSQL／Redis 运行 `pnpm test:integration`，覆盖跨用户访问和失败恢复。Worker 代码不导入 API、浏览器或 session 模块。

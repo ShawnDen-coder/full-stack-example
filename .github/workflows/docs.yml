@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "docs/**"
+      - "container/**"
       - "README*.md"
       - "CONTRIBUTING*.md"
       - "packages/**"
@@ -16,6 +17,7 @@ on:
     branches: [master]
     paths:
       - "docs/**"
+      - "container/**"
       - "README*.md"
       - "CONTRIBUTING*.md"
       - "packages/**"

@@ -22,7 +22,7 @@ or database schema require a separate compatibility and migration assessment.
 
 | Location | Owns | Extension work |
 | --- | --- | --- |
-| [business](../packages/business/README.md) | Services, scoped repositories, task contract/client/processor/Worker factories | Feature code and required public subpaths |
+| [domain](../packages/domain/README.md) | Services, scoped repositories, task contract/client/processor/Worker factories | Feature code and required public subpaths |
 | [API context](../packages/api/src/context.ts) and routers | Service capabilities, identity, input validation and RPC errors | Inject operations and mount routers |
 | [server services](../apps/server/src/services.ts) | Database and task client creation/ownership | Wire capabilities, readiness and cleanup |
 | [Worker runtime](../apps/worker/src/runtime.ts) | Consumer protocol, explicit definitions, composition and lifecycle | One definition per new consumer; resource composition changes only for new dependencies |
@@ -77,10 +77,10 @@ separate. Physical files stay under `users/jobs/profile-read.*.ts`.
 
 | Removed export | Current export |
 | --- | --- |
-| `business/users/jobs/contract` | `business/users/jobs/profile-read/contract` |
-| `business/users/jobs/producer` | `business/users/jobs/profile-read/producer` |
-| `business/users/jobs/worker` | `business/users/jobs/profile-read/worker` |
-| `business/users/jobs/status` | Internal producer helper |
+| `domain/users/jobs/contract` | `domain/users/jobs/profile-read/contract` |
+| `domain/users/jobs/producer` | `domain/users/jobs/profile-read/producer` |
+| `domain/users/jobs/worker` | `domain/users/jobs/profile-read/worker` |
+| `domain/users/jobs/status` | Internal producer helper |
 
 All paths above use the `@full-stack-example/` prefix. Factories share the task prefix:
 `createProfileReadClient`, `createProfileReadProcessor`, `createProfileReadWorker`.
@@ -237,7 +237,7 @@ flowchart TB
   server["apps/server"]
   worker["apps/worker"]
   api["packages/api"]
-  business["packages/business"]
+  business["packages/domain"]
   db["packages/db"]
   queue["packages/queue"]
   observability["packages/observability"]
@@ -266,10 +266,10 @@ flowchart TB
 | Source | Allowed internal dependencies |
 | --- | --- |
 | apps/web | ui and type-only API client contracts |
-| apps/server | api, business, db, queue, observability |
-| apps/worker | business, db, queue, observability |
-| api | business, db, queue, observability |
-| business | db, queue, observability |
+| apps/server | api, domain, db, queue, observability |
+| apps/worker | domain, db, queue, observability |
+| api | domain, db, queue, observability |
+| domain | db, queue, observability |
 | db | observability |
 | queue/observability/ui | No other internal packages |
 

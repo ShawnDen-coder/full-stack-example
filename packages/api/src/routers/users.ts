@@ -1,4 +1,4 @@
-import { ProfileJobsUnavailableError } from "@full-stack-example/business/users/jobs/profile-read/producer";
+import { ProfileJobsUnavailableError } from "@full-stack-example/domain/users/jobs/profile-read/producer";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { protectedProcedure } from "../procedures";

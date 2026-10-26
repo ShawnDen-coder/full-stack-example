@@ -16,7 +16,7 @@
 
 | 位置 | 负责内容 | 扩展时修改 |
 | --- | --- | --- |
-| [business](../packages/business/README.zh-CN.md) | 服务、Scoped Repository、任务契约／client／processor／Worker 工厂 | 新增业务代码和必要的公共子路径 |
+| [domain](../packages/domain/README.zh-CN.md) | 服务、Scoped Repository、任务契约／client／processor／Worker 工厂 | 新增业务代码和必要的公共子路径 |
 | [API context](../packages/api/src/context.ts) 与路由 | 服务能力类型、身份、输入校验、RPC 错误 | 注入业务方法并挂载路由 |
 | [server services](../apps/server/src/services.ts) | 创建并拥有数据库和任务 client | 新能力接线、就绪检查和资源关闭 |
 | [Worker runtime](../apps/worker/src/runtime.ts) | 消费者协议、显式注册列表、组装和生命周期 | 新消费者增加一个定义；新业务依赖才扩展资源组装 |
@@ -62,14 +62,14 @@ await profileJobs.getProfileReadJob({ userId, jobId });
 
 | 已移除入口 | 当前入口 |
 | --- | --- |
-| `business/users/jobs/contract` | `business/users/jobs/profile-read/contract` |
-| `business/users/jobs/producer` | `business/users/jobs/profile-read/producer` |
-| `business/users/jobs/worker` | `business/users/jobs/profile-read/worker` |
-| `business/users/jobs/status` | 改为 producer 使用的内部 helper |
+| `domain/users/jobs/contract` | `domain/users/jobs/profile-read/contract` |
+| `domain/users/jobs/producer` | `domain/users/jobs/profile-read/producer` |
+| `domain/users/jobs/worker` | `domain/users/jobs/profile-read/worker` |
+| `domain/users/jobs/status` | 改为 producer 使用的内部 helper |
 
 表中路径前缀均为 `@full-stack-example/`。工厂统一任务前缀：`createProfileReadClient`、`createProfileReadProcessor`、`createProfileReadWorker`；client 同时提供入队和归属受限的状态查询。对应类型从工厂推导。
 
-business 是私有 workspace 包，全部调用方已同步迁移，旧内部入口已移除。HTTP 兼容别名继续保留。Redis 中的 `user-profile` 队列和 `profile` 任务名不变，已有任务继续使用原契约。
+domain 是私有 workspace 包，全部调用方已同步迁移，旧内部入口已移除。HTTP 兼容别名继续保留。Redis 中的 `user-profile` 队列和 `profile` 任务名不变，已有任务继续使用原契约。
 
 ## 显式消费者注册
 
@@ -171,7 +171,7 @@ flowchart TB
   server["apps/server"]
   worker["apps/worker"]
   api["packages/api"]
-  business["packages/business"]
+  business["packages/domain"]
   db["packages/db"]
   queue["packages/queue"]
   observability["packages/observability"]
@@ -200,10 +200,10 @@ flowchart TB
 | 来源 | 允许依赖的内部包 |
 | --- | --- |
 | `apps/web` | ui，以及仅类型导入的 API 客户端契约 |
-| `apps/server` | api、business、db、queue、observability |
-| `apps/worker` | business、db、queue、observability |
-| api | business、db、queue、observability |
-| business | db、queue、observability |
+| `apps/server` | api、domain、db、queue、observability |
+| `apps/worker` | domain、db、queue、observability |
+| api | domain、db、queue、observability |
+| domain | db、queue、observability |
 | db | observability |
 | queue／observability／ui | 不依赖其他内部包 |
 

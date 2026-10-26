@@ -36,7 +36,7 @@ relations, one migration history, and deployment-only runtime role provisioning.
 5. Review `src/provision.ts` for every new table or capability. Grant only the
    operations each runtime needs; adding a schema does not automatically grant
    access. Migration credentials stay in deployment tasks.
-6. Put feature queries in [business](../business/README.md), not in this package.
+6. Put feature queries in [domain](../domain/README.md), not in this package.
    Applications create/close their own database instances; repositories can use
    an injected database or transaction without owning its connection pool.
 

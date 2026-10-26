@@ -16,7 +16,7 @@ connection options and the native telemetry adapter; business jobs live elsewher
 
 1. Add shared connection, retry or telemetry behavior here only when it applies
    across business features. Keep queue names, payloads, retention and processors
-   in [business job modules](../business/README.md).
+   in [domain job modules](../domain/README.md).
 2. Producers use `createQueueConnection(url)` for bounded retries and no offline
    command buffer. Workers use `createQueueConnection(url, "worker")` so blocking
    reads can reconnect without producer command deadlines. Preserve TLS, URL
@@ -31,7 +31,7 @@ connection options and the native telemetry adapter; business jobs live elsewher
    Test early initialization failure and close, not only successful connections.
    Worker readiness accesses Redis through `worker.getBackend().client` in v6.
 
-To add a task, extend business, wire its producer in
+To add a task, extend domain, wire its producer in
 [server services](../../apps/server/src/services.ts), and explicitly compose its
 consumer in [Worker runtime](../../apps/worker/src/runtime.ts). This package has
 no task registration table, and adding a contract alone does not start a consumer.

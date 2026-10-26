@@ -1,5 +1,5 @@
 {
-	"name": "@full-stack-example/business",
+	"name": "@full-stack-example/domain",
 	"type": "module",
 	"exports": {
 		"./users": "./src/users/service.ts",

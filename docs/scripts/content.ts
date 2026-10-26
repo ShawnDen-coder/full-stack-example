@@ -5,7 +5,7 @@ export const repository =
 	"https://github.com/ShawnDen-coder/full-stack-example";
 export const packageNames = [
 	"api",
-	"business",
+	"domain",
 	"db",
 	"queue",
 	"observability",

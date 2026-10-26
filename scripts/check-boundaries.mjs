@@ -5,10 +5,10 @@ import ts from "typescript";
 
 export const boundaryRules = {
 	"apps/web": ["ui", "api"],
-	"apps/server": ["api", "business", "db", "queue", "observability"],
-	"apps/worker": ["business", "db", "queue", "observability"],
-	"packages/api": ["business", "db", "queue", "observability"],
-	"packages/business": ["db", "queue", "observability"],
+	"apps/server": ["api", "domain", "db", "queue", "observability"],
+	"apps/worker": ["domain", "db", "queue", "observability"],
+	"packages/api": ["domain", "db", "queue", "observability"],
+	"packages/domain": ["db", "queue", "observability"],
 	"packages/db": ["observability"],
 	"packages/queue": [],
 	"packages/observability": [],
@@ -220,7 +220,7 @@ export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
 				if (!target) {
 					if (specifier.startsWith("@full-stack-example/"))
 						diagnostics.push(
-							`${relative(root, file)}:${line}: unknown internal package ${specifier}`,
+							`${relative(root, file).split(sep).join("/")}:${line}: unknown internal package ${specifier}`,
 						);
 					continue;
 				}
@@ -253,7 +253,7 @@ export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
 					);
 				for (const error of errors)
 					diagnostics.push(
-						`${relative(root, file)}:${line}: ${specifier}: ${error}`,
+						`${relative(root, file).split(sep).join("/")}:${line}: ${specifier}: ${error}`,
 					);
 			}
 		}

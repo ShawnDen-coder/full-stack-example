@@ -18,7 +18,7 @@ oRPC input validation, session resolution and transport error mapping.
 
 ## Extend
 
-1. Implement the operation in [business](../business/README.md). Add its concrete
+1. Implement the operation in [domain](../domain/README.md). Add its concrete
    service type to `Services`; instantiate it in
    [server services](../../apps/server/src/services.ts) and pass it through `createApi`.
 2. Add a router under `src/routers`. Validate payloads with Zod and call
@@ -37,7 +37,7 @@ then the [database migration workflow](../db/README.md).
 
 ## Example: expose todo.rename
 
-After adding the [business rename method](../business/README.md#example-rename-an-owned-todo),
+After adding the [domain rename method](../domain/README.md#example-rename-an-owned-todo),
 insert this property into `todoRouter` in [src/routers/todo.ts](src/routers/todo.ts).
 The file already imports `z`, `ORPCError` and `protectedProcedure`:
 

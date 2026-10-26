@@ -4,8 +4,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
-		"build": "tsc -b ../../packages/business && tsdown",
-		"check-types": "tsc -b ../../packages/business && tsc --noEmit",
+		"build": "tsc -b ../../packages/domain && tsdown",
+		"check-types": "tsc -b ../../packages/domain && tsc --noEmit",
 		"start": "node dist/index.mjs",
 		"test": "node --import tsx --test tests/*.test.ts",
 		"env:generate": "varlock codegen"
@@ -15,7 +15,7 @@
 		"@full-stack-example/queue": "workspace:*",
 		"varlock": "catalog:",
 		"@full-stack-example/observability": "workspace:*",
-		"@full-stack-example/business": "workspace:*",
+		"@full-stack-example/domain": "workspace:*",
 		"pino": "catalog:",
 		"@opentelemetry/api": "catalog:",
 		"@opentelemetry/sdk-node": "catalog:",

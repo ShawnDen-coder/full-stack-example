@@ -115,9 +115,9 @@ importers:
       '@full-stack-example/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@full-stack-example/business':
+      '@full-stack-example/domain':
         specifier: workspace:*
-        version: link:../../packages/business
+        version: link:../../packages/domain
       '@full-stack-example/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -300,9 +300,9 @@ importers:
 
   apps/worker:
     dependencies:
-      '@full-stack-example/business':
+      '@full-stack-example/domain':
         specifier: workspace:*
-        version: link:../../packages/business
+        version: link:../../packages/domain
       '@full-stack-example/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -413,9 +413,9 @@ importers:
       '@better-auth/drizzle-adapter':
         specifier: 1.7.7
         version: 1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(@opentelemetry/api@1.10.0)(better-call@1.4.0(zod@4.6.7))(jose@6.2.13)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.4.2)(drizzle-orm@1.0.0-rc.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)(zod@4.6.7))
-      '@full-stack-example/business':
+      '@full-stack-example/domain':
         specifier: workspace:*
-        version: link:../business
+        version: link:../domain
       '@full-stack-example/db':
         specifier: workspace:*
         version: link:../db
@@ -457,7 +457,7 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
 
-  packages/business:
+  packages/domain:
     dependencies:
       '@full-stack-example/db':
         specifier: workspace:*

@@ -80,4 +80,4 @@ pnpm --filter web check-types
 pnpm --filter web build
 ```
 
-在实际使用页面检查浅色／深色主题和键盘导航。认证或交互变更还需使用专用测试服务运行 `pnpm test:e2e`。共享基础组件不导入 business、数据库或服务端代码。
+在实际使用页面检查浅色／深色主题和键盘导航。认证或交互变更还需使用专用测试服务运行 `pnpm test:e2e`。共享基础组件不导入 domain、数据库或服务端代码。

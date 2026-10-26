@@ -1,10 +1,10 @@
+import { createDb } from "@full-stack-example/db";
 import {
 	createUsersService,
 	type UsersService,
-} from "@full-stack-example/business/users";
-import { USER_PROFILE_QUEUE } from "@full-stack-example/business/users/jobs/profile-read/contract";
-import { createProfileReadWorker } from "@full-stack-example/business/users/jobs/profile-read/worker";
-import { createDb } from "@full-stack-example/db";
+} from "@full-stack-example/domain/users";
+import { USER_PROFILE_QUEUE } from "@full-stack-example/domain/users/jobs/profile-read/contract";
+import { createProfileReadWorker } from "@full-stack-example/domain/users/jobs/profile-read/worker";
 import {
 	createLogger,
 	type Logger,

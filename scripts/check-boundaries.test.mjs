@@ -54,7 +54,7 @@ import { Button } from '@full-stack-example/ui/components/button';
 import { value } from '@/index';`,
 	);
 	f.put(
-		"packages/business/src/service.ts",
+		"packages/domain/src/service.ts",
 		"import { value } from '@full-stack-example/db';",
 	);
 	assert.deepEqual(f.check(), []);
@@ -72,7 +72,7 @@ test("rejects forbidden edges, private exports and API runtime imports from web"
 	);
 	f.put(
 		"apps/server/src/private.ts",
-		"import { secret } from '@full-stack-example/business/src/private';",
+		"import { secret } from '@full-stack-example/domain/src/private';",
 	);
 	const errors = f.check();
 	assert.ok(
@@ -91,7 +91,7 @@ test("checks dynamic imports, re-exports, require and type dependencies", (t) =>
 		`
 const db = import('@full-stack-example/db');
 export type { Secret } from '@full-stack-example/api';
-const worker = require('@full-stack-example/business');
+const worker = require('@full-stack-example/domain');
 import foo = require('@full-stack-example/queue');`,
 	);
 	assert.equal(
@@ -107,7 +107,7 @@ test("relative paths and configured aliases cannot bypass exports or allowed edg
 		"import { value } from '../../../packages/api/src/index';",
 	);
 	f.put(
-		"packages/business/src/private.ts",
+		"packages/domain/src/private.ts",
 		"import { value } from '../../db/src/index';",
 	);
 	f.put("apps/web/src/alias.ts", "import { value } from 'hidden/index';");
@@ -121,7 +121,7 @@ test("relative paths and configured aliases cannot bypass exports or allowed edg
 	assert.ok(
 		errors.some(
 			(error) =>
-				error.includes("packages/business") &&
+				error.includes("packages/domain") &&
 				error.includes("cross-package paths"),
 		),
 	);
@@ -137,15 +137,15 @@ test("detects package cycles even when both edges are individually permitted", (
 	const f = fixture(t);
 	f.put(
 		"packages/api/src/index.ts",
-		"import type { A } from '@full-stack-example/business';",
+		"import type { A } from '@full-stack-example/domain';",
 	);
 	f.put(
-		"packages/business/src/index.ts",
+		"packages/domain/src/index.ts",
 		"import type { B } from '@full-stack-example/api';",
 	);
-	const errors = f.check({ ...boundaryRules, "packages/business": ["api"] });
+	const errors = f.check({ ...boundaryRules, "packages/domain": ["api"] });
 	assert.deepEqual(errors, [
-		"Package cycle: packages/api -> packages/business -> packages/api",
+		"Package cycle: packages/api -> packages/domain -> packages/api",
 	]);
 });
 

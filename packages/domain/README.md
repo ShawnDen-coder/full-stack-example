@@ -1,9 +1,11 @@
-# @full-stack-example/business
+# @full-stack-example/domain
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [Project](../../README.md)
 
 Business services, scoped data access and business-owned jobs, reusable by HTTP
 and Worker processes through injected dependencies.
+
+This package groups modules by domain, including service orchestration, SQL repositories and job adapters. It is not restricted to a pure DDD domain layer.
 
 ## Entry points
 
@@ -42,7 +44,7 @@ returning job status/results. Handlers must tolerate retries; choose bounded
 retention and safe result fields. Reuse [queue infrastructure](../queue/README.md).
 Register consumers explicitly in [Worker runtime](../../apps/worker/src/runtime.ts).
 Use task-specific exports such as
-`@full-stack-example/business/users/jobs/profile-read/producer` (`createProfileReadClient`)
+`@full-stack-example/domain/users/jobs/profile-read/producer` (`createProfileReadClient`)
 and `.../profile-read/worker` (`createProfileReadWorker`, `createProfileReadProcessor`).
 The client accepts `enqueueProfileRead({ userId, requestId })` and
 `getProfileReadJob({ userId, jobId })`; status helpers stay internal.
@@ -153,8 +155,8 @@ covers exports, server/API wiring and explicit consumer registration.
 Run from the workspace root:
 
 ```bash
-pnpm --filter @full-stack-example/business test
-pnpm --filter @full-stack-example/business check-types
+pnpm --filter @full-stack-example/domain test
+pnpm --filter @full-stack-example/domain check-types
 ```
 
 Use `pnpm test:integration` with dedicated PostgreSQL/Redis for changes to SQL,
