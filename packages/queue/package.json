@@ -11,7 +11,8 @@
 	},
 	"dependencies": {
 		"bullmq": "catalog:",
-		"bullmq-otel": "catalog:"
+		"bullmq-otel": "catalog:",
+		"ioredis": "catalog:"
 	},
 	"devDependencies": {
 		"typescript": "catalog:"

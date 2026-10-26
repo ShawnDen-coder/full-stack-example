@@ -100,10 +100,12 @@ type Consumer = {
   waitUntilReady(): Promise<unknown>;
   run(): Promise<void>;
   isRunning(): boolean;
-  readonly client: Promise<{
-    status: string;
-    get(key: string): Promise<string | null>;
-  }>;
+  getBackend(): {
+    readonly client: Promise<{
+      status: string;
+      get(key: string): Promise<string | null>;
+    }>;
+  };
   close(force?: boolean): Promise<void>;
 };
 

@@ -29,7 +29,7 @@ export function createProfileReadWorker({
 	usersService: UsersService;
 	concurrency?: number;
 	logger?: Logger;
-}) {
+}): Worker<UserProfileJobData, UserProfileJobResult> {
 	const processProfile = createProfileReadProcessor({ usersService });
 	const jobMetrics = createQueueMetrics(USER_PROFILE_QUEUE);
 	const worker = new Worker<UserProfileJobData, UserProfileJobResult>(

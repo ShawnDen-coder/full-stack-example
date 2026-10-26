@@ -17,8 +17,11 @@ function fixture() {
 		},
 		disconnect() {
 			client.status = "end";
-			version.reject(failure);
-			client.emit("end");
+			// Socket close rejects queued INFO after close() has removed listeners.
+			setImmediate(() => {
+				version.reject(failure);
+				client.emit("end");
+			});
 		},
 	});
 	const originalFactory = RedisConnection.clientFactory;
@@ -34,11 +37,11 @@ function fixture() {
 	return { connection, checkingVersion, version, failure, errors };
 }
 
-test("closing during initialization settles errors before removing listeners", async () => {
+test("closing during initialization suppresses late errors after removing listeners", async () => {
 	const { connection, checkingVersion, failure, errors } = fixture();
 	await checkingVersion.promise;
 	await connection.close();
-	assert.deepEqual(errors, [failure]);
+	assert.deepEqual(errors, []);
 	assert.equal(connection.status, "closed");
 	assert.equal(connection.listenerCount("error"), 0);
 	await assert.rejects(connection.client, (error) => error === failure);

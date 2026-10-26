@@ -5,7 +5,7 @@ export type { Telemetry } from "bullmq";
 export { Queue, Worker } from "bullmq";
 
 export function createQueueTelemetry() {
-	return new BullMQOtel("full-stack-example");
+	return new BullMQOtel({ tracerName: "full-stack-example" });
 }
 
 export function createQueueConnection(
