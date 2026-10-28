@@ -3,8 +3,10 @@ import type { TodosService } from "@full-stack-example/domain/todos";
 import type { UsersService } from "@full-stack-example/domain/users";
 import type { ProfileReadClient } from "@full-stack-example/domain/users/jobs/profile-read/producer";
 import type { Logger } from "@full-stack-example/observability";
+import type { AccessService } from "./access";
 
 export type Services = {
+	accessService: AccessService;
 	usersService: UsersService;
 	todosService: TodosService;
 	profileJobs: Pick<
@@ -15,6 +17,7 @@ export type Services = {
 
 export type Context = {
 	session: Session | null;
+	headers: Headers;
 	requestId: string;
 	services: Services;
 	logger: Logger;
@@ -34,6 +37,7 @@ export async function createContext(
 ): Promise<Context> {
 	return {
 		session: await deps.getSession(headers),
+		headers,
 		services: deps.services,
 		requestId,
 		logger: deps.logger.child({ request_id: requestId }),

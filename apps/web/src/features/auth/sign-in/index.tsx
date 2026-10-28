@@ -24,7 +24,7 @@ export function SignIn() {
 						account?{" "}
 						<Link
 							to="/sign-up"
-							search={{ redirect: "/tasks" }}
+							search={{ redirect: "/" }}
 							className="text-nowrap underline underline-offset-4 hover:text-primary"
 						>
 							Sign Up

@@ -46,3 +46,5 @@ For package-specific entry points and extension steps:
 Commands are defined in [package.json](package.json); shared TypeScript settings live in [tsconfig.base.json](tsconfig.base.json).
 
 Container configuration lives in [container](container/README.md): Compose files, application Dockerfiles, Nginx, and Collector configuration. Images still build from the repository root using its `.dockerignore`; deployment environment configuration stays in `deploy/`.
+
+[Roles and page access](docs/access-control.md) · [Shared access contracts](packages/access/README.md)

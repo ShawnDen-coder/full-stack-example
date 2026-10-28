@@ -23,7 +23,7 @@ export function SignUp() {
 						Already have an account?{" "}
 						<Link
 							to="/sign-in"
-							search={{ redirect: "/tasks" }}
+							search={{ redirect: "/" }}
 							className="underline underline-offset-4 hover:text-primary"
 						>
 							Sign In

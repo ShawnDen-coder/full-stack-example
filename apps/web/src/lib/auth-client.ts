@@ -1,3 +1,10 @@
+import {
+	ac,
+	adminAccess,
+	authRoles,
+	organizationRoles,
+} from "@full-stack-example/access/auth";
+import { adminClient, organizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 import { ENV } from "../env";
@@ -14,5 +21,13 @@ function getServerUrl(url: string) {
 }
 
 export const authClient = createAuthClient({
+	plugins: [
+		adminClient({ ac: adminAccess, roles: authRoles }),
+		organizationClient({
+			ac,
+			roles: organizationRoles,
+			dynamicAccessControl: { enabled: true },
+		}),
+	],
 	baseURL: new URL("/api/auth", getServerUrl(ENV.VITE_SERVER_URL)).toString(),
 });

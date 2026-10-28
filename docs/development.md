@@ -241,3 +241,5 @@ a validated relative return path. Mutations have a shared error notification,
 which a page-specific `onError` may override. Never retry writes automatically.
 
 [Frontend routes and Shadcn Admin integration](frontend.md)
+
+[Roles and page access](access-control.md)

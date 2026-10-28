@@ -1,7 +1,8 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure } from "../procedures";
+import { pageProcedure } from "../procedures";
 
+const protectedProcedure = pageProcedure("todos");
 const id = z.number().int().positive();
 const setCompletedProcedure = protectedProcedure
 	.input(z.object({ id, completed: z.boolean() }))

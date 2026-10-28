@@ -46,3 +46,5 @@ API 地址为 [localhost:3000](http://localhost:3000)，提供[接口文档](htt
 命令定义见 [package.json](package.json)；共享 TypeScript 配置位于 [tsconfig.base.json](tsconfig.base.json)。
 
 容器配置统一位于 [container](container/README.zh-CN.md)：Compose、各应用的 Dockerfile、Nginx 和 Collector 配置。镜像构建上下文仍为仓库根目录，使用根目录的 `.dockerignore`；部署环境配置留在 `deploy/`。
+
+[角色与页面授权](docs/access-control.zh-CN.md) · [共享权限契约](packages/access/README.zh-CN.md)

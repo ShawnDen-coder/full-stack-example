@@ -113,3 +113,7 @@ pnpm --filter @full-stack-example/domain check-types
 ```
 
 SQL、事务、任务重试或 trace 传播变更，需要使用专用 PostgreSQL／Redis 运行 `pnpm test:integration`，覆盖跨用户访问和失败恢复。Worker 代码不导入 API、浏览器或 session 模块。
+
+## 角色与页面授权
+
+[实现与扩展规则](../../docs/access-control.zh-CN.md)。

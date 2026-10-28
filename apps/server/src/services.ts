@@ -1,3 +1,4 @@
+import { createAccessService } from "@full-stack-example/api/access";
 import { type AuthConfig, createAuth } from "@full-stack-example/api/auth";
 import { createDb } from "@full-stack-example/db";
 import { createTodosService } from "@full-stack-example/domain/todos";
@@ -46,7 +47,12 @@ export function createServices(
 			auth,
 			logger,
 			getSession: (headers: Headers) => auth.api.getSession({ headers }),
-			services: { usersService, todosService, profileJobs },
+			services: {
+				usersService,
+				todosService,
+				profileJobs,
+				accessService: createAccessService(auth),
+			},
 			async checkReady() {
 				await db.$client.query("SELECT 1");
 			},

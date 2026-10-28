@@ -22,7 +22,7 @@ const profile = {
 	createdAt: now,
 };
 const session: Session = {
-	user: { ...profile, updatedAt: now },
+	user: { ...profile, role: "user", banned: false, updatedAt: now },
 	session: {
 		id: "session-1",
 		userId: profile.id,
@@ -59,6 +59,12 @@ async function fixture(currentSession: Session | null = session) {
 			return currentSession;
 		},
 		services: {
+			accessService: {
+				getAccess: async () => ({
+					role: "user",
+					pages: ["todos"],
+				}),
+			},
 			todosService: createTodosService({ db }),
 			usersService: {
 				getProfile: async (id) => {
@@ -538,6 +544,37 @@ test("Todo rename validates input, uses session ownership and hides missing reso
 		});
 	} finally {
 		rename.mock.restore();
+		await f.close();
+	}
+});
+
+test("page denial blocks Todo operations before reaching the repository", async () => {
+	const f = await fixture();
+	try {
+		f.deps.services.accessService.getAccess = async () => ({
+			role: "user",
+			pages: [],
+		});
+		const { app } = createApi({
+			...f.deps,
+			corsOrigin: "http://localhost:3001",
+			checkReady: async () => {},
+		});
+		const client: AppRouterClient = createORPCClient(
+			new RPCLink({
+				url: "http://localhost/rpc",
+				fetch: async (request, options) => app.request(request, options),
+			}),
+		);
+		await assert.rejects(
+			() => client.todo.list({}),
+			(error: unknown) =>
+				typeof error === "object" &&
+				error !== null &&
+				"code" in error &&
+				error.code === "FORBIDDEN",
+		);
+	} finally {
 		await f.close();
 	}
 });

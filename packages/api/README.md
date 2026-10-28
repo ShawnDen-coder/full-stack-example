@@ -82,3 +82,7 @@ For auth, database or queue behavior, also run `pnpm test:integration` against
 dedicated test services. Update web callers and run `pnpm check-types` when the
 API contract changes. This package does not start Worker consumers or expose a
 raw database through the RPC context.
+
+## Roles and page access
+
+[Implementation and extension rules](../../docs/access-control.md).

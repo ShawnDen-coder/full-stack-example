@@ -38,6 +38,9 @@ function reportError(error: Error) {
 		onUnauthorized();
 		return;
 	}
+	if ("code" in error && error.code === "FORBIDDEN") {
+		void queryClient.invalidateQueries({ queryKey: ["access", "me"] });
+	}
 	toast.error(error.message || "Request failed. Please try again.");
 }
 export function createQueryClient() {

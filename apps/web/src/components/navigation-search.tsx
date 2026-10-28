@@ -11,8 +11,9 @@ import { Icon } from "@full-stack-example/ui/components/icon";
 import { useNavigate } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
-import { sidebarData } from "@/components/layout/data/sidebar-data";
+import { useAccess, visibleNavigation } from "@/lib/access";
 export function NavigationSearch() {
+	const access = useAccess();
 	const [open, setOpen] = useState(false);
 	const navigate = useNavigate();
 	useEffect(() => {
@@ -25,16 +26,17 @@ export function NavigationSearch() {
 		document.addEventListener("keydown", listener);
 		return () => document.removeEventListener("keydown", listener);
 	}, []);
-	const items = sidebarData.navGroups.flatMap((group) =>
-		group.items.flatMap((item) =>
-			item.items
-				? item.items.map((child) => ({
-						title: child.title,
-						to: child.url,
-						icon: child.icon ?? item.icon ?? Search,
-					}))
-				: [{ title: item.title, to: item.url, icon: item.icon ?? Search }],
-		),
+	const items = (access.data ? visibleNavigation(access.data) : []).flatMap(
+		(group) =>
+			group.items.flatMap((item) =>
+				item.items
+					? item.items.map((child) => ({
+							title: child.title,
+							to: child.url,
+							icon: child.icon ?? item.icon ?? Search,
+						}))
+					: [{ title: item.title, to: item.url, icon: item.icon ?? Search }],
+			),
 	);
 	return (
 		<>

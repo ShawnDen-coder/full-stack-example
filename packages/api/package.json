@@ -6,7 +6,8 @@
 		"./context": "./src/context.ts",
 		"./create-api": "./src/create-api.ts",
 		"./procedures": "./src/procedures.ts",
-		"./routers/index": "./src/routers/index.ts"
+		"./routers/index": "./src/routers/index.ts",
+		"./access": "./src/access.ts"
 	},
 	"scripts": {
 		"build": "tsc -b",
@@ -27,7 +28,8 @@
 		"@better-auth/core": "1.7.7",
 		"@better-auth/drizzle-adapter": "1.7.7",
 		"better-auth": "catalog:",
-		"@full-stack-example/domain": "workspace:*"
+		"@full-stack-example/domain": "workspace:*",
+		"@full-stack-example/access": "workspace:*"
 	},
 	"devDependencies": {
 		"typescript": "catalog:"

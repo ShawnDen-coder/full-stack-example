@@ -1,5 +1,12 @@
 import { defineRelationsPart } from "drizzle-orm";
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+	boolean,
+	index,
+	pgTable,
+	text,
+	timestamp,
+	uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
 	id: text("id").primaryKey(),
@@ -12,6 +19,10 @@ export const user = pgTable("user", {
 		.defaultNow()
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
+	role: text("role").default("user").notNull(),
+	banned: boolean("banned").default(false),
+	banReason: text("ban_reason"),
+	banExpires: timestamp("ban_expires"),
 });
 
 export const session = pgTable(
@@ -29,6 +40,8 @@ export const session = pgTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
+		impersonatedBy: text("impersonated_by"),
+		activeOrganizationId: text("active_organization_id"),
 	},
 	(table) => [index("session_userId_idx").on(table.userId)],
 );
@@ -73,8 +86,91 @@ export const verification = pgTable(
 	(table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+export const organization = pgTable(
+	"organization",
+	{
+		id: text("id").primaryKey(),
+		name: text("name").notNull(),
+		slug: text("slug").notNull().unique(),
+		logo: text("logo"),
+		createdAt: timestamp("created_at").notNull(),
+		metadata: text("metadata"),
+	},
+	(table) => [uniqueIndex("organization_slug_uidx").on(table.slug)],
+);
+
+export const organizationRole = pgTable(
+	"organization_role",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		role: text("role").notNull(),
+		permission: text("permission").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(
+			() => /* @__PURE__ */ new Date(),
+		),
+	},
+	(table) => [
+		index("organizationRole_organizationId_idx").on(table.organizationId),
+		index("organizationRole_role_idx").on(table.role),
+	],
+);
+
+export const member = pgTable(
+	"member",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		role: text("role").default("member").notNull(),
+		createdAt: timestamp("created_at").notNull(),
+	},
+	(table) => [
+		index("member_organizationId_idx").on(table.organizationId),
+		index("member_userId_idx").on(table.userId),
+	],
+);
+
+export const invitation = pgTable(
+	"invitation",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		email: text("email").notNull(),
+		role: text("role"),
+		status: text("status").default("pending").notNull(),
+		expiresAt: timestamp("expires_at").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		inviterId: text("inviter_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		index("invitation_organizationId_idx").on(table.organizationId),
+		index("invitation_email_idx").on(table.email),
+	],
+);
+
 export const authRelations = defineRelationsPart(
-	{ user, session, account, verification },
+	{
+		user,
+		session,
+		account,
+		verification,
+		organization,
+		organizationRole,
+		member,
+		invitation,
+	},
 	(r) => ({
 		user: {
 			sessions: r.many.session({
@@ -84,6 +180,14 @@ export const authRelations = defineRelationsPart(
 			accounts: r.many.account({
 				from: r.user.id,
 				to: r.account.userId,
+			}),
+			members: r.many.member({
+				from: r.user.id,
+				to: r.member.userId,
+			}),
+			invitations: r.many.invitation({
+				from: r.user.id,
+				to: r.invitation.inviterId,
 			}),
 		},
 		session: {
@@ -95,6 +199,46 @@ export const authRelations = defineRelationsPart(
 		account: {
 			user: r.one.user({
 				from: r.account.userId,
+				to: r.user.id,
+			}),
+		},
+		organization: {
+			organizationRoles: r.many.organizationRole({
+				from: r.organization.id,
+				to: r.organizationRole.organizationId,
+			}),
+			members: r.many.member({
+				from: r.organization.id,
+				to: r.member.organizationId,
+			}),
+			invitations: r.many.invitation({
+				from: r.organization.id,
+				to: r.invitation.organizationId,
+			}),
+		},
+		organizationRole: {
+			organization: r.one.organization({
+				from: r.organizationRole.organizationId,
+				to: r.organization.id,
+			}),
+		},
+		member: {
+			organization: r.one.organization({
+				from: r.member.organizationId,
+				to: r.organization.id,
+			}),
+			user: r.one.user({
+				from: r.member.userId,
+				to: r.user.id,
+			}),
+		},
+		invitation: {
+			organization: r.one.organization({
+				from: r.invitation.organizationId,
+				to: r.organization.id,
+			}),
+			user: r.one.user({
+				from: r.invitation.inviterId,
 				to: r.user.id,
 			}),
 		},

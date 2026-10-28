@@ -92,3 +92,7 @@ The integration command requires dedicated `TEST_DATABASE_URL` and
 `TEST_REDIS_URL`. Role tests modify the fixed app_server/app_worker roles and
 public-schema grants. Preserve the existing inaccessible ownerless Todo policy;
 data backfills or ownership changes need a separate explicit migration plan.
+
+## Roles and page access
+
+[Implementation and extension rules](../../docs/access-control.md).

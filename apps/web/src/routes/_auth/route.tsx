@@ -1,9 +1,11 @@
+import { canVisit } from "@full-stack-example/access";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AppLayout } from "@/components/layout/app-layout";
 import Loader from "@/components/loader";
+import { accessOptions } from "@/lib/access";
 import { authClient } from "@/lib/auth-client";
 import { safeReturnTo } from "@/lib/return-to";
-import { synchronizeIdentity } from "@/utils/orpc";
+import { queryClient, synchronizeIdentity } from "@/utils/orpc";
 
 export const Route = createFileRoute("/_auth")({
 	component: AuthLayout,
@@ -18,7 +20,10 @@ export const Route = createFileRoute("/_auth")({
 				search: { redirect: safeReturnTo(location.href) },
 			});
 		}
-		return { session };
+		const access = await queryClient.fetchQuery(accessOptions());
+		if (!canVisit(access, location.pathname))
+			throw redirect({ to: "/no-access" });
+		return { session, access };
 	},
 });
 
