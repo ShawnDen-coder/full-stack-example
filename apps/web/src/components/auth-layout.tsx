@@ -1,6 +1,5 @@
-import { Icon } from "@full-stack-example/ui/components/icon";
-import { Layers } from "lucide-react";
 import type { ReactNode } from "react";
+import { Logo } from "@/assets/logo";
 import { ModeToggle } from "./mode-toggle";
 export function AuthLayout({ children }: { children: ReactNode }) {
 	return (
@@ -14,7 +13,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 			</div>
 			<div className="w-96 max-w-full space-y-6">
 				<div className="flex items-center justify-center gap-2">
-					<Icon icon={Layers} size="logo" />
+					<Logo />
 					<span className="font-medium text-xl">FullStack</span>
 				</div>
 				<div className="w-full rounded-xl border bg-card p-6 text-card-foreground shadow-sm">

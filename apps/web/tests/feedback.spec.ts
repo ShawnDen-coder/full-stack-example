@@ -77,17 +77,15 @@ test("keyboard navigation and form validation expose actionable errors", async (
 	await page.screenshot({ path: testInfo.outputPath("form-mobile.png") });
 });
 
-test("legacy dashboard redirects to the authenticated tasks page", async ({
-	page,
-}) => {
+test("dashboard shows the upstream overview", async ({ page }) => {
 	await mockSession(page);
 	await page.route("**/rpc/todo/list**", (route) =>
 		route.fulfill({ json: { json: { items: [], nextCursor: null } } }),
 	);
 	await page.goto("/dashboard");
-	await expect(page).toHaveURL(/\/tasks$/);
+	await expect(page).toHaveURL(/\/dashboard$/);
 	await expect(
-		page.getByRole("link", { name: "Tasks", exact: true }),
+		page.getByRole("link", { name: "Dashboard", exact: true }),
 	).toHaveAttribute("aria-current", "page");
 });
 
@@ -118,7 +116,7 @@ test("Todo refresh failure preserves rows and draft, then recovers inline", asyn
 			},
 		});
 	});
-	await page.goto("/tasks");
+	await page.goto("/todos");
 	await expect(
 		page.getByText("Previously loaded task", { exact: true }),
 	).toBeVisible();
@@ -177,7 +175,7 @@ test("locally handled query errors still clear an expired session", async ({
 			json: { json: { id: 1, text: "Private task", completed: true } },
 		});
 	});
-	await page.goto("/tasks");
+	await page.goto("/todos");
 	await page.getByRole("checkbox", { name: "Private task" }).click();
 	await expect(page).toHaveURL(/sign-in/);
 	await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
@@ -214,7 +212,7 @@ test("saved task text survives a failed refresh and duplicate saves are blocked"
 			json: { json: { id: 1, text: "Saved edit", completed: false } },
 		});
 	});
-	await page.goto("/tasks");
+	await page.goto("/todos");
 	await page
 		.getByRole("button", { name: "Edit Before edit", exact: true })
 		.click();
@@ -241,4 +239,151 @@ test("saved task text survives a failed refresh and duplicate saves are blocked"
 	);
 	await expect(page.getByText("Before edit", { exact: true })).toHaveCount(0);
 	expect(writes).toBe(1);
+});
+
+test("upstream pages render, filters follow history and task dialogs work", async ({
+	page,
+}, testInfo) => {
+	await mockSession(page);
+	await page.setViewportSize({ width: 1440, height: 1000 });
+	await page.addInitScript(() =>
+		localStorage.setItem("vite-ui-theme", "light"),
+	);
+	const errors: string[] = [];
+	page.on("pageerror", (error) => errors.push(error.message));
+	await page.goto("/dashboard");
+	// Select the persisted appearance through the actual UI.
+	await page.goto("/settings/appearance");
+	await page.getByText("Light", { exact: true }).click();
+	await page.getByRole("link", { name: "Dashboard", exact: true }).click();
+	await expect(page.getByText("Total Revenue", { exact: true })).toBeVisible();
+	await expect(page.locator(".recharts-surface").first()).toBeVisible();
+	await page.screenshot({ path: testInfo.outputPath("dashboard-desktop.png") });
+	await page.getByRole("tab", { name: "Analytics", exact: true }).click();
+	await expect(
+		page.getByText("Traffic Overview", { exact: true }),
+	).toBeVisible();
+	await page.getByRole("link", { name: "Apps", exact: true }).click();
+	await expect(
+		page.getByRole("heading", { name: "App Integrations" }),
+	).toBeVisible();
+	await page.screenshot({ path: testInfo.outputPath("apps-desktop.png") });
+	const appFilter = page.getByPlaceholder("Filter apps...");
+	await appFilter.fill("GitHub");
+	await expect(
+		page.getByRole("heading", { name: "GitHub", exact: true }),
+	).toBeVisible();
+	await expect(
+		page.getByRole("heading", { name: "Discord", exact: true }),
+	).toHaveCount(0);
+	await appFilter.fill("Discord");
+	await expect(
+		page.getByRole("heading", { name: "Discord", exact: true }),
+	).toBeVisible();
+	await page.goBack();
+	await expect(appFilter).toHaveValue("GitHub");
+	await page.getByRole("link", { name: "Tasks", exact: true }).click();
+	await expect(page.getByRole("table")).toBeVisible();
+	await expect(page.getByRole("row")).toHaveCount(11);
+	await page.screenshot({ path: testInfo.outputPath("tasks-desktop.png") });
+	const taskFilter = page.getByPlaceholder("Filter by title or ID...");
+	await taskFilter.fill("no-task-matches-this");
+	await expect(page.getByText("No results.", { exact: true })).toBeVisible();
+	await page.goBack();
+	await expect(taskFilter).toHaveValue("");
+	await expect(page.getByRole("row")).toHaveCount(11);
+	await page.getByRole("button", { name: "Create", exact: true }).click();
+	await expect(page.getByRole("dialog", { name: "Create Task" })).toBeVisible();
+	await page.getByRole("button", { name: "Save changes", exact: true }).click();
+	await expect(
+		page.getByText("Title is required.", { exact: true }),
+	).toBeVisible();
+	await page.screenshot({ path: testInfo.outputPath("tasks-create.png") });
+	await page.keyboard.press("Escape");
+	await page.getByRole("button", { name: "Import", exact: true }).click();
+	await expect(
+		page.getByRole("dialog", { name: "Import Tasks" }),
+	).toBeVisible();
+	await page.keyboard.press("Escape");
+	await page.getByRole("checkbox", { name: "Select row" }).first().click();
+	await expect(
+		page.getByRole("button", { name: "Delete selected tasks" }),
+	).toBeVisible();
+	await page.getByRole("button", { name: "Delete selected tasks" }).click();
+	await expect(page.getByRole("alertdialog")).toBeVisible();
+	await page.keyboard.press("Escape");
+	await page.goto("/settings/appearance");
+	await page.getByText("Dark", { exact: true }).click();
+	await page.getByRole("link", { name: "Tasks", exact: true }).click();
+	await page.locator('[data-sidebar="trigger"]').click();
+	await expect(page.locator('[data-sidebar="trigger"]')).toHaveAttribute(
+		"aria-expanded",
+		"false",
+	);
+	await page.screenshot({
+		path: testInfo.outputPath("tasks-dark-collapsed.png"),
+	});
+	expect(errors).toEqual([]);
+});
+
+test("complete admin navigation, users, settings and page galleries are reachable", async ({
+	page,
+}, testInfo) => {
+	await mockSession(page);
+	await page.setViewportSize({ width: 1440, height: 1000 });
+	await page.goto("/settings/appearance");
+	await page.getByText("Light", { exact: true }).click();
+	await page.getByRole("link", { name: "Users", exact: true }).click();
+	await expect(page.getByRole("heading", { name: "User List" })).toBeVisible();
+	for (const group of ["General", "Pages", "Other"])
+		await expect(page.getByText(group, { exact: true })).toBeVisible();
+	await expect(page.getByRole("row")).toHaveCount(11);
+	await page.screenshot({ path: testInfo.outputPath("users-desktop.png") });
+	await page.getByRole("button", { name: "Add User", exact: true }).click();
+	await expect(page.getByRole("dialog")).toBeVisible();
+	await page.keyboard.press("Escape");
+	await page.getByRole("button", { name: "Invite User", exact: true }).click();
+	await expect(page.getByRole("dialog")).toBeVisible();
+	await page.keyboard.press("Escape");
+	await page.getByRole("link", { name: "Chats 3", exact: true }).click();
+	await expect(
+		page.getByRole("heading", { name: "Your messages" }),
+	).toBeVisible();
+	await page.screenshot({ path: testInfo.outputPath("chats-desktop.png") });
+	for (const route of ["account", "notifications", "display"]) {
+		await page.goto(`/settings/${route}`);
+		await expect(
+			page.getByText(/Demo form; changes are not saved/),
+		).toBeVisible();
+	}
+	await page.getByRole("button", { name: "Open theme settings" }).click();
+	await expect(
+		page.getByRole("dialog", { name: "Theme Settings" }),
+	).toBeVisible();
+	await page.keyboard.press("Escape");
+	await page.goto("/errors/forbidden");
+	await expect(
+		page.getByRole("heading", { name: "403", exact: true }),
+	).toBeVisible();
+	await page.getByRole("link", { name: "Help Center", exact: true }).click();
+	await expect(
+		page.getByRole("heading", { name: "Coming Soon!" }),
+	).toBeVisible();
+	await page.locator('[data-sidebar="trigger"]').click();
+	await page.getByRole("button", { name: "Settings", exact: true }).click();
+	await page.getByRole("menuitem", { name: "Account", exact: true }).click();
+	await expect(page).toHaveURL(/\/settings\/account$/);
+	await mockSession(page, false);
+	await page.goto("/sign-in-2");
+	await expect(
+		page.getByRole("button", { name: "Sign In", exact: true }),
+	).toBeVisible();
+	await page.goto("/forgot-password");
+	await expect(
+		page.getByRole("button", { name: "Continue", exact: true }),
+	).toBeVisible();
+	await page.goto("/otp");
+	await expect(
+		page.getByRole("button", { name: "Verify", exact: true }),
+	).toBeVisible();
 });

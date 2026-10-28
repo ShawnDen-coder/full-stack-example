@@ -9,8 +9,9 @@ import {
 } from "@full-stack-example/ui/components/command";
 import { Icon } from "@full-stack-example/ui/components/icon";
 import { useNavigate } from "@tanstack/react-router";
-import { ListTodo, Palette, Search, UserRound } from "lucide-react";
+import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
+import { sidebarData } from "@/components/layout/data/sidebar-data";
 export function NavigationSearch() {
 	const [open, setOpen] = useState(false);
 	const navigate = useNavigate();
@@ -24,11 +25,17 @@ export function NavigationSearch() {
 		document.addEventListener("keydown", listener);
 		return () => document.removeEventListener("keydown", listener);
 	}, []);
-	const items = [
-		{ title: "Tasks", to: "/tasks", icon: ListTodo },
-		{ title: "Profile", to: "/settings", icon: UserRound },
-		{ title: "Appearance", to: "/settings/appearance", icon: Palette },
-	] as const;
+	const items = sidebarData.navGroups.flatMap((group) =>
+		group.items.flatMap((item) =>
+			item.items
+				? item.items.map((child) => ({
+						title: child.title,
+						to: child.url,
+						icon: child.icon ?? item.icon ?? Search,
+					}))
+				: [{ title: item.title, to: item.url, icon: item.icon ?? Search }],
+		),
+	);
 	return (
 		<>
 			<Button

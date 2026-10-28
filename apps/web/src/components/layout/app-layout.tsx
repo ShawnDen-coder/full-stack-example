@@ -1,11 +1,7 @@
-import { Icon } from "@full-stack-example/ui/components/icon";
 import {
 	Sidebar,
 	SidebarContent,
 	SidebarFooter,
-	SidebarGroup,
-	SidebarGroupContent,
-	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarInset,
 	SidebarMenu,
@@ -15,28 +11,43 @@ import {
 	SidebarRail,
 } from "@full-stack-example/ui/components/sidebar";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { Layers, ListTodo, Settings } from "lucide-react";
+import { Logo } from "@/assets/logo";
+import { ConfigDrawer } from "@/components/config-drawer";
 import { ModeToggle } from "@/components/mode-toggle";
 import { NavigationSearch } from "@/components/navigation-search";
 import UserMenu from "@/components/user-menu";
+import { DirectionProvider } from "@/context/direction-provider";
+import { LayoutProvider, useLayout } from "@/context/layout-provider";
+import { sidebarData } from "./data/sidebar-data";
 import { Header } from "./header";
 import { Main } from "./main";
+import { NavGroup } from "./nav-group";
 
 export function AppLayout() {
+	return (
+		<DirectionProvider>
+			<LayoutProvider>
+				<AppLayoutInner />
+			</LayoutProvider>
+		</DirectionProvider>
+	);
+}
+function AppLayoutInner() {
+	const { variant, collapsible } = useLayout();
 	const { pathname } = useLocation();
 	const defaultOpen = !document.cookie
 		.split("; ")
 		.includes("sidebar_state=false");
 	return (
 		<SidebarProvider defaultOpen={defaultOpen}>
-			<Sidebar collapsible="icon" variant="inset">
+			<Sidebar collapsible={collapsible} variant={variant}>
 				<SidebarHeader>
 					<SidebarMenu>
 						<SidebarMenuItem>
 							<SidebarMenuButton size="lg" asChild tooltip="FullStack">
-								<Link to="/tasks">
+								<Link to="/dashboard">
 									<div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-										<Icon icon={Layers} size="logo" />
+										<Logo />
 									</div>
 									<span className="font-semibold">FullStack</span>
 								</Link>
@@ -45,51 +56,28 @@ export function AppLayout() {
 					</SidebarMenu>
 				</SidebarHeader>
 				<SidebarContent>
-					<SidebarGroup>
-						<SidebarGroupLabel>Workspace</SidebarGroupLabel>
-						<SidebarGroupContent>
-							<SidebarMenu>
-								<SidebarMenuItem>
-									<SidebarMenuButton
-										asChild
-										tooltip="Tasks"
-										isActive={pathname === "/tasks"}
-									>
-										<Link to="/tasks" activeProps={{ "aria-current": "page" }}>
-											<Icon icon={ListTodo} />
-											<span>Tasks</span>
-										</Link>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-								<SidebarMenuItem>
-									<SidebarMenuButton
-										asChild
-										tooltip="Settings"
-										isActive={pathname.startsWith("/settings")}
-									>
-										<Link to="/settings" activeOptions={{ exact: false }}>
-											<Icon icon={Settings} />
-											<span>Settings</span>
-										</Link>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-							</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
+					{sidebarData.navGroups.map((group) => (
+						<NavGroup key={group.title} {...group} />
+					))}
 				</SidebarContent>
 				<SidebarFooter>
 					<UserMenu />
 				</SidebarFooter>
 				<SidebarRail />
 			</Sidebar>
-			<SidebarInset className="@container/content min-w-0">
+			<SidebarInset className="@container/content min-w-0 has-data-[layout=fixed]:h-svh peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]">
 				<Header>
 					<NavigationSearch />
-					<div className="ms-auto">
+					<div className="ms-auto flex items-center gap-2">
 						<ModeToggle />
+						<ConfigDrawer />
 					</div>
 				</Header>
-				<Main id="content" tabIndex={-1}>
+				<Main
+					fixed={["/tasks", "/apps", "/users", "/chats"].includes(pathname)}
+					id="content"
+					tabIndex={-1}
+				>
 					<Outlet />
 				</Main>
 			</SidebarInset>

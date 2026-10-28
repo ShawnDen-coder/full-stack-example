@@ -11,6 +11,8 @@ async function signup(page: Page, name: string) {
 	await page.getByLabel("Password", { exact: true }).fill(password);
 	await page.getByRole("button", { name: "Sign Up", exact: true }).click();
 	await expect(page).toHaveURL(/\/tasks$/);
+	await page.getByRole("link", { name: "Todos", exact: true }).click();
+	await expect(page).toHaveURL(/\/todos$/);
 	return email;
 }
 async function signout(page: Page, name: string) {
@@ -24,10 +26,10 @@ async function signout(page: Page, name: string) {
 test("protected redirect, sign in return path, CRUD and account cache isolation", async ({
 	page,
 }) => {
-	await page.goto("/tasks");
+	await page.goto("/todos");
 	await expect(page).toHaveURL(/sign-in.*redirect/);
 	const alice = await signup(page, "Alice");
-	await page.getByRole("link", { name: "Tasks" }).click();
+	await page.getByRole("link", { name: "Todos" }).click();
 	await page
 		.getByRole("textbox", { name: "New task" })
 		.fill("Alice private task");
@@ -57,19 +59,19 @@ test("protected redirect, sign in return path, CRUD and account cache isolation"
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await route.continue();
 	});
-	await page.getByRole("link", { name: "Tasks" }).click();
+	await page.getByRole("link", { name: "Todos" }).click();
 	await expect(page.getByText("No todos yet. Add one above!")).toBeVisible();
 	await expect(page.locator("body")).not.toHaveAttribute("data-leaked", "true");
 	await page.unroute("**/rpc/todo/list**");
 	await signout(page, "Bob");
-	await page.goto("/tasks");
+	await page.goto("/todos");
 	await page.getByLabel("Email", { exact: true }).fill(alice);
 	await page.getByLabel("Password", { exact: true }).fill(password);
 	await page
 		.locator("form")
 		.getByRole("button", { name: "Sign In", exact: true })
 		.click();
-	await expect(page).toHaveURL(/\/tasks$/);
+	await expect(page).toHaveURL(/\/todos$/);
 	await page.getByRole("button", { name: "Delete Alice private task" }).click();
 	await expect(page.getByText("No todos yet. Add one above!")).toBeVisible();
 });
@@ -79,7 +81,7 @@ test("failed writes are visible and session expiry removes protected content", a
 	context,
 }) => {
 	await signup(page, "Failure test");
-	await page.goto("/tasks");
+	await page.goto("/todos");
 	await page.route("**/rpc/todo/create", (route) => route.abort("failed"));
 	await page.getByRole("textbox", { name: "New task" }).fill("Keep this draft");
 	await page.getByRole("button", { name: "Add", exact: true }).click();
@@ -102,7 +104,7 @@ test("late responses from the previous account never repopulate its cache", asyn
 	page,
 }) => {
 	await signup(page, "Late Alice");
-	await page.goto("/tasks");
+	await page.goto("/todos");
 	await page
 		.getByRole("textbox", { name: "New task" })
 		.fill("Late private task");
@@ -130,15 +132,19 @@ test("late responses from the previous account never repopulate its cache", asyn
 		await held;
 		await route.fulfill({ response }).catch(() => {});
 	});
-	await page.getByRole("link", { name: "Settings" }).click();
+	await page.getByRole("button", { name: "Settings", exact: true }).click();
+	await page
+		.getByRole("link", { name: "Profile", exact: true })
+		.first()
+		.click();
 	await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
-	await page.getByRole("link", { name: "Tasks" }).click();
+	await page.getByRole("link", { name: "Todos" }).click();
 	await capture;
 	await signout(page, "Late Alice");
 	await signup(page, "Late Bob");
 	release();
 	await page.unroute("**/rpc/todo/list**");
-	await page.getByRole("link", { name: "Tasks" }).click();
+	await page.getByRole("link", { name: "Todos" }).click();
 	await expect(page.getByText("No todos yet. Add one above!")).toBeVisible();
 	await expect(
 		page.getByText("Late private task", { exact: true }),
@@ -149,7 +155,7 @@ test("Todo editing supports validation, cancel, failed-write recovery and persis
 	page,
 }, testInfo) => {
 	await signup(page, "Editor");
-	await page.getByRole("link", { name: "Tasks", exact: true }).click();
+	await page.getByRole("link", { name: "Todos", exact: true }).click();
 	await page.getByRole("textbox", { name: "New task" }).fill("Original task");
 	await page.getByRole("button", { name: "Add", exact: true }).click();
 	await page
@@ -220,7 +226,11 @@ test("settings persist profile and theme, sidebar collapses and search navigates
 }, testInfo) => {
 	await page.setViewportSize({ width: 1440, height: 900 });
 	await signup(page, "Settings tester");
-	await page.getByRole("link", { name: "Settings", exact: true }).click();
+	await page.getByRole("button", { name: "Settings", exact: true }).click();
+	await page
+		.getByRole("link", { name: "Profile", exact: true })
+		.first()
+		.click();
 	await expect(page).toHaveURL(/\/settings$/);
 	await page.getByLabel("Name", { exact: true }).fill("Updated name");
 	await page
@@ -237,7 +247,10 @@ test("settings persist profile and theme, sidebar collapses and search navigates
 		page.getByRole("button", { name: "Updated name", exact: true }),
 	).toBeVisible();
 	await page.screenshot({ path: testInfo.outputPath("profile-desktop.png") });
-	await page.getByRole("link", { name: "Appearance", exact: true }).click();
+	await page
+		.getByRole("main")
+		.getByRole("link", { name: "Appearance", exact: true })
+		.click();
 	await page.getByText("Light", { exact: true }).click();
 	await expect(page.locator("html")).not.toHaveClass(/dark/);
 	await page.reload();
@@ -257,14 +270,14 @@ test("settings persist profile and theme, sidebar collapses and search navigates
 	});
 	await toggle.click();
 	await page.getByRole("button", { name: /Search pages/ }).click();
-	await page.getByRole("combobox").fill("Tasks");
-	await page.getByRole("option", { name: "Tasks", exact: true }).click();
-	await expect(page).toHaveURL(/\/tasks$/);
+	await page.getByRole("combobox").fill("Todos");
+	await page.getByRole("option", { name: "Todos", exact: true }).click();
+	await expect(page).toHaveURL(/\/todos$/);
 	await expect(page.getByRole("dialog")).toHaveCount(0);
 	await page.goto("/settings/profile");
 	await expect(page).toHaveURL(/\/settings$/);
 	await page.goto("/todos");
-	await expect(page).toHaveURL(/\/tasks$/);
+	await expect(page).toHaveURL(/\/todos$/);
 });
 
 test("legacy auth URLs preserve return paths and reject authentication loops", async ({

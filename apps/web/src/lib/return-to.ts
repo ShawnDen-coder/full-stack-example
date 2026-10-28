@@ -9,9 +9,15 @@ export function safeReturnTo(value: unknown) {
 	const url = new URL(value, "https://local.invalid");
 	if (
 		url.origin !== "https://local.invalid" ||
-		["/login", "/register", "/sign-in", "/sign-up"].includes(
-			url.pathname.replace(/\/+$/, ""),
-		)
+		[
+			"/login",
+			"/register",
+			"/sign-in",
+			"/sign-in-2",
+			"/sign-up",
+			"/forgot-password",
+			"/otp",
+		].includes(url.pathname.replace(/\/+$/, ""))
 	)
 		return "/tasks";
 	return `${url.pathname}${url.search}${url.hash}`;
