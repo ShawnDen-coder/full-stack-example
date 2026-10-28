@@ -1,5 +1,6 @@
 import { Button } from "@full-stack-example/ui/components/button";
 import { Checkbox } from "@full-stack-example/ui/components/checkbox";
+import { Icon } from "@full-stack-example/ui/components/icon";
 import { Input } from "@full-stack-example/ui/components/input";
 import { Label } from "@full-stack-example/ui/components/label";
 import { useForm } from "@tanstack/react-form";
@@ -66,7 +67,7 @@ export function TodoRow({
 							disabled={busy || editingAnother}
 							onClick={onEdit}
 						>
-							<Pencil aria-hidden="true" className="h-4 w-4" />
+							<Icon icon={Pencil} aria-hidden="true" />
 						</Button>
 						<Button
 							variant="ghost"
@@ -75,7 +76,7 @@ export function TodoRow({
 							disabled={busy || editingAnother}
 							onClick={onDelete}
 						>
-							<Trash2 aria-hidden="true" className="h-4 w-4" />
+							<Icon icon={Trash2} aria-hidden="true" />
 						</Button>
 					</div>
 				</div>

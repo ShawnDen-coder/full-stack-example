@@ -1,5 +1,7 @@
 "use client";
 
+import { Icon } from "@full-stack-example/ui/components/icon";
+
 import {
 	CircleCheckIcon,
 	InfoIcon,
@@ -18,11 +20,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
 			theme={theme as ToasterProps["theme"]}
 			className="toaster group"
 			icons={{
-				success: <CircleCheckIcon className="size-4" />,
-				info: <InfoIcon className="size-4" />,
-				warning: <TriangleAlertIcon className="size-4" />,
-				error: <OctagonXIcon className="size-4" />,
-				loading: <Loader2Icon className="size-4 animate-spin" />,
+				success: <Icon icon={CircleCheckIcon} />,
+				info: <Icon icon={InfoIcon} />,
+				warning: <Icon icon={TriangleAlertIcon} />,
+				error: <Icon icon={OctagonXIcon} />,
+				loading: <Icon icon={Loader2Icon} className="animate-spin" />,
 			}}
 			style={
 				{

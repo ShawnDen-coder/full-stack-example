@@ -32,6 +32,31 @@ export function SaveButton() {
 }
 ```
 
+## 图标规范
+
+统一通过 `@full-stack-example/ui/components/icon` 的 `Icon` 渲染，从
+`lucide-react` 按名称导入具体图标。web 和 ui 使用 workspace catalog 中同一个
+固定版本，不建立导入整个图标集合的 barrel。
+
+```tsx
+import { Icon } from "@full-stack-example/ui/components/icon";
+import { Layers, Pencil } from "lucide-react";
+
+<Icon icon={Pencil} />
+<Icon icon={Layers} size="logo" />
+```
+
+尺寸分为 `indicator`（12px）、`default`（16px，导航及行操作）、`toolbar`（18px）、
+`logo`（22px）和 `status`（24px，独立加载／状态图标）。统一采用 24 单位 SVG
+viewBox、描边 2、圆润线头与转角；描边随图形缩放。保留 `currentColor`，
+`className` 用于颜色、定位和动画，不覆盖尺寸及描边。按钮点击区域与图标尺寸分开。
+默认图标仅作装饰；为外层按钮提供名称，独立图标则可传 `aria-label` 或
+`aria-labelledby`。加载图标仍需配合可见或读屏状态文本。
+
+桌面 Figma 规范采用控件圆角 6px、列表／菜单圆角 8px、内嵌面板圆角 12px、
+控件高度 36px 和任务行高 48px。这些是下一阶段布局实现的目标；现有生成控件的
+几何样式保留到布局落地时统一更新。[查看桌面设计](https://www.figma.com/design/pLdKCBQfL4BxqiTiO0TcuK/FullStack-Example?node-id=12-300)。
+
 ## 示例：增加共享 PendingButton
 
 这个待实现的组件用于避免重复提交，复用已有 Button 的 variants、焦点行为和设计变量。新增 `src/components/pending-button.tsx`：

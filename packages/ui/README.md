@@ -41,6 +41,34 @@ export function SaveButton() {
 }
 ```
 
+## Icon conventions
+
+Use `Icon` from `@full-stack-example/ui/components/icon` with individual imports
+from `lucide-react`. Both packages use the workspace catalog, pinned to the same
+Lucide release. Do not create a barrel that imports the entire icon collection.
+
+```tsx
+import { Icon } from "@full-stack-example/ui/components/icon";
+import { Layers, Pencil } from "lucide-react";
+
+<Icon icon={Pencil} />
+<Icon icon={Layers} size="logo" />
+```
+
+Sizes are `indicator` (12px), `default` (16px, navigation and row actions),
+`toolbar` (18px), `logo` (22px), and `status` (24px, standalone loading/status).
+Use a 24-unit SVG viewBox with stroke width 2, round caps and round joins; strokes
+scale with the icon. Keep `currentColor`, and use `className` for color, positioning
+and animation rather than overriding size or stroke geometry. Button hit areas
+are independent of icon dimensions. Icons are decorative by default; label the
+containing button or provide `aria-label` / `aria-labelledby` on a standalone icon.
+This does not replace the visible or screen-reader status text for a loader.
+
+The desktop Figma controls use 6px radius, list/menu surfaces 8px, inset panels
+12px, 36px controls and 48px task rows. These are the agreed next layout targets;
+existing generated controls retain their current geometry until that layout is
+implemented. See the [desktop design](https://www.figma.com/design/pLdKCBQfL4BxqiTiO0TcuK/FullStack-Example?node-id=12-300).
+
 ## Example: add a shared PendingButton
 
 This proposed component prevents repeat submission and reuses the existing

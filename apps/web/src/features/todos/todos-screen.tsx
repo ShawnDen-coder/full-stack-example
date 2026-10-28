@@ -6,6 +6,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@full-stack-example/ui/components/card";
+import { Icon } from "@full-stack-example/ui/components/icon";
 import { Input } from "@full-stack-example/ui/components/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -124,7 +125,7 @@ export function TodosScreen({ userId }: { userId: string | undefined }) {
 					)}
 					{todos.isPending ? (
 						<div role="status">
-							<Loader2 className="h-6 w-6 animate-spin" />
+							<Icon icon={Loader2} size="status" className="animate-spin" />
 							<span className="sr-only">Loading tasks</span>
 						</div>
 					) : !todos.data ? (
