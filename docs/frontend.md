@@ -27,6 +27,10 @@ collection, not a production backend. Its MIT notice is retained in
 | `/sign-in`, `/sign-up`, `/sign-in-2` | Better Auth forms and validated return paths; alternate sign-in uses upstream two-column layout |
 | `/forgot-password`, `/otp` | Upstream UI previews; no email delivery, verification or session creation |
 | `/todos` | Existing live user-owned Todo CRUD, editing, recovery and cursor pagination |
+| `/queues` | Live read-only BullMQ overview for registered queues |
+| `/queues/$queueKey/jobs` | Live job table, status tabs, exact job ID lookup and server pagination |
+| `/queues/$queueKey/jobs/$jobId` | Live failure details and bounded additional logs |
+| `/queues/$queueKey/schedulers` | Live scheduler list; empty when none are registered |
 | Other URLs | Root not-found boundary |
 
 Legacy `/login`, `/register` and `/settings/profile` redirect to canonical routes.

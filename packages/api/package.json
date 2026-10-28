@@ -7,29 +7,33 @@
 		"./create-api": "./src/create-api.ts",
 		"./procedures": "./src/procedures.ts",
 		"./routers/index": "./src/routers/index.ts",
-		"./access": "./src/access.ts"
+		"./access": "./src/access.ts",
+		"./queue-monitor": "./src/queue-monitor.ts"
 	},
 	"scripts": {
 		"build": "tsc -b",
 		"check-types": "tsc -b"
 	},
 	"dependencies": {
+		"@better-auth/core": "1.7.7",
+		"@better-auth/drizzle-adapter": "1.7.7",
+		"@bull-board/api": "9.10.5",
+		"@full-stack-example/access": "workspace:*",
 		"@full-stack-example/db": "workspace:*",
+		"@full-stack-example/domain": "workspace:*",
+		"@full-stack-example/observability": "workspace:*",
+		"@full-stack-example/queue": "workspace:*",
 		"@orpc/client": "catalog:",
 		"@orpc/openapi": "catalog:",
 		"@orpc/server": "catalog:",
 		"@orpc/zod": "catalog:",
 		"@types/pg": "catalog:",
-		"drizzle-orm": "catalog:",
-		"zod": "catalog:",
-		"@full-stack-example/queue": "workspace:*",
-		"hono": "^4.13.7",
-		"@full-stack-example/observability": "workspace:*",
-		"@better-auth/core": "1.7.7",
-		"@better-auth/drizzle-adapter": "1.7.7",
 		"better-auth": "catalog:",
-		"@full-stack-example/domain": "workspace:*",
-		"@full-stack-example/access": "workspace:*"
+		"bullmq": "catalog:",
+		"cron-parser": "5.10.2",
+		"drizzle-orm": "catalog:",
+		"hono": "^4.13.7",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"typescript": "catalog:"

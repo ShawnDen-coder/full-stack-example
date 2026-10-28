@@ -13,6 +13,12 @@ test("navigation checks exact path boundaries and keeps basic account access", (
 	assert.equal(canVisit(access, "/todos-other"), false);
 	assert.equal(canVisit(access, "/admin/users"), false);
 	assert.equal(canVisit(access, "/settings/account"), true);
+	assert.equal(canVisit(access, "/queues"), false);
+	assert.equal(
+		canVisit({ role: "user", pages: ["queues"] }, "/queues/user-profile/jobs"),
+		true,
+	);
+	assert.equal(canVisit({ role: "admin", pages: [] }, "/queues"), false);
 	assert.equal(landingPath(access), "/todos");
 	assert.equal(landingPath({ ...access, pages: [] }), "/no-access");
 });
@@ -32,6 +38,18 @@ test("native roles reserve administration for admins and owners", () => {
 	assert.equal(
 		organizationRoles.owner.authorize({ todos: ["read"] }).success,
 		true,
+	);
+	assert.equal(
+		organizationRoles.owner.authorize({ queues: ["read"] }).success,
+		true,
+	);
+	assert.equal(
+		organizationRoles.admin.authorize({ queues: ["read"] }).success,
+		true,
+	);
+	assert.equal(
+		organizationRoles.member.authorize({ queues: ["read"] }).success,
+		false,
 	);
 	assert.equal(authRoles.user.authorize({ user: ["ban"] }).success, false);
 	assert.equal(authRoles.superadmin.authorize({ user: ["ban"] }).success, true);

@@ -23,7 +23,7 @@
 | [Worker entry](../apps/worker/src/index.ts)、[lifecycle](../apps/worker/src/lifecycle.ts) 与心跳 | 信号、致命失败、进程退出、停止心跳、最终 deadline | 维护一次进程级退出流程 |
 | db／queue／observability／ui | 各自的基础设施或共享能力 | 只在能力本身变化时修改 |
 
-消费者协议归应用运行时所有，业务包继续返回原生 BullMQ Worker，使用结构类型匹配协议；业务代码不导入应用类型。queue 继续提供通用连接和 telemetry，不存储业务注册表。
+消费者协议归应用运行时所有，业务包继续返回原生 BullMQ Worker，使用结构类型匹配协议；业务代码不导入应用类型。queue 继续提供通用连接和 telemetry，不存储业务注册表。只读监控在 server 组装：profile producer 交出已有 Queue，server 注册表把稳定 key 和摘要投影绑到该实例。API 用 `@bull-board/api` 的 `BullMQAdapter` 实现 `queues` oRPC，并由 `pageProcedure("queues")` 保护。不挂载 Bull Board 的 HTTP 应用和 UI。新队列只有写进这个 server 注册表后才会出现在页面上。
 
 ## 工厂与业务操作
 

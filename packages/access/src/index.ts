@@ -6,6 +6,7 @@ export const pages = [
 	{ key: "tasks", title: "Tasks", path: "/tasks" },
 	{ key: "apps", title: "Apps", path: "/apps" },
 	{ key: "chats", title: "Chats", path: "/chats" },
+	{ key: "queues", title: "Queues", path: "/queues" },
 ] as const;
 export const pageKeys = [
 	"todos",
@@ -13,6 +14,7 @@ export const pageKeys = [
 	"tasks",
 	"apps",
 	"chats",
+	"queues",
 ] as const;
 export type PageKey = (typeof pageKeys)[number];
 export const workspaceId = "application";

@@ -14,6 +14,15 @@ import {
 } from "./profile-read.contract";
 import { getProfileReadJob } from "./profile-read.status";
 
+export type ProfileQueueHandle = {
+	getJobLogs(
+		jobId: string,
+		start?: number,
+		end?: number,
+		asc?: boolean,
+	): Promise<{ logs: string[]; count: number }>;
+};
+
 export class ProfileJobsUnavailableError extends Error {
 	constructor() {
 		super("Profile jobs are temporarily unavailable");
@@ -72,6 +81,10 @@ export function createProfileReadClient({
 		},
 		async checkReady() {
 			await profileQueue.getJobCounts("waiting");
+		},
+		// Assembly-only handle. The server monitors this instance; callers must not close it.
+		getQueueForMonitoring(): ProfileQueueHandle {
+			return profileQueue;
 		},
 	};
 }

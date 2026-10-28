@@ -4,6 +4,7 @@ import type { UsersService } from "@full-stack-example/domain/users";
 import type { ProfileReadClient } from "@full-stack-example/domain/users/jobs/profile-read/producer";
 import type { Logger } from "@full-stack-example/observability";
 import type { AccessService } from "./access";
+import type { QueueMonitor } from "./queue-monitor";
 
 export type Services = {
 	accessService: AccessService;
@@ -13,6 +14,7 @@ export type Services = {
 		ProfileReadClient,
 		"enqueueProfileRead" | "getProfileReadJob"
 	>;
+	queueMonitor: QueueMonitor;
 };
 
 export type Context = {

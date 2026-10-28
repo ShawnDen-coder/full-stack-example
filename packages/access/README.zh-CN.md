@@ -9,7 +9,7 @@
 ## 扩展
 
 在 pageKeys、pages 添加页面，使用 pageProcedure 保护相关接口，再通过原生动态角色
-授予 read。没有动态授权则拒绝访问。canVisit、landingPath 只消费服务端快照，
+授予 read。没有动态授权则拒绝访问。`queues` 走 `/queues`，避免被当成 `/admin` 角色页。canVisit、landingPath 只消费服务端快照，
 不能替代接口鉴权。保持设置、帮助可达，继续校验业务数据所有权。
 
 参见[架构](../../docs/access-control.zh-CN.md)。运行本包测试和 pnpm check-types 验证。

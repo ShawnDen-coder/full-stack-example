@@ -1,0 +1,8 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { QueueJobsScreen } from "@/features/queues/jobs-screen";
+import { jobsSearchSchema } from "@/features/queues/search";
+
+export const Route = createFileRoute("/_auth/queues/$queueKey/jobs/")({
+	validateSearch: jobsSearchSchema,
+	component: QueueJobsScreen,
+});

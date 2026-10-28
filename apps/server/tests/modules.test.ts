@@ -33,7 +33,10 @@ const session: Session = {
 	},
 };
 
-async function fixture(currentSession: Session | null = session) {
+async function fixture(
+	currentSession: Session | null = session,
+	pages: Array<"todos" | "queues"> = ["todos"],
+) {
 	const calls: string[] = [];
 	const sessionHeaders: Headers[] = [];
 	// Creating a pool is lazy; these HTTP tests never connect to PostgreSQL.
@@ -61,8 +64,8 @@ async function fixture(currentSession: Session | null = session) {
 		services: {
 			accessService: {
 				getAccess: async () => ({
-					role: "user",
-					pages: ["todos"],
+					role: "user" as const,
+					pages,
 				}),
 			},
 			todosService: createTodosService({ db }),
@@ -71,6 +74,16 @@ async function fixture(currentSession: Session | null = session) {
 					calls.push(`profile:${id}`);
 					return profile;
 				},
+			},
+			queueMonitor: {
+				list: async () => {
+					calls.push("queues.list");
+					return [];
+				},
+				jobs: async () => null,
+				job: async () => null,
+				logs: async () => null,
+				schedulers: async () => null,
 			},
 			profileJobs: {
 				enqueueProfileRead: async ({ userId: id }) => {
@@ -576,5 +589,24 @@ test("page denial blocks Todo operations before reaching the repository", async 
 		);
 	} finally {
 		await f.close();
+	}
+});
+
+test("queue monitoring requires the queues page before reading Redis", async () => {
+	const denied = await fixture();
+	try {
+		await assert.rejects(() => denied.client.queues.list(), {
+			code: "FORBIDDEN",
+		});
+		assert.equal(denied.calls.includes("queues.list"), false);
+	} finally {
+		await denied.close();
+	}
+	const allowed = await fixture(session, ["queues"]);
+	try {
+		assert.deepEqual(await allowed.client.queues.list(), []);
+		assert.ok(allowed.calls.includes("queues.list"));
+	} finally {
+		await allowed.close();
 	}
 });

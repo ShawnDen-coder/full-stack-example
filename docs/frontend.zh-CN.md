@@ -25,6 +25,10 @@
 | `/sign-in`、`/sign-up`、`/sign-in-2` | Better Auth 真实表单与返回地址校验；第二种登录使用上游双栏布局 |
 | `/forgot-password`、`/otp` | 上游 UI 预览，不发送邮件、不验证验证码、不创建会话 |
 | `/todos` | 原有真实用户任务，保留增删改、错误恢复和游标分页 |
+| `/queues` | 已登记 BullMQ 队列的只读概览 |
+| `/queues/$queueKey/jobs` | 真实任务表、状态标签、精确任务 ID 和服务端分页 |
+| `/queues/$queueKey/jobs/$jobId` | 真实失败详情和有界附加日志 |
+| `/queues/$queueKey/schedulers` | 真实定时触发列表；没有注册项时为空 |
 | 其他 URL | 根路由 404 边界 |
 
 旧 `/login`、`/register` 和 `/settings/profile` 跳转到规范路由。

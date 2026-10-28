@@ -108,7 +108,10 @@ function AppLayoutInner() {
 					</div>
 				</Header>
 				<Main
-					fixed={["/tasks", "/apps", "/users", "/chats"].includes(pathname)}
+					fixed={
+						["/tasks", "/apps", "/users", "/chats"].includes(pathname) ||
+						/^\/queues(?:\/[^/]+\/(?:jobs|schedulers))?\/?$/.test(pathname)
+					}
 					id="content"
 					tabIndex={-1}
 				>

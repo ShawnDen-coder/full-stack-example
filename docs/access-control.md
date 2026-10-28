@@ -26,6 +26,9 @@ pages; they still obey Todo data ownership.
 Registration enrolls users as `member,standard`. The migration seeds `standard`
 with the existing five pages and enrolls existing users and sessions, preserving
 access on upgrade. Future pages must be explicitly added to dynamic roles.
+`queues` is one of those later pages: owners and admins receive it from the
+static role definitions, and `standard` does not include it until an administrator
+grants it.
 `standard` cannot be deleted, and editable role keys cannot be renamed.
 
 The Admin plugin is separate: `user.role` is the global account-management role,

@@ -14,7 +14,7 @@
 | [src/todos/repository.ts](src/todos/repository.ts) | SQL、字段投影和独立的 `forUser(userId)` scope |
 | [src/users/service.ts](src/users/service.ts) | 无需额外 Repository 的简单查询示例 |
 | [src/users/jobs/profile-read.contract.ts](src/users/jobs/profile-read.contract.ts) | 队列／任务名、Zod payload、结果类型及重试／保留配置 |
-| [src/users/jobs/profile-read.producer.ts](src/users/jobs/profile-read.producer.ts) | 入队、状态查询、队列观测和关闭 |
+| [src/users/jobs/profile-read.producer.ts](src/users/jobs/profile-read.producer.ts) | 入队、状态查询、队列观测、关闭，以及仅供组装层使用的监控句柄 |
 | [src/users/jobs/profile-read.processor.ts](src/users/jobs/profile-read.processor.ts) | 不依赖 Worker 连接的 payload 校验和业务执行 |
 | [src/users/jobs/profile-read.worker.ts](src/users/jobs/profile-read.worker.ts) | 消费者工厂、每次尝试的日志和指标 |
 
