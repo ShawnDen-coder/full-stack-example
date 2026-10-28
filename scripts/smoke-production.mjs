@@ -60,9 +60,18 @@ async function rpc(name, input) {
 		headers: { ...headers, Cookie: cookie },
 		body: JSON.stringify({ json: input }),
 	});
-	assert.equal(response.status, 200);
+	assert.equal(response.status, 200, `RPC ${name} must succeed`);
 	return (await response.json()).json;
 }
+const access = await rpc("access/me", {});
+assert.equal(access.role, "user");
+assert.deepEqual(access.pages, [
+	"todos",
+	"dashboard",
+	"tasks",
+	"apps",
+	"chats",
+]);
 const todo = await rpc("todo/create", { text: "Production smoke task" });
 assert.equal(todo.text, "Production smoke task");
 assert.ok(
