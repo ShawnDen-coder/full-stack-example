@@ -1,3 +1,4 @@
+import { Button } from "@full-stack-example/ui/components/button";
 import { Toaster } from "@full-stack-example/ui/components/sonner";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -8,7 +9,6 @@ import {
 	Outlet,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import Header from "@/components/header";
 import { SessionBoundary } from "@/components/session-boundary";
 import { ThemeProvider } from "@/components/theme-provider";
 import type { orpc } from "@/utils/orpc";
@@ -23,34 +23,46 @@ export interface RouterAppContext {
 export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootComponent,
 	errorComponent: ({ reset }) => (
-		<main id="content" tabIndex={-1} className="p-8">
-			<h1>Something went wrong</h1>
+		<main
+			id="content"
+			tabIndex={-1}
+			className="flex min-h-svh flex-col items-center justify-center gap-4 p-8 text-center"
+		>
+			<h1 className="font-bold text-3xl tracking-tight">
+				Something went wrong
+			</h1>
 			<p>Please try again.</p>
-			<button type="button" onClick={reset}>
+			<Button type="button" onClick={reset}>
 				Retry
-			</button>
+			</Button>
 		</main>
 	),
 	notFoundComponent: () => (
-		<main id="content" tabIndex={-1} className="p-8">
-			<h1>Page not found</h1>
-			<Link to="/">Go home</Link>
+		<main
+			id="content"
+			tabIndex={-1}
+			className="flex min-h-svh flex-col items-center justify-center gap-4 p-8 text-center"
+		>
+			<h1 className="font-bold text-3xl tracking-tight">Page not found</h1>
+			<Button asChild>
+				<Link to="/">Go home</Link>
+			</Button>
 		</main>
 	),
 	head: () => ({
 		meta: [
 			{
-				title: "full-stack-example",
+				title: "FullStack",
 			},
 			{
 				name: "description",
-				content: "full-stack-example is a web application",
+				content: "Your personal workspace.",
 			},
 		],
 		links: [
 			{
 				rel: "icon",
-				href: "/favicon.ico",
+				href: "/favicon.svg",
 			},
 		],
 	}),
@@ -66,18 +78,21 @@ function RootComponent() {
 				disableTransitionOnChange
 				storageKey="vite-ui-theme"
 			>
-				<div className="grid h-svh grid-rows-[auto_1fr]">
-					<SessionBoundary>
-						<Header />
-						<main id="content" tabIndex={-1} className="min-w-0">
-							<Outlet />
-						</main>
-					</SessionBoundary>
-				</div>
+				<a
+					href="#content"
+					className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-background focus:p-3 focus:text-foreground focus:outline focus:outline-ring"
+				>
+					Skip to main content
+				</a>
+				<SessionBoundary>
+					<Outlet />
+				</SessionBoundary>
 				<Toaster richColors />
 			</ThemeProvider>
-			<TanStackRouterDevtools position="bottom-left" />
-			<ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+			{import.meta.env.DEV && <TanStackRouterDevtools position="bottom-left" />}
+			{import.meta.env.DEV && (
+				<ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+			)}
 		</>
 	);
 }

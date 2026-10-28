@@ -1,11 +1,4 @@
 import { Button } from "@full-stack-example/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@full-stack-example/ui/components/card";
 import { Icon } from "@full-stack-example/ui/components/icon";
 import { Input } from "@full-stack-example/ui/components/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -83,111 +76,106 @@ export function TodosScreen({ userId }: { userId: string | undefined }) {
 			createMutation.mutate({ text: newTodoText });
 	};
 	return (
-		<div className="mx-auto w-full max-w-md p-4 py-10">
-			<Card>
-				<CardHeader>
-					<CardTitle>Todo List</CardTitle>
-					<CardDescription>Manage your personal tasks</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<form
-						onSubmit={handleAddTodo}
-						className="mb-6 flex items-center gap-2"
+		<div className="space-y-6">
+			<div>
+				<h1 className="font-bold text-3xl tracking-tight">Tasks</h1>
+				<p className="text-muted-foreground">Manage your personal tasks.</p>
+			</div>
+			<div>
+				<form onSubmit={handleAddTodo} className="mb-6 flex items-center gap-2">
+					<Input
+						aria-label="New task"
+						value={newTodoText}
+						onChange={(event) => setNewTodoText(event.target.value)}
+						maxLength={500}
+						placeholder="Add a new task..."
+						disabled={navigationLocked}
+					/>
+					<Button
+						type="submit"
+						disabled={navigationLocked || !newTodoText.trim()}
 					>
-						<Input
-							aria-label="New task"
-							value={newTodoText}
-							onChange={(event) => setNewTodoText(event.target.value)}
-							maxLength={500}
-							placeholder="Add a new task..."
-							disabled={navigationLocked}
-						/>
-						<Button
-							type="submit"
-							disabled={navigationLocked || !newTodoText.trim()}
-						>
-							{createMutation.isPending ? "Adding..." : "Add"}
-						</Button>
-					</form>
-					{todos.isError && todos.data && (
-						<div role="alert" className="mb-4 space-y-2">
-							<p>
-								Unable to refresh your tasks. Showing previously loaded tasks.
-							</p>
-							<Button
-								variant="outline"
-								disabled={todos.isFetching}
-								onClick={() => void todos.refetch()}
-							>
-								{todos.isFetching ? "Retrying..." : "Retry"}
-							</Button>
-						</div>
-					)}
-					{todos.isPending ? (
-						<div role="status">
-							<Icon icon={Loader2} size="status" className="animate-spin" />
-							<span className="sr-only">Loading tasks</span>
-						</div>
-					) : !todos.data ? (
-						<div role="alert">
-							<p>Unable to load your tasks.</p>
-							<Button
-								disabled={todos.isFetching}
-								onClick={() => void todos.refetch()}
-							>
-								{todos.isFetching ? "Retrying..." : "Retry"}
-							</Button>
-						</div>
-					) : todos.data.items.length === 0 ? (
-						<p className="py-4 text-center">No todos yet. Add one above!</p>
-					) : (
-						<ul className="space-y-2">
-							{todos.data.items.map((todo) => (
-								<TodoRow
-									key={todo.id}
-									todo={todo}
-									busy={busy}
-									editing={editingId === todo.id}
-									editingAnother={editingId !== null && editingId !== todo.id}
-									onEdit={() => setEditingId(todo.id)}
-									onClose={() => setEditingId(null)}
-									onRename={async (text) => {
-										await renameMutation.mutateAsync({ id: todo.id, text });
-									}}
-									onCompleted={() =>
-										setCompletedMutation.mutate({
-											id: todo.id,
-											completed: !todo.completed,
-										})
-									}
-									onDelete={() => deleteMutation.mutate({ id: todo.id })}
-								/>
-							))}
-						</ul>
-					)}
-					<div className="mt-6 flex justify-between">
+						{createMutation.isPending ? "Adding..." : "Add"}
+					</Button>
+				</form>
+				{todos.isError && todos.data && (
+					<div role="alert" className="mb-4 space-y-2">
+						<p>
+							Unable to refresh your tasks. Showing previously loaded tasks.
+						</p>
 						<Button
 							variant="outline"
-							disabled={cursors.length === 1 || navigationLocked}
-							onClick={() => setCursors((values) => values.slice(0, -1))}
+							disabled={todos.isFetching}
+							onClick={() => void todos.refetch()}
 						>
-							Previous
-						</Button>
-						<Button
-							variant="outline"
-							disabled={
-								!todos.data?.nextCursor || navigationLocked || todos.isFetching
-							}
-							onClick={() => {
-								const next = todos.data?.nextCursor;
-								if (next) setCursors((values) => [...values, next]);
-							}}
-						>
-							Next
+							{todos.isFetching ? "Retrying..." : "Retry"}
 						</Button>
 					</div>
-				</CardContent>
-			</Card>
+				)}
+				{todos.isPending ? (
+					<div role="status">
+						<Icon icon={Loader2} size="status" className="animate-spin" />
+						<span className="sr-only">Loading tasks</span>
+					</div>
+				) : !todos.data ? (
+					<div role="alert">
+						<p>Unable to load your tasks.</p>
+						<Button
+							disabled={todos.isFetching}
+							onClick={() => void todos.refetch()}
+						>
+							{todos.isFetching ? "Retrying..." : "Retry"}
+						</Button>
+					</div>
+				) : todos.data.items.length === 0 ? (
+					<p className="py-4 text-center">No todos yet. Add one above!</p>
+				) : (
+					<ul className="divide-y rounded-md border">
+						{todos.data.items.map((todo) => (
+							<TodoRow
+								key={todo.id}
+								todo={todo}
+								busy={busy}
+								editing={editingId === todo.id}
+								editingAnother={editingId !== null && editingId !== todo.id}
+								onEdit={() => setEditingId(todo.id)}
+								onClose={() => setEditingId(null)}
+								onRename={async (text) => {
+									await renameMutation.mutateAsync({ id: todo.id, text });
+								}}
+								onCompleted={() =>
+									setCompletedMutation.mutate({
+										id: todo.id,
+										completed: !todo.completed,
+									})
+								}
+								onDelete={() => deleteMutation.mutate({ id: todo.id })}
+							/>
+						))}
+					</ul>
+				)}
+				<div className="mt-6 flex justify-between">
+					<Button
+						variant="outline"
+						disabled={cursors.length === 1 || navigationLocked}
+						onClick={() => setCursors((values) => values.slice(0, -1))}
+					>
+						Previous
+					</Button>
+					<Button
+						variant="outline"
+						disabled={
+							!todos.data?.nextCursor || navigationLocked || todos.isFetching
+						}
+						onClick={() => {
+							const next = todos.data?.nextCursor;
+							if (next) setCursors((values) => [...values, next]);
+						}}
+					>
+						Next
+					</Button>
+				</div>
+			</div>
 		</div>
 	);
 }

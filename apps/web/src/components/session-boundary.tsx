@@ -21,7 +21,7 @@ export function SessionBoundary({ children }: { children: ReactNode }) {
 			clearSessionData();
 			void authClient.getSession({ query: { disableCookieCache: true } });
 			void router.navigate({
-				to: "/login",
+				to: "/sign-in",
 				search: {
 					redirect: safeReturnTo(
 						window.location.pathname + window.location.search,

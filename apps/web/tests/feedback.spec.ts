@@ -39,7 +39,7 @@ test("keyboard navigation and form validation expose actionable errors", async (
 	page,
 }, testInfo) => {
 	await mockSession(page, false);
-	await page.goto("/login");
+	await page.goto("/sign-in");
 	const skip = page.getByRole("link", { name: "Skip to main content" });
 	await expect(skip).toBeAttached();
 	await page.keyboard.press("Tab");
@@ -77,35 +77,18 @@ test("keyboard navigation and form validation expose actionable errors", async (
 	await page.screenshot({ path: testInfo.outputPath("form-mobile.png") });
 });
 
-test("dashboard retries initial failure without a duplicate error toast", async ({
+test("legacy dashboard redirects to the authenticated tasks page", async ({
 	page,
 }) => {
 	await mockSession(page);
-	let failed = true;
-	await page.route("**/rpc/privateData**", (route) =>
-		failed
-			? route.abort("failed")
-			: route.fulfill({ json: { json: { message: "Dashboard recovered" } } }),
+	await page.route("**/rpc/todo/list**", (route) =>
+		route.fulfill({ json: { json: { items: [], nextCursor: null } } }),
 	);
 	await page.goto("/dashboard");
+	await expect(page).toHaveURL(/\/tasks$/);
 	await expect(
-		page.getByRole("status").filter({ hasText: "Loading dashboard" }),
-	).toBeVisible();
-	await expect(page.getByRole("alert")).toContainText(
-		"Unable to load your dashboard.",
-		{ timeout: 15000 },
-	);
-	await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
-	failed = false;
-	await page.getByRole("button", { name: "Retry", exact: true }).click();
-	await expect(page.getByText("API: Dashboard recovered")).toBeVisible();
-	await expect(page.getByRole("alert")).toHaveCount(0);
-	await expect(
-		page.getByRole("link", { name: "Dashboard", exact: true }),
+		page.getByRole("link", { name: "Tasks", exact: true }),
 	).toHaveAttribute("aria-current", "page");
-	await expect(
-		page.getByRole("link", { name: "Home", exact: true }),
-	).not.toHaveAttribute("aria-current", "page");
 });
 
 test("Todo refresh failure preserves rows and draft, then recovers inline", async ({
@@ -135,7 +118,7 @@ test("Todo refresh failure preserves rows and draft, then recovers inline", asyn
 			},
 		});
 	});
-	await page.goto("/todos");
+	await page.goto("/tasks");
 	await expect(
 		page.getByText("Previously loaded task", { exact: true }),
 	).toBeVisible();
@@ -194,9 +177,9 @@ test("locally handled query errors still clear an expired session", async ({
 			json: { json: { id: 1, text: "Private task", completed: true } },
 		});
 	});
-	await page.goto("/todos");
+	await page.goto("/tasks");
 	await page.getByRole("checkbox", { name: "Private task" }).click();
-	await expect(page).toHaveURL(/login/);
+	await expect(page).toHaveURL(/sign-in/);
 	await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
 	await expect(page.getByText("Private task", { exact: true })).toHaveCount(0);
 });
@@ -231,7 +214,7 @@ test("saved task text survives a failed refresh and duplicate saves are blocked"
 			json: { json: { id: 1, text: "Saved edit", completed: false } },
 		});
 	});
-	await page.goto("/todos");
+	await page.goto("/tasks");
 	await page
 		.getByRole("button", { name: "Edit Before edit", exact: true })
 		.click();

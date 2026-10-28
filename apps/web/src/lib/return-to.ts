@@ -5,9 +5,14 @@ export function safeReturnTo(value: unknown) {
 		value.startsWith("//") ||
 		value.includes("\\")
 	)
-		return "/dashboard";
+		return "/tasks";
 	const url = new URL(value, "https://local.invalid");
-	if (url.origin !== "https://local.invalid" || url.pathname === "/login")
-		return "/dashboard";
+	if (
+		url.origin !== "https://local.invalid" ||
+		["/login", "/register", "/sign-in", "/sign-up"].includes(
+			url.pathname.replace(/\/+$/, ""),
+		)
+	)
+		return "/tasks";
 	return `${url.pathname}${url.search}${url.hash}`;
 }
