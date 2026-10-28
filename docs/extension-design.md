@@ -31,7 +31,13 @@ or database schema require a separate compatibility and migration assessment.
 
 The consumer protocol belongs to the application runtime. Business factories keep
 returning native BullMQ Workers that structurally satisfy it, without importing
-application types. Queue remains generic connection/telemetry infrastructure.
+application types. Queue remains generic connection/telemetry infrastructure. Read-only monitoring
+is assembled in the server: the profile producer exposes its existing Queue,
+and the server registry maps a stable key plus summary projectors onto that
+instance. API wraps `@bull-board/api` `BullMQAdapter` behind `queues` oRPC
+procedures protected by `pageProcedure("queues")`. Bull Board's HTTP app and UI
+are not mounted. A new queue appears in the UI only after that server registry
+lists it.
 
 ## Factories and business operations
 

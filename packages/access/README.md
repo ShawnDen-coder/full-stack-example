@@ -10,6 +10,7 @@ There are no database resources or custom permission evaluators in this package.
 
 Add a page to pageKeys and pages, protect backing APIs with pageProcedure, then
 grant read through native dynamic roles. Missing dynamic grants deny access.
+`queues` follows that path at `/queues` so it is not treated as an `/admin` role page.
 canVisit and landingPath consume a server snapshot; they never authorize APIs.
 Keep settings/help accessible and preserve owner-scoped business queries.
 

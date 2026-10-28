@@ -8,6 +8,10 @@ allowBuilds:
   msgpackr-extract: false
   protobufjs: false
   vue-demi: true
+peerDependencyRules:
+  ignoreMissing:
+    # Queue monitoring uses @bull-board/api only. Its UI peer is not loaded.
+    - "@bull-board/ui"
 catalog:
   lucide-react: 1.61.0
   zod: ^4.5.4

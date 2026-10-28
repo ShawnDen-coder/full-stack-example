@@ -1,10 +1,15 @@
 import { createAccessService } from "@full-stack-example/api/access";
 import { type AuthConfig, createAuth } from "@full-stack-example/api/auth";
+import { createQueueMonitor } from "@full-stack-example/api/queue-monitor";
 import { createDb } from "@full-stack-example/db";
 import { createTodosService } from "@full-stack-example/domain/todos";
 import { createUsersService } from "@full-stack-example/domain/users";
 import { createProfileReadClient } from "@full-stack-example/domain/users/jobs/profile-read/producer";
 import { createLogger, type Logger } from "@full-stack-example/observability";
+import {
+	summarizeProfileJobData,
+	summarizeProfileJobResult,
+} from "./queue-summaries";
 
 export type ServerConfig = {
 	DATABASE_URL: string;
@@ -41,6 +46,15 @@ export function createServices(
 		});
 		const usersService = createUsersService({ db });
 		const todosService = createTodosService({ db });
+		const queueMonitor = createQueueMonitor([
+			{
+				key: "user-profile",
+				name: "User profile",
+				queue: profileJobs.getQueueForMonitoring(),
+				summarizeData: summarizeProfileJobData,
+				summarizeResult: summarizeProfileJobResult,
+			},
+		]);
 		let closePromise: Promise<void> | undefined;
 		return {
 			db,
@@ -51,6 +65,7 @@ export function createServices(
 				usersService,
 				todosService,
 				profileJobs,
+				queueMonitor,
 				accessService: createAccessService(auth),
 			},
 			async checkReady() {

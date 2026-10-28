@@ -22,6 +22,7 @@
 
 新注册用户自动加入 `member,standard`。迁移为 standard 开放原有五个页面，并为已有用户
 和 session 补齐组织关系，保留升级前的访问能力。新增页面需在后台明确授权给动态角色。
+`queues` 就是这样的后续页面：owner 和 admin 从静态角色定义获得它，`standard` 在管理员授予前不包含它。
 standard 不能删除；动态角色的标识不能重命名。
 
 Admin 插件独立负责全站账号管理：`user.role` 不等于工作区身份。初始化授予全站

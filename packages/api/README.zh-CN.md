@@ -13,6 +13,8 @@
 | [src/procedures.ts](src/procedures.ts) | 公开及需要登录的 procedure 构造器 |
 | [src/routers/todo.ts](src/routers/todo.ts) | 输入校验和用户范围 CRUD 的参考实现 |
 | [src/routers/index.ts](src/routers/index.ts) | 注册路由并推导客户端类型 |
+| [src/queue-monitor.ts](src/queue-monitor.ts) | 基于 `@bull-board/api` 的只读 BullMQ 投影 |
+| [src/routers/queues.ts](src/routers/queues.ts) | 受页面权限保护的队列、任务、日志和定时过程 |
 | [src/auth.ts](src/auth.ts) | Better Auth 工厂 |
 
 ## 扩展步骤
@@ -49,6 +51,8 @@ rename: protectedProcedure
 当前 router 已实现此操作。已有 `appRouter.todo` 注册和推导出的客户端类型会开放 `client.todo.rename({ id: 7, text: "Book tickets" })`。无需接收 `userId`、创建新的 Service 实例或手写客户端接口。调用方式见[前端案例](../../docs/extension-examples.zh-CN.md#案例一重命名-todo)。
 
 扩展 [Server 模块测试](../../apps/server/tests/modules.test.ts)：未登录调用被拒绝；文本会 trim；空文本、超长文本和非法 ID 被校验拦截；Service 收到的用户 ID 来自 session。使用专用数据库的集成测试确认资源不存在和属于其他用户时均返回 `NOT_FOUND`。`TodosService` 增加 `rename` 后，同步更新测试中的 typed service fake。
+
+队列监控可跨任务状态精确查找任务 ID 或名称；调度读取接受页码，每页最多返回 50 条及总数。
 
 ## 验证
 

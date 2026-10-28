@@ -15,7 +15,7 @@ This package groups modules by domain, including service orchestration, SQL repo
 | [src/todos/repository.ts](src/todos/repository.ts) | SQL, projections and immutable `forUser(userId)` scopes |
 | [src/users/service.ts](src/users/service.ts) | A small query that does not need a separate repository |
 | [src/users/jobs/profile-read.contract.ts](src/users/jobs/profile-read.contract.ts) | Queue/task names, Zod payload, result type and retry/retention defaults |
-| [src/users/jobs/profile-read.producer.ts](src/users/jobs/profile-read.producer.ts) | Enqueue, status access, queue observation and cleanup |
+| [src/users/jobs/profile-read.producer.ts](src/users/jobs/profile-read.producer.ts) | Enqueue, status access, queue observation, cleanup, and an assembly-only monitoring handle |
 | [src/users/jobs/profile-read.processor.ts](src/users/jobs/profile-read.processor.ts) | Payload validation and business execution without a Worker connection |
 | [src/users/jobs/profile-read.worker.ts](src/users/jobs/profile-read.worker.ts) | Consumer factory, attempt logs and metrics |
 

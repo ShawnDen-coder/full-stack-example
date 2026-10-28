@@ -179,6 +179,7 @@ function SidebarMenuCollapsedDropdown({
 
 function checkIsActive(href: string, item: NavItem, mainNav = false) {
 	return (
+		(item.url === "/queues" && href.split("?")[0].startsWith("/queues/")) ||
 		href === item.url || // /endpint?search=param
 		href.split("?")[0] === item.url || // endpoint
 		!!item?.items?.filter((i) => i.url === href).length || // if child nav is active

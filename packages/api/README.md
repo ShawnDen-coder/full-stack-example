@@ -14,6 +14,8 @@ oRPC input validation, session resolution and transport error mapping.
 | [src/procedures.ts](src/procedures.ts) | Public and authenticated procedure builders |
 | [src/routers/todo.ts](src/routers/todo.ts) | Reference for validated, owner-scoped CRUD |
 | [src/routers/index.ts](src/routers/index.ts) | Router registration and inferred client types |
+| [src/queue-monitor.ts](src/queue-monitor.ts) | Read-only BullMQ projection over `@bull-board/api` |
+| [src/routers/queues.ts](src/routers/queues.ts) | Page-protected queue, job, log and scheduler procedures |
 | [src/auth.ts](src/auth.ts) | Better Auth factory |
 
 ## Extend
@@ -68,6 +70,8 @@ requests fail; whitespace is trimmed; empty/overlong text and invalid IDs are
 rejected; the service receives the session user ID. Test both missing and foreign
 Todos as `NOT_FOUND` with dedicated database integration tests. Update typed
 service fakes when their `TodosService` contract gains `rename`.
+
+Queue monitoring searches exact job IDs or names across job states; scheduler reads accept a page and return 50 items at most with the total count.
 
 ## Verify
 

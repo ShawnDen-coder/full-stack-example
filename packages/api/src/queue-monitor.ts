@@ -1,0 +1,352 @@
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import type { Queue } from "bullmq";
+
+export const jobStatuses = [
+	"waiting",
+	"active",
+	"delayed",
+	"completed",
+	"failed",
+	"prioritized",
+	"waiting-children",
+] as const;
+export type JobStatus = (typeof jobStatuses)[number];
+
+const TEXT_LIMIT = 2000;
+
+export class QueueMonitorUnavailableError extends Error {
+	constructor() {
+		super("Queue monitoring is temporarily unavailable");
+		this.name = "QueueMonitorUnavailableError";
+	}
+}
+
+export type MonitoringQueue = {
+	getJobLogs(
+		jobId: string,
+		start?: number,
+		end?: number,
+		asc?: boolean,
+	): Promise<{ logs: string[]; count: number }>;
+};
+
+export type QueueMonitorRegistration = {
+	key: string;
+	name: string;
+	queue: MonitoringQueue;
+	summarizeData: (data: unknown) => Record<string, string>;
+	summarizeResult: (result: unknown) => Record<string, string>;
+};
+
+type MonitoredJob = {
+	id?: string;
+	name: string;
+	timestamp: number;
+	processedOn?: number;
+	finishedOn?: number;
+	attemptsMade?: number;
+	opts?: { attempts?: number };
+	failedReason?: string;
+	stacktrace?: string[] | null;
+	data: unknown;
+	returnvalue: unknown;
+	getState(): Promise<string>;
+};
+
+type MonitoredScheduler = {
+	id: string;
+	name?: string;
+	pattern?: string | null;
+	every?: number | null;
+	tz?: string | null;
+	next?: number | null;
+	lastRun?: number;
+};
+
+export type QueueReadAdapter = {
+	getJobCounts(): Promise<Record<string, number>>;
+	isPaused(): Promise<boolean>;
+	getJobs(
+		statuses: string[],
+		start?: number,
+		end?: number,
+	): Promise<MonitoredJob[]>;
+	getJob(id: string): Promise<MonitoredJob | undefined>;
+	getJobSchedulers(start: number, end: number): Promise<MonitoredScheduler[]>;
+	getJobSchedulersCount(): Promise<number>;
+};
+
+type MonitorOptions = {
+	createAdapter?: (queue: MonitoringQueue) => QueueReadAdapter;
+};
+
+function clip(value: unknown): string | null {
+	if (value == null || value === "") return null;
+	const text = String(value)
+		.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted-email]")
+		.replace(/[A-Za-z0-9_+/=-]{32,}/g, "[redacted-token]");
+	return text.length <= TEXT_LIMIT ? text : `${text.slice(0, TEXT_LIMIT)}…`;
+}
+
+function fields(record: Record<string, string>) {
+	const summary: Record<string, string> = {};
+	for (const [key, value] of Object.entries(record)) {
+		const clipped = clip(value);
+		if (clipped) summary[key] = clipped;
+	}
+	return summary;
+}
+
+function createBullReader(queue: MonitoringQueue): QueueReadAdapter {
+	const adapter = new BullMQAdapter(queue as Queue);
+	return {
+		getJobCounts: async () => ({ ...(await adapter.getJobCounts()) }),
+		isPaused: () => adapter.isPaused(),
+		getJobs: (statuses, start, end) =>
+			adapter.getJobs(statuses as JobStatus[], start, end),
+		getJob: (id) => adapter.getJob(id),
+		getJobSchedulersCount: () => (queue as Queue).getJobSchedulersCount(),
+		getJobSchedulers: async (start, end) => {
+			const rows = await (queue as Queue).getJobSchedulers(start, end);
+			return Promise.all(
+				rows.map(async (row) => ({
+					id: row.key,
+					name: row.name,
+					pattern: row.pattern ?? null,
+					every: row.every ?? null,
+					tz: row.tz ?? null,
+					next: row.next ?? null,
+					lastRun:
+						row.next && (row.iterationCount ?? 0) > 1
+							? (await (queue as Queue).getJob(`repeat:${row.key}:${row.next}`))
+									?.timestamp
+							: undefined,
+				})),
+			);
+		},
+	};
+}
+
+async function read<T>(work: () => Promise<T>) {
+	try {
+		return await work();
+	} catch (error) {
+		if (error instanceof QueueMonitorUnavailableError) throw error;
+		throw new QueueMonitorUnavailableError();
+	}
+}
+
+export function createQueueMonitor(
+	registrations: QueueMonitorRegistration[],
+	options: MonitorOptions = {},
+) {
+	const createAdapter = options.createAdapter ?? createBullReader;
+	const entries = new Map(
+		registrations.map((registration) => [
+			registration.key,
+			{ registration, adapter: createAdapter(registration.queue) },
+		]),
+	);
+
+	function requireQueue(queueKey: string) {
+		return entries.get(queueKey) ?? null;
+	}
+
+	function project(
+		registration: QueueMonitorRegistration,
+		job: MonitoredJob,
+		state: string,
+	) {
+		if (!job.id) return null;
+		return {
+			id: job.id,
+			name: job.name,
+			state,
+			attemptsMade: job.attemptsMade ?? 0,
+			attemptsConfigured:
+				typeof job.opts?.attempts === "number" ? job.opts.attempts : null,
+			timestamp: job.timestamp,
+			processedOn: job.processedOn ?? null,
+			finishedOn: job.finishedOn ?? null,
+			failedReason: clip(job.failedReason),
+			summary: fields(registration.summarizeData(job.data)),
+		};
+	}
+
+	return {
+		async list() {
+			const refreshedAt = new Date().toISOString();
+			return read(async () => {
+				const queues = [];
+				for (const { registration, adapter } of entries.values()) {
+					const [rawCounts, paused] = await Promise.all([
+						adapter.getJobCounts(),
+						adapter.isPaused(),
+					]);
+					const counts = Object.fromEntries(
+						jobStatuses.map((status) => [status, rawCounts[status] ?? 0]),
+					) as Record<JobStatus, number>;
+					queues.push({
+						key: registration.key,
+						name: registration.name,
+						paused,
+						counts,
+						refreshedAt,
+					});
+				}
+				return queues;
+			});
+		},
+		async jobs({
+			queueKey,
+			status,
+			page,
+			pageSize,
+			jobId,
+		}: {
+			queueKey: string;
+			status: JobStatus;
+			page: number;
+			pageSize: number;
+			jobId?: string;
+		}) {
+			const entry = requireQueue(queueKey);
+			if (!entry) return null;
+			return read(async () => {
+				const refreshedAt = new Date().toISOString();
+				if (jobId) {
+					const matches = new Map<string, MonitoredJob>();
+					const exact = await entry.adapter.getJob(jobId);
+					if (exact?.id) matches.set(exact.id, exact);
+					for (const state of jobStatuses) {
+						for (let start = 0; ; start += 500) {
+							const batch = await entry.adapter.getJobs(
+								[state],
+								start,
+								start + 499,
+							);
+							for (const job of batch)
+								if (job.id && job.name === jobId) matches.set(job.id, job);
+							if (batch.length < 500) break;
+						}
+					}
+					const all = [...matches.values()];
+					const selected = all.slice((page - 1) * pageSize, page * pageSize);
+					const items = (
+						await Promise.all(
+							selected.map(async (job) =>
+								project(entry.registration, job, await job.getState()),
+							),
+						)
+					).filter((item) => item !== null);
+					return { items, total: all.length, page, pageSize, refreshedAt };
+				}
+				const rawCounts = await entry.adapter.getJobCounts();
+				const start = (page - 1) * pageSize;
+				const jobs = await entry.adapter.getJobs(
+					[status],
+					start,
+					start + pageSize - 1,
+				);
+				return {
+					items: jobs.flatMap((job) => {
+						const item = project(entry.registration, job, status);
+						return item ? [item] : [];
+					}),
+					total: rawCounts[status] ?? 0,
+					page,
+					pageSize,
+					refreshedAt,
+				};
+			});
+		},
+		async job({ queueKey, jobId }: { queueKey: string; jobId: string }) {
+			const entry = requireQueue(queueKey);
+			if (!entry) return null;
+			return read(async () => {
+				const job = await entry.adapter.getJob(jobId);
+				if (!job?.id) return null;
+				const listed = project(entry.registration, job, await job.getState());
+				if (!listed) return null;
+				const stack = job.stacktrace?.filter(Boolean).join("\n");
+				return {
+					...listed,
+					stacktrace: clip(stack),
+					result: fields(entry.registration.summarizeResult(job.returnvalue)),
+					refreshedAt: new Date().toISOString(),
+				};
+			});
+		},
+		async logs({
+			queueKey,
+			jobId,
+			page,
+			pageSize,
+		}: {
+			queueKey: string;
+			jobId: string;
+			page: number;
+			pageSize: number;
+		}) {
+			const entry = requireQueue(queueKey);
+			if (!entry) return null;
+			return read(async () => {
+				const job = await entry.adapter.getJob(jobId);
+				if (!job?.id) return null;
+				const start = (page - 1) * pageSize;
+				const result = await entry.registration.queue.getJobLogs(
+					jobId,
+					start,
+					start + pageSize - 1,
+				);
+				let clipped = false;
+				const lines = result.logs.map((line) => {
+					if (line.length > TEXT_LIMIT) clipped = true;
+					return clip(line) ?? "";
+				});
+				return {
+					lines,
+					total: result.count,
+					page,
+					pageSize,
+					clipped,
+				};
+			});
+		},
+		async schedulers({
+			queueKey,
+			page = 1,
+		}: {
+			queueKey: string;
+			page?: number;
+		}) {
+			const entry = requireQueue(queueKey);
+			if (!entry) return null;
+			return read(async () => {
+				const [rows, total] = await Promise.all([
+					entry.adapter.getJobSchedulers((page - 1) * 50, page * 50 - 1),
+					entry.adapter.getJobSchedulersCount(),
+				]);
+				return {
+					items: rows.map((row) => ({
+						id: row.id,
+						name: row.name ?? row.id,
+						pattern: row.pattern ?? null,
+						every: row.every ?? null,
+						tz: row.tz ?? null,
+						next: row.next ?? null,
+						lastTrigger:
+							typeof row.lastRun === "number"
+								? { kind: "inferred" as const, at: row.lastRun }
+								: { kind: "unknown" as const },
+					})),
+					total,
+					page,
+					refreshedAt: new Date().toISOString(),
+				};
+			});
+		},
+	};
+}
+
+export type QueueMonitor = ReturnType<typeof createQueueMonitor>;
