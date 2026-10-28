@@ -228,12 +228,37 @@ test("migrations, real authentication, owner isolation, pagination and independe
 			(await a.client.todo.toggle({ id: one.id, completed: true })).completed,
 			true,
 		);
+		await assert.rejects(
+			() => b.client.todo.rename({ id: one.id, text: "foreign edit" }),
+			{ code: "NOT_FOUND" },
+		);
+		await assert.rejects(
+			() => cookieClient().todo.rename({ id: one.id, text: "anonymous edit" }),
+			{ code: "UNAUTHORIZED" },
+		);
+		assert.deepEqual(
+			await a.client.todo.rename({ id: one.id, text: "  renamed task  " }),
+			{ ...one, text: "renamed task", completed: true },
+		);
+		assert.equal(
+			(await a.client.todo.list({})).items.find((item) => item.id === one.id)
+				?.text,
+			"renamed task",
+		);
+		for (const text of [" ", "x".repeat(501)])
+			await assert.rejects(() => a.client.todo.rename({ id: one.id, text }), {
+				code: "BAD_REQUEST",
+			});
 		assert.deepEqual(await a.client.todo.delete({ id: one.id }), {
 			id: one.id,
 		});
 		await assert.rejects(() => a.client.todo.delete({ id: one.id }), {
 			code: "NOT_FOUND",
 		});
+		await assert.rejects(
+			() => a.client.todo.rename({ id: one.id, text: "deleted" }),
+			{ code: "NOT_FOUND" },
+		);
 		const job = await a.client.users.requestProfile();
 		await assert.rejects(() => b.client.users.profileJob(job), {
 			code: "NOT_FOUND",

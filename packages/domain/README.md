@@ -57,10 +57,9 @@ sum against database pool and memory capacity. See the
 
 ## Example: rename an owned Todo
 
-This is a proposed extension, not an existing operation. It reuses the current
-`todo.text` column, so no migration or new package export is needed. Add this
-method inside the object returned by `forUser(userId)` in
-[repository.ts](src/todos/repository.ts), alongside `setCompleted`:
+This operation is implemented using the existing `todo.text` column, with no
+migration or new package export. In [repository.ts](src/todos/repository.ts),
+`rename` belongs to the immutable `forUser(userId)` scope alongside `setCompleted`:
 
 ```ts
 async rename({ id, text }: { id: number; text: string }) {
@@ -73,7 +72,7 @@ async rename({ id, text }: { id: number; text: string }) {
 },
 ```
 
-Add the corresponding method to the returned service object in
+The corresponding method is part of the returned service object in
 [service.ts](src/todos/service.ts):
 
 ```ts
@@ -98,9 +97,9 @@ owns SQL and ownership; API maps a `null` result to `NOT_FOUND`. The inferred
 [API example](../api/README.md#example-expose-todorename) and
 [application walkthrough](../../docs/extension-examples.md#case-1-rename-a-todo).
 
-Extend [repository tests](tests/todos-repository.test.ts) to check both `id` and
+[Repository tests](tests/todos-repository.test.ts) check both `id` and
 `user_id` predicates, independent interleaved owners, and `null` for zero rows.
-Add service tests for trimming and empty/overlong text. Integration tests should
+Service tests cover trimming and empty/overlong text. Integration tests
 confirm Alice can rename her Todo and Bob cannot modify or discover it.
 
 ## Example: add a profile-summary job

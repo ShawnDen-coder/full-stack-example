@@ -200,3 +200,62 @@ test("locally handled query errors still clear an expired session", async ({
 	await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
 	await expect(page.getByText("Private task", { exact: true })).toHaveCount(0);
 });
+
+test("saved task text survives a failed refresh and duplicate saves are blocked", async ({
+	page,
+}) => {
+	await mockSession(page);
+	let saved = false;
+	let writes = 0;
+	let release = () => {};
+	const held = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	await page.route("**/rpc/todo/list**", (route) =>
+		saved
+			? route.abort("failed")
+			: route.fulfill({
+					json: {
+						json: {
+							items: [{ id: 1, text: "Before edit", completed: false }],
+							nextCursor: null,
+						},
+					},
+				}),
+	);
+	await page.route("**/rpc/todo/rename", async (route) => {
+		writes++;
+		await held;
+		saved = true;
+		await route.fulfill({
+			json: { json: { id: 1, text: "Saved edit", completed: false } },
+		});
+	});
+	await page.goto("/todos");
+	await page
+		.getByRole("button", { name: "Edit Before edit", exact: true })
+		.click();
+	await page
+		.getByRole("textbox", { name: "Task name", exact: true })
+		.fill("Saved edit");
+	await page.getByRole("button", { name: "Save", exact: true }).click();
+	await expect(
+		page.getByRole("button", { name: "Saving...", exact: true }),
+	).toBeDisabled();
+	await expect(
+		page.getByRole("button", { name: "Cancel", exact: true }),
+	).toBeDisabled();
+	await expect(
+		page.getByRole("textbox", { name: "Task name", exact: true }),
+	).toBeDisabled();
+	await page.keyboard.press("Enter");
+	release();
+	await expect(
+		page.getByRole("button", { name: "Edit Saved edit", exact: true }),
+	).toBeVisible({ timeout: 15000 });
+	await expect(page.getByRole("alert")).toContainText(
+		"Showing previously loaded tasks.",
+	);
+	await expect(page.getByText("Before edit", { exact: true })).toHaveCount(0);
+	expect(writes).toBe(1);
+});

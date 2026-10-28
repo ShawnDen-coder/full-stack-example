@@ -171,6 +171,7 @@ test("anonymous requests cannot access any Todo operation", async () => {
 		for (const request of [
 			() => f.client.todo.list({}),
 			() => f.client.todo.create({ text: "private" }),
+			() => f.client.todo.rename({ id: 1, text: "edited" }),
 			() => f.client.todo.toggle({ id: 1, completed: true }),
 			() => f.client.todo.setCompleted({ id: 1, completed: true }),
 			() => f.client.todo.delete({ id: 1 }),
@@ -492,6 +493,51 @@ test("expected RPC rejections use info logs and unknown paths never become label
 		assert.ok(!entries.some((entry) => entry.level >= 50));
 		assert.ok(!lines.join("").includes("private-arbitrary-secret-url"));
 	} finally {
+		await f.close();
+	}
+});
+
+test("Todo rename validates input, uses session ownership and hides missing resources", async () => {
+	const f = await fixture();
+	const calls: unknown[] = [];
+	const rename = mock.method(
+		f.deps.services.todosService,
+		"rename",
+		async (
+			input: Parameters<typeof f.deps.services.todosService.rename>[0],
+		) => {
+			calls.push(input);
+			return input.id === 7
+				? { id: 7, text: input.text, completed: true }
+				: null;
+		},
+	);
+	try {
+		assert.deepEqual(
+			await f.client.todo.rename({
+				id: 7,
+				text: "  edited  ",
+				userId: "foreign",
+			} as { id: number; text: string }),
+			{ id: 7, text: "edited", completed: true },
+		);
+		assert.deepEqual(calls, [{ id: 7, text: "edited", userId: "user-1" }]);
+		for (const input of [
+			{ id: 7, text: " " },
+			{ id: 7, text: "x".repeat(501) },
+			{ id: 0, text: "valid" },
+			{ id: 1.5, text: "valid" },
+		]) {
+			await assert.rejects(() => f.client.todo.rename(input), {
+				code: "BAD_REQUEST",
+			});
+		}
+		assert.equal(calls.length, 1);
+		await assert.rejects(() => f.client.todo.rename({ id: 8, text: "valid" }), {
+			code: "NOT_FOUND",
+		});
+	} finally {
+		rename.mock.restore();
 		await f.close();
 	}
 });

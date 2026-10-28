@@ -48,6 +48,14 @@ export function createTodosRepository({ db }: { db: TodoExecutor }) {
 						.returning(fields);
 					return updated ?? null;
 				},
+				async rename({ id, text }: { id: number; text: string }) {
+					const [updated] = await db
+						.update(todo)
+						.set({ text })
+						.where(ownedTodo(id))
+						.returning(fields);
+					return updated ?? null;
+				},
 				async delete(id: number) {
 					const [deleted] = await db
 						.delete(todo)

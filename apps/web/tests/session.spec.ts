@@ -137,3 +137,73 @@ test("late responses from the previous account never repopulate its cache", asyn
 		page.getByText("Late private task", { exact: true }),
 	).toHaveCount(0);
 });
+
+test("Todo editing supports validation, cancel, failed-write recovery and persistence", async ({
+	page,
+}, testInfo) => {
+	await signup(page, "Editor");
+	await page.getByRole("link", { name: "Todos", exact: true }).click();
+	await page.getByRole("textbox", { name: "New task" }).fill("Original task");
+	await page.getByRole("button", { name: "Add", exact: true }).click();
+	await page
+		.getByRole("button", { name: "Edit Original task", exact: true })
+		.click();
+	const input = page.getByRole("textbox", { name: "Task name", exact: true });
+	await expect(input).toBeFocused();
+	await input.fill("Discard this edit");
+	await input.press("Escape");
+	await expect(input).toHaveCount(0);
+	await expect(
+		page.getByRole("button", { name: "Edit Original task", exact: true }),
+	).toBeFocused();
+	await page
+		.getByRole("button", { name: "Edit Original task", exact: true })
+		.click();
+	await expect(input).toHaveValue("Original task");
+	await input.fill("   ");
+	await expect(input).toHaveAccessibleDescription("Enter a task name.");
+	await expect(
+		page.getByRole("button", { name: "Save", exact: true }),
+	).toBeDisabled();
+	await input.fill("x".repeat(501));
+	await expect(input).toHaveAccessibleDescription(
+		"Use 500 characters or fewer.",
+	);
+	await expect(
+		page.getByRole("button", { name: "Save", exact: true }),
+	).toBeDisabled();
+	await input.fill("  Edited task  ");
+	await page.route("**/rpc/todo/rename", (route) => route.abort("failed"));
+	await page.getByRole("button", { name: "Save", exact: true }).click();
+	await expect(page.getByRole("alert")).toContainText(
+		"Unable to save this task.",
+	);
+	await expect(input).toHaveValue("  Edited task  ");
+	await expect(input).toBeEnabled();
+	await expect(
+		page
+			.locator("[data-sonner-toast]")
+			.filter({ hasText: /fetch|network|failed/i }),
+	).toHaveCount(0);
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.screenshot({ path: testInfo.outputPath("todo-edit-mobile.png") });
+	await page.unroute("**/rpc/todo/rename");
+	await page.getByRole("button", { name: "Save", exact: true }).click();
+	await expect(input).toHaveCount(0);
+	await expect(
+		page.getByRole("button", { name: "Edit Edited task", exact: true }),
+	).toBeFocused();
+	await page.reload();
+	await expect(page.getByText("Edited task", { exact: true })).toBeVisible();
+	await expect(page.getByText("Original task", { exact: true })).toHaveCount(0);
+	await page
+		.getByRole("button", { name: "Edit Edited task", exact: true })
+		.click();
+	await input.fill("Another draft");
+	await page.getByRole("button", { name: "Cancel", exact: true }).click();
+	await expect(page.getByText("Edited task", { exact: true })).toBeVisible();
+	await page.setViewportSize({ width: 1280, height: 800 });
+	await page.screenshot({
+		path: testInfo.outputPath("todo-edited-desktop.png"),
+	});
+});

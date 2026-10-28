@@ -32,7 +32,7 @@ Worker 工厂返回原生 Worker，内部固定 `autorun: false`。增加一个 
 
 ## 示例：重命名自己的 Todo
 
-这是待实现的扩展示例，当前 API 尚无此操作。它复用已有 `todo.text` 列，不需要 migration 或新增 package export。在 [repository.ts](src/todos/repository.ts) 的 `forUser(userId)` 返回对象内，与 `setCompleted` 并列添加：
+此操作已实现，复用现有 `todo.text` 字段，无需 migration 或新增 package export。[repository.ts](src/todos/repository.ts) 的 `rename` 位于 `forUser(userId)` 返回的作用域对象内：
 
 ```ts
 async rename({ id, text }: { id: number; text: string }) {
@@ -45,7 +45,7 @@ async rename({ id, text }: { id: number; text: string }) {
 },
 ```
 
-在 [service.ts](src/todos/service.ts) 的返回对象中增加业务方法：
+[service.ts](src/todos/service.ts) 的返回对象提供以下业务方法：
 
 ```ts
 async rename({ userId, id, text }: {
