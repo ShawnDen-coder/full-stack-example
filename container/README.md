@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [Project](../README.md)
 
-Compose stacks, application images, the web reverse proxy and the optional telemetry Collector live here. Run all commands below from the repository root with Node.js 24, pnpm 11.0.9 and Docker Compose available.
+Compose stacks, application images, the web reverse proxy and the optional telemetry Collector live here. Run all commands below from the repository root with pnpm 12.15.0 and Docker Compose available. pnpm manages Node.js 24 for host commands via the root manifest and lockfile. Image builders install pnpm 12.15.0 and use the same frozen lockfile; server and worker production images run directly on `node:24-slim` without pnpm.
 
 ## Files
 

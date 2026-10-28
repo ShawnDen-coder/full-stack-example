@@ -15,7 +15,7 @@ pnpm check:boundaries
 pnpm exec biome check .
 ```
 
-`pnpm check` 会应用 Biome 自动修复。依赖变更限定在实际使用它的包中；保持 `.node-version`、Node 类型和 Docker 运行时版本一致。依赖升级，尤其是 Drizzle RC 变更，需要通过完整验证流程，避免与无关功能混在一起。
+`pnpm check` 会应用 Biome 自动修复。依赖变更限定在实际使用它的包中；保持 `devEngines.runtime`、`engines`、`.node-version`、Node 类型、CI 和 Docker 运行时均使用 Node 24。项目运行时由 pnpm 12.15.0 管理，用 `pnpm node --version` 验证。更新支持范围内的 Node 版本时，运行 `pnpm runtime set node 24.x`，审查 manifest 和锁文件，再执行上述检查。提交生成的锁文件，包括 pnpm 引导文档和运行时校验信息。依赖升级，尤其是 Drizzle RC 变更，需要通过完整验证流程，避免与无关功能混在一起。
 
 Husky 对暂存文件运行 lint-staged，对提交消息运行 Cocogitto；提交前先完成下方 CLI 安装。CI 是最终依据，本地钩子不能替代 CI。
 
@@ -39,7 +39,7 @@ Husky 对暂存文件运行 lint-staged，对提交消息运行 Cocogitto；提�
 
 ## 验证
 
-GitHub Actions 使用 Node 24、pnpm 11.0.9 和已提交的锁文件进行验证。离线测试覆盖 HTTP 边界、就绪检查、日志脱敏和 worker 生命周期。集成测试使用真实 PostgreSQL/Redis、已提交的迁移和 Better Auth，并验证任务重试、连接中断和 SIGTERM 退出。Playwright 覆盖账号切换（包括延迟响应）、写入失败和会话过期。生产冒烟测试验证构建后的 Nginx/API/worker 整体链路、Secure Cookie 和 SPA 深层路由。发布保护测试确保迁移失败后不会继续替换应用容器。
+GitHub Actions 使用 Node 24、pnpm 12.15.0 和已提交的锁文件进行验证。离线测试覆盖 HTTP 边界、就绪检查、日志脱敏和 worker 生命周期。集成测试使用真实 PostgreSQL/Redis、已提交的迁移和 Better Auth，并验证任务重试、连接中断和 SIGTERM 退出。Playwright 覆盖账号切换（包括延迟响应）、写入失败和会话过期。生产冒烟测试验证构建后的 Nginx/API/worker 整体链路、Secure Cookie 和 SPA 深层路由。发布保护测试确保迁移失败后不会继续替换应用容器。
 
 运行集成测试或浏览器测试前，将 `TEST_DATABASE_URL` 和 `TEST_REDIS_URL` 指向**专用、可随时丢弃的测试服务**，然后执行：
 
@@ -67,7 +67,7 @@ pnpm docs:preview
 
 导航与路由映射位于 `docs/scripts/content.ts`，布局与主题位于 `docs/rspress.config.ts`、`docs/styles/index.css`。修改映射时运行 `pnpm --filter @full-stack-example/docs test`；检查 `pnpm docs:build` 的产物，并在桌面与手机上验证导航、搜索、语言切换和深层链接。
 
-`.github/workflows/docs.yml` 在 PR 中构建，合入 `master` 后部署到 GitHub Pages；手动发布可运行该 workflow。工作流使用 Node.js 24、pnpm 11.0.9 和锁文件。
+`.github/workflows/docs.yml` 在 PR 中构建，合入 `master` 后部署到 GitHub Pages；手动发布可运行该 workflow。工作流使用 Node.js 24、pnpm 12.15.0 和锁文件。
 
 ## 版本管理
 

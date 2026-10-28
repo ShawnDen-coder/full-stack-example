@@ -8,15 +8,18 @@ Built with React / TanStack Router, Hono / oRPC, Better Auth, Drizzle / PostgreS
 
 ## Quick start
 
-Use Node.js 24, pnpm 11.0.9, and Docker Compose. Run from the repository root:
+Install pnpm 12.15.0 and Docker Compose. pnpm downloads and manages Node.js 24 for this project via `devEngines.runtime` in `package.json`; the exact version and checksums are committed in `pnpm-lock.yaml`. Run from the repository root:
 
 ```bash
 pnpm install --frozen-lockfile
+pnpm node --version
 pnpm env:init
 pnpm infra:up
 pnpm db:migrate
 pnpm dev
 ```
+
+If you already have Node.js/npm, install pnpm with `npm install -g pnpm@12.15.0`. Use `pnpm node` for direct Node commands and `pnpm run` / `pnpm exec` for project tools. Your system `node --version` may still show another version. To make bare `node` follow the project too, run `pnpm shim add node` once and ensure `pnpm bin -g` precedes other Node installations on `PATH` (run `pnpm setup` and reopen the terminal if the global bin directory is not configured). No separate Node version manager is required. `.node-version` remains a Node 24 hint for other tools; pnpm uses the manifest and lockfile.
 
 `env:init` creates ignored local configuration with a random auth secret and preserves existing files. This setup targets a new database; for an existing database created with `db:push`, review the [migration guidance](docs/operations.md#database-migrations) first.
 

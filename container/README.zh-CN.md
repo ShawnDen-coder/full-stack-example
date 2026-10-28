@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [项目说明](../README.zh-CN.md)
 
-本目录集中管理 Compose 栈、应用镜像、Web 反向代理和可选的遥测 Collector。以下命令均从仓库根目录执行，需要 Node.js 24、pnpm 11.0.9 和 Docker Compose。
+本目录集中管理 Compose 栈、应用镜像、Web 反向代理和可选的遥测 Collector。以下命令均从仓库根目录执行，需要 pnpm 12.15.0 和 Docker Compose。宿主机命令使用的 Node.js 24 由 pnpm 根据根 manifest 和锁文件管理。镜像构建阶段安装 pnpm 12.15.0 并使用同一份冻结锁文件；server 和 worker 生产镜像直接使用 `node:24-slim`，无需 pnpm。
 
 ## 文件职责
 
