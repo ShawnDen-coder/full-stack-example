@@ -1,11 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TodosScreen } from "@/features/todos/todos-screen";
-
-export const Route = createFileRoute("/_auth/tasks")({ component: TodosRoute });
-
-function TodosRoute() {
-	const { session } = Route.useRouteContext();
-	return (
-		<TodosScreen key={session.data?.user.id} userId={session.data?.user.id} />
-	);
-}
+import { z } from "zod";
+import { Tasks } from "@/features/tasks";
+export const Route = createFileRoute("/_auth/tasks")({
+	validateSearch: z.object({
+		page: z.number().int().positive().optional().catch(1),
+		pageSize: z.number().int().min(1).max(100).optional().catch(10),
+		status: z
+			.array(z.enum(["todo", "in progress", "done", "canceled", "backlog"]))
+			.optional()
+			.catch([]),
+		priority: z
+			.array(z.enum(["low", "medium", "high"]))
+			.optional()
+			.catch([]),
+		filter: z.string().optional().catch(""),
+	}),
+	component: Tasks,
+});

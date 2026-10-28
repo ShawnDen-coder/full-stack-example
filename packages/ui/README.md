@@ -138,3 +138,9 @@ empty) have been removed; add future components using the same Radix baseline.
 Tokens live in `src/styles/theme.css`; global rules live in `globals.css`.
 Do not blindly regenerate customized sidebar, sheet, dialog, dropdown-menu,
 separator or sonner components: review upstream changes and local adaptations.
+
+The complete upstream primitive set now includes table, tabs, select, badge,
+alert/alert-dialog, popover, collapsible, scroll-area, calendar, switch and input-otp.
+`form` is the upstream React Hook Form adapter; existing TanStack Form screens can
+continue using the lower-level input/label primitives. App-specific table toolbars,
+columns, URL state and business dialogs remain in web rather than this package.

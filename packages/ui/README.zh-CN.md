@@ -117,3 +117,8 @@ message-scroller、input-group、empty 生成组件。后续组件沿用 Radix �
 主题 token 位于 `src/styles/theme.css`，全局规则位于 `globals.css`。
 sidebar、sheet、dialog、dropdown-menu、separator、sonner 等定制组件
 更新时需人工审查差异，不能直接用 CLI 覆盖。
+
+现已纳入上游完整基础组件，包括 table、tabs、select、badge、alert/alert-dialog、
+popover、collapsible、scroll-area、calendar、switch 和 input-otp。
+`form` 是上游 React Hook Form 适配层；既有 TanStack Form 页面继续使用 input/label
+等基础组件。业务表格工具栏、列定义、URL 状态和业务弹窗仍放在 web，不进入 UI 包。
