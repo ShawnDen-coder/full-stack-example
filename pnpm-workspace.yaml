@@ -9,6 +9,7 @@ allowBuilds:
   protobufjs: false
   vue-demi: true
 catalog:
+  lucide-react: 1.61.0
   zod: ^4.5.4
   typescript: ^6.0.3
   varlock: 1.18.0

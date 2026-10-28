@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@full-stack-example/ui/components/button";
+import { Icon } from "@full-stack-example/ui/components/icon";
 import { cn } from "@full-stack-example/ui/lib/utils";
 import {
 	MessageScroller as MessageScrollerPrimitive,
@@ -109,7 +110,7 @@ function MessageScrollerButton({
 		>
 			{children ?? (
 				<>
-					<ArrowDownIcon />
+					<Icon icon={ArrowDownIcon} />
 					<span className="sr-only">
 						{direction === "end" ? "Scroll to end" : "Scroll to start"}
 					</span>
