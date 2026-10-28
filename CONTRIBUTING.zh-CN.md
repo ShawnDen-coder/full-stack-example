@@ -15,7 +15,7 @@ pnpm check:boundaries
 pnpm exec biome check .
 ```
 
-`pnpm check` 会应用 Biome 自动修复。依赖变更限定在实际使用它的包中；保持 `devEngines.runtime`、`engines`、`.node-version`、Node 类型、CI 和 Docker 运行时均使用 Node 24。项目运行时由 pnpm 12.15.0 管理，用 `pnpm node --version` 验证。更新支持范围内的 Node 版本时，运行 `pnpm runtime set node 24.x`，审查 manifest 和锁文件，再执行上述检查。提交生成的锁文件，包括 pnpm 引导文档和运行时校验信息。依赖升级，尤其是 Drizzle RC 变更，需要通过完整验证流程，避免与无关功能混在一起。
+`pnpm check` 会应用 Biome 自动修复。依赖变更限定在实际使用它的包中；保持 `devEngines.runtime`、`engines`、`.node-version`、Node 类型、CI 和 容器运行时均使用 Node 24。项目运行时由 pnpm 12.15.0 管理，用 `pnpm node --version` 验证。更新支持范围内的 Node 版本时，运行 `pnpm runtime set node 24.x`，审查 manifest 和锁文件，再执行上述检查。提交生成的锁文件，包括 pnpm 引导文档和运行时校验信息。依赖升级，尤其是 Drizzle RC 变更，需要通过完整验证流程，避免与无关功能混在一起。
 
 Husky 对暂存文件运行 lint-staged，对提交消息运行 Cocogitto；提交前先完成下方 CLI 安装。CI 是最终依据，本地钩子不能替代 CI。
 

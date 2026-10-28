@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [Project](../README.md)
 
-Compose stacks, application images, the web reverse proxy and the optional telemetry Collector live here. Run all commands below from the repository root with pnpm 12.15.0 and Docker Compose available. pnpm manages Node.js 24 for host commands via the root manifest and lockfile. Image builders install pnpm 12.15.0 and use the same frozen lockfile; server and worker production images run directly on `node:24-slim` without pnpm.
+Compose stacks, application images, the web reverse proxy and the optional telemetry Collector live here. Run all commands below from the repository root with pnpm 12.15.0 and Podman Compose available. pnpm manages Node.js 24 for host commands via the root manifest and lockfile. Image builders install pnpm 12.15.0 and use the same frozen lockfile; server and worker production images run directly on `node:24-slim` without pnpm.
 
 ## Files
 
@@ -19,6 +19,12 @@ Compose stacks, application images, the web reverse proxy and the optional telem
 
 ## Local development
 
+Install Podman and a Compose v2.24+ compatible provider (`docker-compose`, including newer major versions). `podman compose` delegates to that provider; the container engine is Podman and Docker Engine/Desktop is not required. See the [Podman Desktop Compose setup](https://podman-desktop.io/docs/compose/setting-up-compose). Select its executable with `PODMAN_COMPOSE_PROVIDER` if multiple providers are installed. This stack requires `up --wait`, optional `env_file` entries, and `service_completed_successfully` dependencies.
+
+On Windows/macOS, initialize a Podman machine once with `podman machine init` if needed, then run `podman machine start`. On Linux, start the API socket with `systemctl --user enable --now podman.socket` for rootless use. Verify `podman info` and `podman compose version` before continuing.
+
+Existing Docker volumes are stored separately from Podman volumes. Back up and restore PostgreSQL/Redis data before switching an existing installation; starting Podman creates a new stack rather than moving existing data.
+
 The usual workflow runs PostgreSQL and Redis in containers and the applications on the host:
 
 ```bash
@@ -32,8 +38,8 @@ pnpm dev
 `pnpm infra:down` stops PostgreSQL and Redis while keeping their data volumes. To run the applications in containers after initializing configuration and applying migrations:
 
 ```bash
-docker compose -f container/compose.yml up -d --build
-docker compose -f container/compose.yml logs -f
+podman compose -f container/compose.yml up -d --build
+podman compose -f container/compose.yml logs -f
 ```
 
 Stop host application processes before starting their container equivalents to free ports 3000 and 3001. The local stack exposes web at port 3001, server at port 3000, and PostgreSQL/Redis on loopback ports 5432/6379. Application containers do not automatically apply local migrations.
@@ -43,13 +49,13 @@ Stop host application processes before starting their container equivalents to f
 Provide production configuration according to [deploy/.env.schema](../deploy/.env.schema), using process environment variables or the ignored `deploy/.env` file. The root scripts load this configuration through Varlock:
 
 ```bash
-pnpm docker:build
-pnpm docker:up
-pnpm docker:logs
-pnpm docker:down
+pnpm podman:build
+pnpm podman:up
+pnpm podman:logs
+pnpm podman:down
 ```
 
-`docker:up` uses [scripts/deploy.mjs](../scripts/deploy.mjs) to build images, wait for PostgreSQL/Redis, migrate, provision runtime roles, and then update applications. `docker:down` keeps data volumes. Production requires an external HTTPS reverse proxy forwarding to `127.0.0.1:8080` by default. Follow the [operations guide](../docs/operations.md) for credentials, database roles, migration failure handling, backups and recovery.
+`podman:up` uses [scripts/deploy.mjs](../scripts/deploy.mjs) to build images, wait for PostgreSQL/Redis, migrate, provision runtime roles, and then update applications. `podman:down` keeps data volumes. Production requires an external HTTPS reverse proxy forwarding to `127.0.0.1:8080` by default. Follow the [operations guide](../docs/operations.md) for credentials, database roles, migration failure handling, backups and recovery.
 
 ## Optional telemetry
 
@@ -66,15 +72,16 @@ For production, combine `container/compose.production.yml` with `container/compo
 
 - Compose paths are relative to the first Compose file. Keep `context: ..` so every image builds from the repository root; Dockerfile paths such as `container/server/Dockerfile` and `COPY` sources are relative to that context.
 - The root [.dockerignore](../.dockerignore) controls build exclusions. Local environment value files must remain outside image layers. Application environment schemas stay with their applications; production environment configuration stays in `deploy/`.
+- Podman supports the existing Dockerfile format and `.dockerignore`. External images use qualified registry names, production application images use `localhost/`, and the Collector bind mount uses `:Z` for SELinux hosts.
 - Keep `name: full-stack-example` stable. Use `COMPOSE_PROJECT_NAME` for intentional stack isolation; changing the project name changes the default container/network/volume namespace. Preserve volume keys when moving configuration.
 - For a new application image, add a subdirectory here, wire its service into the relevant Compose stacks, and update root scripts and [CI](../.github/workflows/ci.yml) when needed. Keep application startup and shutdown ownership in the application.
 
 Validate local configuration without starting containers:
 
 ```bash
-docker compose -f container/compose.yml config --quiet
-docker compose -f container/compose.yml -f container/compose.observability.yml config --quiet
-pnpm exec varlock run --path ./deploy/ -- docker compose -f container/compose.production.yml config --quiet
+podman compose -f container/compose.yml config --quiet
+podman compose -f container/compose.yml -f container/compose.observability.yml config --quiet
+pnpm exec varlock run --path ./deploy/ -- podman compose -f container/compose.production.yml config --quiet
 ```
 
 The production check needs the required deployment values. Configuration validation does not replace building images and running the production smoke check described in [CI](../.github/workflows/ci.yml).

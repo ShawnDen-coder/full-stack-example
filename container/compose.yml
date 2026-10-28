@@ -76,7 +76,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: docker.io/library/redis:7-alpine
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
     ports:
       - "127.0.0.1:6379:6379"
@@ -90,7 +90,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:18
+    image: docker.io/library/postgres:18
     environment:
       POSTGRES_DB: full-stack-example
       POSTGRES_USER: postgres

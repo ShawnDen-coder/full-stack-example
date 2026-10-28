@@ -6,7 +6,7 @@
 
 ## 生产部署
 
-支持的基线是单机 Docker Compose，前面配置 HTTPS 反向代理。`container/compose.yml` 用于本地开发，`container/compose.production.yml` 是独立生产栈，浏览器请求使用同一个公开 HTTPS origin。通过进程环境或忽略的 `deploy/.env` 提供 `deploy/.env.schema` 中的值：`PUBLIC_APP_URL`、`BETTER_AUTH_SECRET`（至少 32 个字符）、`POSTGRES_PASSWORD` 和三个指向 `postgres:5432/app` 的数据库 URL：
+支持的基线是单机 Podman Compose，前面配置 HTTPS 反向代理。`container/compose.yml` 用于本地开发，`container/compose.production.yml` 是独立生产栈，浏览器请求使用同一个公开 HTTPS origin。通过进程环境或忽略的 `deploy/.env` 提供 `deploy/.env.schema` 中的值：`PUBLIC_APP_URL`、`BETTER_AUTH_SECRET`（至少 32 个字符）、`POSTGRES_PASSWORD` 和三个指向 `postgres:5432/app` 的数据库 URL：
 
 - `MIGRATION_DATABASE_URL`：`postgres` schema owner，密码与 `POSTGRES_PASSWORD` 一致，仅供部署任务使用。
 - `DATABASE_URL`：`app_server`，使用独立运行密码。
@@ -15,10 +15,10 @@
 密码需 URL 编码，生产密码没有默认值，不复用开发或 CI 凭据。部署依次执行 migration、运行角色配置、Server/Worker 更新和 Web 更新。Server 仅获得业务表读写权限，Worker 仅读取用户资料；运行角色没有 DDL 权限。已有数据卷会在角色配置步骤中创建或更新这两个账号。
 
 ```bash
-pnpm docker:up
-pnpm docker:logs
+pnpm podman:up
+pnpm podman:logs
 # 停止容器，保留数据卷：
-pnpm docker:down
+pnpm podman:down
 ```
 
 部署命令会构建镜像，等待 PostgreSQL 和 Redis 就绪，执行一次新的迁移任务，再依次更新 API/worker 和前端。迁移失败会在替换现有应用容器之前停止发布。就绪检查失败会阻止后续部署步骤，但不会自动回滚应用。升级时应采用向后兼容的增量迁移。
@@ -59,7 +59,7 @@ Worker 的 `DATABASE_URL` 和 `REDIS_URL` 指向与 API 相同的服务，不需
 
 发布涉及数据库结构的变更前，使用部署环境管理的凭据执行 `pg_dump -Fc`，创建 PostgreSQL 逻辑备份，并存放在宿主机之外。通过 `pg_restore` 将备份恢复到新的空数据库，验证恢复流程。为队列任务保留 Redis AOF 数据卷，并确保处理函数能承受重复执行。仅保存在同一台机器上的备份，或从未验证过的恢复流程，都不足以支持可靠恢复。
 
-回滚应用时，只有此前验证过的镜像版本仍兼容当前数据库结构，才能重新部署它。系统不会自动执行破坏性的反向迁移。恢复数据库时，先停止生产者和消费者，将备份恢复到新数据库，检查表结构和数据归属，再让服务连接该数据库。在恢复消费者之前，核对并处理队列中的任务。不要在生产升级过程中执行 `docker compose down -v`。
+回滚应用时，只有此前验证过的镜像版本仍兼容当前数据库结构，才能重新部署它。系统不会自动执行破坏性的反向迁移。恢复数据库时，先停止生产者和消费者，将备份恢复到新数据库，检查表结构和数据归属，再让服务连接该数据库。在恢复消费者之前，核对并处理队列中的任务。不要在生产升级过程中执行 `podman compose down -v`。
 
 ## 可观测性
 

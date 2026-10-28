@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:18
+        image: docker.io/library/postgres:18
         env:
           POSTGRES_PASSWORD: integration-only
           POSTGRES_DB: full_stack_example_test
@@ -35,7 +35,7 @@ jobs:
           --health-cmd "pg_isready -U postgres -d full_stack_example_test"
           --health-interval 5s --health-timeout 3s --health-retries 20
       redis:
-        image: redis:7-alpine
+        image: docker.io/library/redis:7-alpine
         ports: [6379:6379]
         options: >-
           --health-cmd "redis-cli ping"
@@ -84,10 +84,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: docker compose -f container/compose.production.yml build
-      - run: docker compose -f container/compose.production.yml up -d --wait
+      - name: Set up Podman and Compose provider
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+          systemctl --user start podman.socket
+          for provider in /usr/libexec/docker/cli-plugins/docker-compose /usr/lib/docker/cli-plugins/docker-compose; do
+            if [ -x "$provider" ]; then
+              echo "PODMAN_COMPOSE_PROVIDER=$provider" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          echo "Compose v2 provider not found" >&2
+          exit 1
+      - run: podman compose version
+      - run: podman compose -f container/compose.production.yml build
+      - run: podman compose -f container/compose.production.yml up -d --wait
       - run: node scripts/smoke-production.mjs
       - if: failure()
-        run: docker compose -f container/compose.production.yml logs --tail 100
+        run: podman compose -f container/compose.production.yml logs --tail 100
       - if: always()
-        run: docker compose -f container/compose.production.yml down -v
+        run: podman compose -f container/compose.production.yml down -v

@@ -15,7 +15,7 @@ pnpm check:boundaries
 pnpm exec biome check .
 ```
 
-`pnpm check` applies Biome fixes. Scope dependency changes to the owning package; keep `devEngines.runtime`, `engines`, `.node-version`, Node types, CI, and Docker runtimes aligned on Node 24. pnpm 12.15.0 manages the project runtime; verify it with `pnpm node --version`. To update Node within the supported major, run `pnpm runtime set node 24.x`, review the manifest and lockfile, and repeat the checks above. Commit the generated lockfile, including its pnpm boot document and runtime checksums. Dependency upgrades, especially Drizzle RC changes, need the full validation pipeline and should not be mixed with unrelated features.
+`pnpm check` applies Biome fixes. Scope dependency changes to the owning package; keep `devEngines.runtime`, `engines`, `.node-version`, Node types, CI, and container runtimes aligned on Node 24. pnpm 12.15.0 manages the project runtime; verify it with `pnpm node --version`. To update Node within the supported major, run `pnpm runtime set node 24.x`, review the manifest and lockfile, and repeat the checks above. Commit the generated lockfile, including its pnpm boot document and runtime checksums. Dependency upgrades, especially Drizzle RC changes, need the full validation pipeline and should not be mixed with unrelated features.
 
 Husky runs lint-staged on staged files and Cocogitto on commit messages; install the CLI below before committing. CI is authoritative; local hooks do not replace it.
 
