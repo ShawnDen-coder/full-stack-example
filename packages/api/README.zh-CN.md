@@ -60,3 +60,7 @@ pnpm --filter server test
 ```
 
 认证、数据库或队列行为变更还要使用专用测试服务运行 `pnpm test:integration`。API 契约变化时同步 web 调用方并运行 `pnpm check-types`。本包不启动 Worker 消费者，也不通过 RPC context 暴露原始数据库。
+
+## 角色与页面授权
+
+[实现与扩展规则](../../docs/access-control.zh-CN.md)。

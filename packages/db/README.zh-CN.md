@@ -63,3 +63,7 @@ pnpm test:integration
 ```
 
 集成测试要求专用的 `TEST_DATABASE_URL` 和 `TEST_REDIS_URL`。权限测试会修改固定 app_server／app_worker 角色及 public schema 授权。保留历史无归属 Todo 不可访问的策略；数据回填或归属变更需要单独明确的迁移方案。
+
+## 角色与页面授权
+
+[实现与扩展规则](../../docs/access-control.zh-CN.md)。

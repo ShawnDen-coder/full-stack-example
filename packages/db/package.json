@@ -15,7 +15,8 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate:deploy": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
-		"db:migrate": "drizzle-kit migrate"
+		"db:migrate": "drizzle-kit migrate",
+		"admin:bootstrap": "tsx src/bootstrap-admin.ts"
 	},
 	"dependencies": {
 		"drizzle-orm": "catalog:",
@@ -27,7 +28,8 @@
 		"@types/pg": "catalog:",
 		"drizzle-kit": "1.0.0-rc.4",
 		"typescript": "catalog:",
-		"varlock": "catalog:"
+		"varlock": "catalog:",
+		"tsx": "^4.23.13"
 	},
 	"files": [
 		"src",

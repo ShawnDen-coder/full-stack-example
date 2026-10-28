@@ -4,6 +4,16 @@ async function mockSession(
 	page: Page,
 	authenticated: boolean | (() => boolean) = true,
 ) {
+	await page.route("**/rpc/access/me", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					pages: ["todos", "dashboard", "tasks", "apps", "chats"],
+				},
+			},
+		}),
+	);
 	const date = new Date().toISOString();
 	await page.route("**/api/auth/**", (route) =>
 		route.fulfill({
@@ -40,6 +50,7 @@ test("keyboard navigation and form validation expose actionable errors", async (
 }, testInfo) => {
 	await mockSession(page, false);
 	await page.goto("/sign-in");
+	await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
 	const skip = page.getByRole("link", { name: "Skip to main content" });
 	await expect(skip).toBeAttached();
 	await page.keyboard.press("Tab");
@@ -326,64 +337,19 @@ test("upstream pages render, filters follow history and task dialogs work", asyn
 	expect(errors).toEqual([]);
 });
 
-test("complete admin navigation, users, settings and page galleries are reachable", async ({
+test("ordinary users keep settings but cannot enter administration", async ({
 	page,
-}, testInfo) => {
+}) => {
 	await mockSession(page);
-	await page.setViewportSize({ width: 1440, height: 1000 });
 	await page.goto("/settings/appearance");
-	await page.getByText("Light", { exact: true }).click();
-	await page.getByRole("link", { name: "Users", exact: true }).click();
-	await expect(page.getByRole("heading", { name: "User List" })).toBeVisible();
-	for (const group of ["General", "Pages", "Other"])
-		await expect(page.getByText(group, { exact: true })).toBeVisible();
-	await expect(page.getByRole("row")).toHaveCount(11);
-	await page.screenshot({ path: testInfo.outputPath("users-desktop.png") });
-	await page.getByRole("button", { name: "Add User", exact: true }).click();
-	await expect(page.getByRole("dialog")).toBeVisible();
-	await page.keyboard.press("Escape");
-	await page.getByRole("button", { name: "Invite User", exact: true }).click();
-	await expect(page.getByRole("dialog")).toBeVisible();
-	await page.keyboard.press("Escape");
-	await page.getByRole("link", { name: "Chats 3", exact: true }).click();
 	await expect(
-		page.getByRole("heading", { name: "Your messages" }),
-	).toBeVisible();
-	await page.screenshot({ path: testInfo.outputPath("chats-desktop.png") });
-	for (const route of ["account", "notifications", "display"]) {
-		await page.goto(`/settings/${route}`);
-		await expect(
-			page.getByText(/Demo form; changes are not saved/),
-		).toBeVisible();
-	}
-	await page.getByRole("button", { name: "Open theme settings" }).click();
+		page.getByRole("link", { name: "Users", exact: true }),
+	).toHaveCount(0);
+	await page.goto("/admin/users");
+	await expect(page).toHaveURL(/\/no-access$/);
 	await expect(
-		page.getByRole("dialog", { name: "Theme Settings" }),
+		page.getByRole("heading", { name: "Page access required" }),
 	).toBeVisible();
-	await page.keyboard.press("Escape");
-	await page.goto("/errors/forbidden");
-	await expect(
-		page.getByRole("heading", { name: "403", exact: true }),
-	).toBeVisible();
-	await page.getByRole("link", { name: "Help Center", exact: true }).click();
-	await expect(
-		page.getByRole("heading", { name: "Coming Soon!" }),
-	).toBeVisible();
-	await page.locator('[data-sidebar="trigger"]').click();
-	await page.getByRole("button", { name: "Settings", exact: true }).click();
-	await page.getByRole("menuitem", { name: "Account", exact: true }).click();
+	await page.getByRole("link", { name: "Account settings" }).click();
 	await expect(page).toHaveURL(/\/settings\/account$/);
-	await mockSession(page, false);
-	await page.goto("/sign-in-2");
-	await expect(
-		page.getByRole("button", { name: "Sign In", exact: true }),
-	).toBeVisible();
-	await page.goto("/forgot-password");
-	await expect(
-		page.getByRole("button", { name: "Continue", exact: true }),
-	).toBeVisible();
-	await page.goto("/otp");
-	await expect(
-		page.getByRole("button", { name: "Verify", exact: true }),
-	).toBeVisible();
 });

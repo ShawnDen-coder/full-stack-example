@@ -491,6 +491,19 @@ test("production runtime roles can perform their work but cannot change schema o
 		const workerClient = worker.$client;
 		await server.$client.query('SELECT id FROM public."user" LIMIT 1');
 		await server.$client.query("SELECT id FROM public.todo LIMIT 1");
+		for (const table of [
+			"organization",
+			"member",
+			"organization_role",
+			"invitation",
+		]) {
+			await serverClient.query(`SELECT id FROM public.${table} LIMIT 1`);
+			await assert.rejects(
+				() => workerClient.query(`SELECT id FROM public.${table}`),
+				{ code: "42501" },
+			);
+		}
+
 		await worker.$client.query(
 			'SELECT id, name, email_verified FROM public."user" LIMIT 1',
 		);

@@ -198,3 +198,5 @@ const status = await client.users.getProfileReadJob({ id: job.id });
 需要登录的页面放在 `_auth` 布局下，查询键包含当前用户 ID。身份发生变化时，会话边界组件会取消并清除查询缓存，使路由上下文失效；来自旧身份的延迟 RPC 响应会被拒绝。收到 `UNAUTHORIZED` 响应后，清除私有状态并跳转到登录页，返回地址仅接受经过校验的相对路径。写操作统一显示错误通知，页面可通过自己的 `onError` 覆盖。不要自动重试写操作。
 
 [前端路由与 Shadcn Admin 集成](frontend.zh-CN.md)
+
+[角色与页面授权](access-control.zh-CN.md)

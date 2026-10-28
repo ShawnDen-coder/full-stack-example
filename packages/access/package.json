@@ -1,0 +1,21 @@
+{
+	"name": "@full-stack-example/access",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./auth": "./src/auth.ts"
+	},
+	"scripts": {
+		"build": "tsc -b",
+		"check-types": "tsc -b",
+		"test": "node --import tsx --test tests/*.test.ts"
+	},
+	"dependencies": {
+		"better-auth": "catalog:"
+	},
+	"devDependencies": {
+		"typescript": "catalog:",
+		"tsx": "^4.23.13"
+	}
+}

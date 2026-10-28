@@ -8,7 +8,7 @@ export function SignUpForm() {
 		<SignUpFormImpl
 			returnTo={safeReturnTo(search.redirect)}
 			onSwitchToSignIn={() =>
-				void navigate({ to: "/sign-in", search: { redirect: "/tasks" } })
+				void navigate({ to: "/sign-in", search: { redirect: "/" } })
 			}
 		/>
 	);

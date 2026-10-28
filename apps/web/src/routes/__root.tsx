@@ -78,8 +78,17 @@ function RootComponent() {
 				disableTransitionOnChange
 				storageKey="vite-ui-theme"
 			>
+				{/* biome-ignore lint/a11y/useValidAnchor: A skip link retains its section destination while moving focus without a router reload. */}
 				<a
 					href="#content"
+					onClick={(event) => {
+						const content = document.getElementById("content");
+						if (content) {
+							event.preventDefault();
+							content.focus();
+							content.scrollIntoView();
+						}
+					}}
 					className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-background focus:p-3 focus:text-foreground focus:outline focus:outline-ring"
 				>
 					Skip to main content

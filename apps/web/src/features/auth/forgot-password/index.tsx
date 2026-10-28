@@ -31,7 +31,7 @@ export function ForgotPassword() {
 						Don't have an account?{" "}
 						<Link
 							to="/sign-up"
-							search={{ redirect: "/tasks" }}
+							search={{ redirect: "/" }}
 							className="underline underline-offset-4 hover:text-primary"
 						>
 							Sign up

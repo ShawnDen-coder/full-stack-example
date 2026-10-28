@@ -46,7 +46,8 @@
 		"release": "cog bump --auto",
 		"docs:dev": "pnpm --filter @full-stack-example/docs dev:site",
 		"docs:build": "pnpm --filter @full-stack-example/docs build:site",
-		"docs:preview": "pnpm --filter @full-stack-example/docs preview:site"
+		"docs:preview": "pnpm --filter @full-stack-example/docs preview:site",
+		"admin:bootstrap": "pnpm --filter @full-stack-example/db admin:bootstrap"
 	},
 	"dependencies": {
 		"zod": "catalog:"

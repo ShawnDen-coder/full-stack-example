@@ -5,7 +5,7 @@ export function safeReturnTo(value: unknown) {
 		value.startsWith("//") ||
 		value.includes("\\")
 	)
-		return "/tasks";
+		return "/";
 	const url = new URL(value, "https://local.invalid");
 	if (
 		url.origin !== "https://local.invalid" ||
@@ -19,6 +19,6 @@ export function safeReturnTo(value: unknown) {
 			"/otp",
 		].includes(url.pathname.replace(/\/+$/, ""))
 	)
-		return "/tasks";
+		return "/";
 	return `${url.pathname}${url.search}${url.hash}`;
 }

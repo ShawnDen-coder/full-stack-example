@@ -161,3 +161,7 @@ pnpm --filter @full-stack-example/domain check-types
 Use `pnpm test:integration` with dedicated PostgreSQL/Redis for changes to SQL,
 transactions, job retries or trace propagation. Cover cross-user access and
 failure recovery. Worker code must not import API or browser/session modules.
+
+## Roles and page access
+
+[Implementation and extension rules](../../docs/access-control.md).

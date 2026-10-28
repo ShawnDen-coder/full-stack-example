@@ -30,7 +30,7 @@ export function Otp() {
 						Haven't received it?{" "}
 						<Link
 							to="/sign-in"
-							search={{ redirect: "/tasks" }}
+							search={{ redirect: "/" }}
 							className="underline underline-offset-4 hover:text-primary"
 						>
 							Back to sign in.

@@ -10,7 +10,7 @@ async function signup(page: Page, name: string) {
 	await page.getByLabel("Email", { exact: true }).fill(email);
 	await page.getByLabel("Password", { exact: true }).fill(password);
 	await page.getByRole("button", { name: "Sign Up", exact: true }).click();
-	await expect(page).toHaveURL(/\/tasks$/);
+	await expect(page).toHaveURL(/\/todos$/);
 	await page.getByRole("link", { name: "Todos", exact: true }).click();
 	await expect(page).toHaveURL(/\/todos$/);
 	return email;
@@ -295,7 +295,7 @@ test("legacy auth URLs preserve return paths and reject authentication loops", a
 	await page.getByRole("button", { name: "Sign Up", exact: true }).click();
 	await expect(page).toHaveURL(/\/settings\/appearance$/);
 	await page.goto("/sign-in?redirect=%2Fsign-up");
-	await expect(page).toHaveURL(/\/tasks$/);
+	await expect(page).toHaveURL(/\/todos$/);
 	await page.goto("/register?redirect=https%3A%2F%2Fexample.com");
-	await expect(page).toHaveURL(/\/tasks$/);
+	await expect(page).toHaveURL(/\/todos$/);
 });

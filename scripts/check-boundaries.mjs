@@ -4,15 +4,16 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 
 export const boundaryRules = {
-	"apps/web": ["ui", "api"],
+	"apps/web": ["ui", "api", "access"],
 	"apps/server": ["api", "domain", "db", "queue", "observability"],
 	"apps/worker": ["domain", "db", "queue", "observability"],
-	"packages/api": ["domain", "db", "queue", "observability"],
+	"packages/api": ["access", "domain", "db", "queue", "observability"],
 	"packages/domain": ["db", "queue", "observability"],
 	"packages/db": ["observability"],
 	"packages/queue": [],
 	"packages/observability": [],
 	"packages/ui": [],
+	"packages/access": [],
 };
 
 function files(directory) {
