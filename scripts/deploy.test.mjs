@@ -37,7 +37,14 @@ test("migration failure prevents application replacement", () => {
 });
 test("deployment waits for dependencies and migration before starting applications", () => {
 	const calls = [];
-	deploy(env, (_command, args) => {
+	deploy(env, (command, args, options) => {
+		assert.equal(command, "podman");
+		assert.deepEqual(args.slice(0, 3), [
+			"compose",
+			"-f",
+			"container/compose.production.yml",
+		]);
+		assert.equal(options.env, env);
 		calls.push(args.slice(3));
 		return { status: 0 };
 	});

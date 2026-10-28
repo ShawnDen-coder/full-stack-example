@@ -3,7 +3,7 @@ name: full-stack-example
 # TLS terminates at an external reverse proxy forwarding to 127.0.0.1:8080.
 services:
   postgres:
-    image: postgres:18
+    image: docker.io/library/postgres:18
     environment:
       POSTGRES_USER: postgres
       POSTGRES_DB: app
@@ -17,7 +17,7 @@ services:
       retries: 20
     restart: unless-stopped
   redis:
-    image: redis:7-alpine
+    image: docker.io/library/redis:7-alpine
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
     volumes:
       - redis_data:/data
@@ -28,7 +28,7 @@ services:
       retries: 20
     restart: unless-stopped
   migrate:
-    image: ${COMPOSE_PROJECT_NAME:-full-stack-example}-server
+    image: localhost/${COMPOSE_PROJECT_NAME:-full-stack-example}-server
     init: true
     environment:
       DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set migration owner URL}
@@ -40,7 +40,7 @@ services:
         condition: service_healthy
     restart: "no"
   provision:
-    image: ${COMPOSE_PROJECT_NAME:-full-stack-example}-server
+    image: localhost/${COMPOSE_PROJECT_NAME:-full-stack-example}-server
     init: true
     environment:
       MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set migration owner URL}
@@ -52,7 +52,7 @@ services:
         condition: service_completed_successfully
     restart: "no"
   server:
-    image: ${COMPOSE_PROJECT_NAME:-full-stack-example}-server
+    image: localhost/${COMPOSE_PROJECT_NAME:-full-stack-example}-server
     build:
       context: ..
       dockerfile: container/server/Dockerfile
@@ -81,6 +81,7 @@ services:
     stop_grace_period: 40s
     restart: unless-stopped
   worker:
+    image: localhost/${COMPOSE_PROJECT_NAME:-full-stack-example}-worker
     build:
       context: ..
       dockerfile: container/worker/Dockerfile
@@ -107,6 +108,7 @@ services:
     stop_grace_period: 40s
     restart: unless-stopped
   web:
+    image: localhost/${COMPOSE_PROJECT_NAME:-full-stack-example}-web
     build:
       context: ..
       dockerfile: container/web/Dockerfile

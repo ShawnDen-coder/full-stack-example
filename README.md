@@ -8,7 +8,9 @@ Built with React / TanStack Router, Hono / oRPC, Better Auth, Drizzle / PostgreS
 
 ## Quick start
 
-Install pnpm 12.15.0 and Docker Compose. pnpm downloads and manages Node.js 24 for this project via `devEngines.runtime` in `package.json`; the exact version and checksums are committed in `pnpm-lock.yaml`. Run from the repository root:
+Set up Podman and its Compose provider using the [container guide](container/README.md#local-development), then verify `podman info` and `podman compose version`. On Windows/macOS, start your Podman machine before running infrastructure commands.
+
+Install pnpm 12.15.0 and Podman Compose. pnpm downloads and manages Node.js 24 for this project via `devEngines.runtime` in `package.json`; the exact version and checksums are committed in `pnpm-lock.yaml`. Run from the repository root:
 
 ```bash
 pnpm install --frozen-lockfile

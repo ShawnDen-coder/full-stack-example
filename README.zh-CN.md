@@ -8,7 +8,9 @@
 
 ## 快速开始
 
-准备 pnpm 12.15.0 和 Docker Compose。pnpm 通过 `package.json` 的 `devEngines.runtime` 自动下载并管理项目使用的 Node.js 24，具体版本和校验信息提交在 `pnpm-lock.yaml` 中。在仓库根目录执行：
+按[容器指南](container/README.zh-CN.md#本地开发)配置 Podman 和 Compose provider，并确认 `podman info`、`podman compose version` 正常。Windows/macOS 执行基础设施命令前，先启动 Podman machine。
+
+准备 pnpm 12.15.0 和 Podman Compose。pnpm 通过 `package.json` 的 `devEngines.runtime` 自动下载并管理项目使用的 Node.js 24，具体版本和校验信息提交在 `pnpm-lock.yaml` 中。在仓库根目录执行：
 
 ```bash
 pnpm install --frozen-lockfile

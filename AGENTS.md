@@ -28,6 +28,6 @@ Todo SQL lives in `packages/domain/src/todos/repository.ts`. Bind the authentica
 
 Each shared package has bilingual `README.md` / `README.zh-CN.md` extension guides. Read the owning package's guide before adding an export, business operation, schema, job, instrument or component; update it when its extension contract changes. Root READMEs link to these guides, and `docs/development.md` / `docs/development.zh-CN.md` describe application wiring.
 
-PostgreSQL and Redis run through Docker Compose (`pnpm infra:up`). Initialize local configuration with `pnpm env:init`. Apply committed migrations with `pnpm db:migrate` before starting the app with `pnpm dev`.
+PostgreSQL and Redis run through Podman Compose (`pnpm infra:up`). Initialize local configuration with `pnpm env:init`. Apply committed migrations with `pnpm db:migrate` before starting the app with `pnpm dev`.
 
 Keep secrets and local `.env` files out of Git. Follow the existing generated code conventions and keep dependency changes scoped to the package that needs them. Use concise conventional commit subjects.

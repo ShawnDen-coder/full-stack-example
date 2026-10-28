@@ -68,7 +68,7 @@ export function deploy(env, run = spawnSync) {
 	validateProductionEnv(env);
 	const compose = (...args) => {
 		const result = run(
-			"docker",
+			"podman",
 			["compose", "-f", "container/compose.production.yml", ...args],
 			{ stdio: "inherit", env },
 		);

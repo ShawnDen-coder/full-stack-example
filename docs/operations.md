@@ -6,7 +6,7 @@ Deploy, migrate, tune runtime limits, and recover production services. For local
 
 ## Production deployment
 
-The supported baseline is one Docker Compose host behind an HTTPS reverse proxy.
+The supported baseline is one Podman Compose host behind an HTTPS reverse proxy.
 `container/compose.yml` is for local development; `container/compose.production.yml` is the
 independent production stack. All browser requests use one public HTTPS origin.
 
@@ -24,10 +24,10 @@ Worker can only read user profiles. Runtime roles cannot change the schema.
 Never reuse development or CI credentials.
 
 ```bash
-pnpm docker:up
-pnpm docker:logs
+pnpm podman:up
+pnpm podman:logs
 # Stop containers while preserving data volumes:
-pnpm docker:down
+pnpm podman:down
 ```
 
 The deployment command builds images, waits for PostgreSQL and Redis, runs a
@@ -103,7 +103,7 @@ only when they remain compatible with the current schema. There is no automatic
 destructive down-migration. For a database restore, stop producers and consumers,
 restore into a fresh database, verify schema and ownership, then start services
 against that database. Reconcile queued jobs before resuming consumers. Never use
-`docker compose down -v` as part of a production update.
+`podman compose down -v` as part of a production update.
 
 ## Observability
 
