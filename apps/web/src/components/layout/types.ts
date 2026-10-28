@@ -1,4 +1,5 @@
 import type { LinkProps } from "@tanstack/react-router";
+import type { LucideIcon } from "lucide-react";
 
 type User = {
 	name: string;
@@ -15,7 +16,7 @@ type Team = {
 type BaseNavItem = {
 	title: string;
 	badge?: string;
-	icon?: React.ElementType;
+	icon?: LucideIcon;
 };
 
 type NavLink = BaseNavItem & {
