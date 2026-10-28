@@ -1,5 +1,5 @@
 FROM node:24-slim AS builder
-RUN npm install -g pnpm@11.0.9
+RUN npm install -g pnpm@12.15.0
 WORKDIR /workspace
 COPY . .
 RUN pnpm install --frozen-lockfile

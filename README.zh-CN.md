@@ -8,15 +8,18 @@
 
 ## 快速开始
 
-准备 Node.js 24、pnpm 11.0.9 和 Docker Compose，在仓库根目录执行：
+准备 pnpm 12.15.0 和 Docker Compose。pnpm 通过 `package.json` 的 `devEngines.runtime` 自动下载并管理项目使用的 Node.js 24，具体版本和校验信息提交在 `pnpm-lock.yaml` 中。在仓库根目录执行：
 
 ```bash
 pnpm install --frozen-lockfile
+pnpm node --version
 pnpm env:init
 pnpm infra:up
 pnpm db:migrate
 pnpm dev
 ```
+
+已有 Node.js/npm 时，可运行 `npm install -g pnpm@12.15.0` 安装 pnpm。直接执行 Node 命令用 `pnpm node`，项目工具用 `pnpm run` / `pnpm exec`。系统的 `node --version` 仍可能显示其他版本；如需让裸 `node` 命令也跟随项目，执行一次 `pnpm shim add node`，并确保 `pnpm bin -g` 对应目录在 `PATH` 中优先于其他 Node 安装目录（若未配置全局目录，先运行 `pnpm setup` 并重新打开终端）。无需另外安装 Node 版本管理器。`.node-version` 保留为其他工具的 Node 24 提示；pnpm 以 manifest 和锁文件为准。
 
 `env:init` 会创建不纳入 Git 的本地配置，生成随机认证密钥，并保留已有文件。上述流程面向新数据库；如果已有通过 `db:push` 创建的数据库，请先阅读[迁移说明](docs/operations.zh-CN.md#数据库迁移)。
 
