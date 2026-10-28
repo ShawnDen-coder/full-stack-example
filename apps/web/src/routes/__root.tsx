@@ -23,7 +23,7 @@ export interface RouterAppContext {
 export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootComponent,
 	errorComponent: ({ reset }) => (
-		<main className="p-8">
+		<main id="content" tabIndex={-1} className="p-8">
 			<h1>Something went wrong</h1>
 			<p>Please try again.</p>
 			<button type="button" onClick={reset}>
@@ -32,7 +32,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 		</main>
 	),
 	notFoundComponent: () => (
-		<main className="p-8">
+		<main id="content" tabIndex={-1} className="p-8">
 			<h1>Page not found</h1>
 			<Link to="/">Go home</Link>
 		</main>
@@ -69,7 +69,9 @@ function RootComponent() {
 				<div className="grid h-svh grid-rows-[auto_1fr]">
 					<SessionBoundary>
 						<Header />
-						<Outlet />
+						<main id="content" tabIndex={-1} className="min-w-0">
+							<Outlet />
+						</main>
 					</SessionBoundary>
 				</div>
 				<Toaster richColors />

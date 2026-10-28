@@ -11,12 +11,26 @@ export default function Header() {
 	] as const;
 
 	return (
-		<div>
+		<header>
+			<a
+				href="#content"
+				className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-background focus:p-3 focus:text-foreground focus:outline focus:outline-ring"
+			>
+				Skip to main content
+			</a>
 			<div className="flex flex-row items-center justify-between px-2 py-1">
-				<nav className="flex gap-4 text-lg">
+				<nav aria-label="Main navigation" className="flex gap-4 text-lg">
 					{links.map(({ to, label }) => {
 						return (
-							<Link key={to} to={to}>
+							<Link
+								key={to}
+								to={to}
+								activeOptions={{ exact: true }}
+								activeProps={{
+									className: "font-semibold underline underline-offset-4",
+									"aria-current": "page",
+								}}
+							>
 								{label}
 							</Link>
 						);
@@ -28,6 +42,6 @@ export default function Header() {
 				</div>
 			</div>
 			<hr />
-		</div>
+		</header>
 	);
 }

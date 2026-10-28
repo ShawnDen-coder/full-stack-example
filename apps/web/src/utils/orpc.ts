@@ -48,7 +48,13 @@ export function createQueryClient() {
 					!isUnauthorized(error) && error.name !== "AbortError" && count < 2,
 			},
 		},
-		queryCache: new QueryCache({ onError: reportError }),
+		queryCache: new QueryCache({
+			onError: (error, query) => {
+				// Authentication failures must always reach the session boundary.
+				if (isUnauthorized(error) || !query.meta?.errorHandledLocally)
+					reportError(error);
+			},
+		}),
 		mutationCache: new MutationCache({
 			onError: (error, _variables, _context, mutation) => {
 				if (isUnauthorized(error) || !mutation.options.onError)
