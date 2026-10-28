@@ -27,6 +27,7 @@ function TodosRoute() {
 	const todos = useQuery({
 		...orpc.todo.list.queryOptions({ input: { cursor, limit: 20 } }),
 		queryKey: [...queryKey, cursor],
+		meta: { errorHandledLocally: true },
 	});
 	const refresh = async () => {
 		await queryClient.invalidateQueries({ queryKey });
@@ -83,15 +84,34 @@ function TodosRoute() {
 							{createMutation.isPending ? "Adding..." : "Add"}
 						</Button>
 					</form>
+					{todos.isError && todos.data && (
+						<div role="alert" className="mb-4 space-y-2">
+							<p>
+								Unable to refresh your tasks. Showing previously loaded tasks.
+							</p>
+							<Button
+								variant="outline"
+								disabled={todos.isFetching}
+								onClick={() => void todos.refetch()}
+							>
+								{todos.isFetching ? "Retrying..." : "Retry"}
+							</Button>
+						</div>
+					)}
 					{todos.isPending ? (
 						<div role="status">
 							<Loader2 className="h-6 w-6 animate-spin" />
 							<span className="sr-only">Loading tasks</span>
 						</div>
-					) : todos.isError ? (
+					) : !todos.data ? (
 						<div role="alert">
 							<p>Unable to load your tasks.</p>
-							<Button onClick={() => void todos.refetch()}>Retry</Button>
+							<Button
+								disabled={todos.isFetching}
+								onClick={() => void todos.refetch()}
+							>
+								{todos.isFetching ? "Retrying..." : "Retry"}
+							</Button>
 						</div>
 					) : todos.data.items.length === 0 ? (
 						<p className="py-4 text-center">No todos yet. Add one above!</p>

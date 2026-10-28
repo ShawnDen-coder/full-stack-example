@@ -67,10 +67,16 @@ export default function SignUpForm({
 			<h1 className="mb-6 text-center font-bold text-3xl">Create Account</h1>
 
 			<form
+				noValidate
 				onSubmit={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
-					form.handleSubmit();
+					const element = e.currentTarget;
+					void form.handleSubmit().then(() => {
+						element
+							.querySelector<HTMLInputElement>('[aria-invalid="true"]')
+							?.focus();
+					});
 				}}
 				className="space-y-4"
 			>
@@ -82,15 +88,28 @@ export default function SignUpForm({
 								<Input
 									id={field.name}
 									name={field.name}
+									aria-invalid={field.state.meta.errors.length > 0}
+									aria-describedby={
+										field.state.meta.errors.length > 0
+											? `${field.name}-errors`
+											: undefined
+									}
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
-								{field.state.meta.errors.map((error) => (
-									<p key={error?.message} className="text-red-500">
-										{error?.message}
-									</p>
-								))}
+								{field.state.meta.errors.length > 0 && (
+									<div id={`${field.name}-errors`} role="alert">
+										{field.state.meta.errors.map((error) => (
+											<p
+												key={error?.message}
+												className="text-destructive text-sm"
+											>
+												{error?.message}
+											</p>
+										))}
+									</div>
+								)}
 							</div>
 						)}
 					</form.Field>
@@ -104,16 +123,29 @@ export default function SignUpForm({
 								<Input
 									id={field.name}
 									name={field.name}
+									aria-invalid={field.state.meta.errors.length > 0}
+									aria-describedby={
+										field.state.meta.errors.length > 0
+											? `${field.name}-errors`
+											: undefined
+									}
 									type="email"
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
-								{field.state.meta.errors.map((error) => (
-									<p key={error?.message} className="text-red-500">
-										{error?.message}
-									</p>
-								))}
+								{field.state.meta.errors.length > 0 && (
+									<div id={`${field.name}-errors`} role="alert">
+										{field.state.meta.errors.map((error) => (
+											<p
+												key={error?.message}
+												className="text-destructive text-sm"
+											>
+												{error?.message}
+											</p>
+										))}
+									</div>
+								)}
 							</div>
 						)}
 					</form.Field>
@@ -127,16 +159,29 @@ export default function SignUpForm({
 								<Input
 									id={field.name}
 									name={field.name}
+									aria-invalid={field.state.meta.errors.length > 0}
+									aria-describedby={
+										field.state.meta.errors.length > 0
+											? `${field.name}-errors`
+											: undefined
+									}
 									type="password"
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
-								{field.state.meta.errors.map((error) => (
-									<p key={error?.message} className="text-red-500">
-										{error?.message}
-									</p>
-								))}
+								{field.state.meta.errors.length > 0 && (
+									<div id={`${field.name}-errors`} role="alert">
+										{field.state.meta.errors.map((error) => (
+											<p
+												key={error?.message}
+												className="text-destructive text-sm"
+											>
+												{error?.message}
+											</p>
+										))}
+									</div>
+								)}
 							</div>
 						)}
 					</form.Field>
@@ -161,11 +206,7 @@ export default function SignUpForm({
 			</form>
 
 			<div className="mt-4 text-center">
-				<Button
-					variant="link"
-					onClick={onSwitchToSignIn}
-					className="text-indigo-600 hover:text-indigo-800"
-				>
+				<Button variant="link" onClick={onSwitchToSignIn}>
 					Already have an account? Sign In
 				</Button>
 			</div>
