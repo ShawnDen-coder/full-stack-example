@@ -18,9 +18,9 @@ and API queries belong to the web application.
 ## Extend
 
 1. Put reusable primitives under `src/components`; keep feature composition under
-   [web](../../apps/web/src). Follow the existing Base UI/shadcn conventions,
+   [web](../../apps/web/src). Follow the existing Radix/shadcn conventions,
    prop typing, variants and `cn` utility rather than adding a parallel UI system.
-2. Reuse semantic CSS tokens from `src/styles/globals.css`. Make theme changes
+2. Reuse semantic CSS tokens from `src/styles/theme.css`. Make theme changes
    there rather than scattering fixed colors across consumers.
 3. Use filenames matching the export patterns. A new `.tsx` primitive is imported
    as `@full-stack-example/ui/components/name`; normally no root barrel is needed.
@@ -64,10 +64,6 @@ are independent of icon dimensions. Icons are decorative by default; label the
 containing button or provide `aria-label` / `aria-labelledby` on a standalone icon.
 This does not replace the visible or screen-reader status text for a loader.
 
-The desktop Figma controls use 6px radius, list/menu surfaces 8px, inset panels
-12px, 36px controls and 48px task rows. These are the agreed next layout targets;
-existing generated controls retain their current geometry until that layout is
-implemented. See the [desktop design](https://www.figma.com/design/pLdKCBQfL4BxqiTiO0TcuK/FullStack-Example?node-id=12-300).
 
 ## Example: add a shared PendingButton
 
@@ -129,3 +125,16 @@ pnpm --filter web build
 Inspect the consuming screen in light/dark themes and with keyboard navigation.
 For authentication or interaction changes, run `pnpm test:e2e` against dedicated
 test services. Shared primitives must not import domain, database or server code.
+
+## Shadcn Admin source
+
+The shared primitives and theme are adapted from satnaing/shadcn-admin at
+`e16c87f213a5ba5e45964e9b67c792105ec74d26`. See
+[the migration notes](../../docs/frontend.md) and
+[MIT notice](../../third-party/shadcn-admin.LICENSE).
+Use Radix `asChild` composition, not Base UI `render`. The former unused chat
+primitives (attachment, bubble, marker, message, message-scroller, input-group,
+empty) have been removed; add future components using the same Radix baseline.
+Tokens live in `src/styles/theme.css`; global rules live in `globals.css`.
+Do not blindly regenerate customized sidebar, sheet, dialog, dropdown-menu,
+separator or sonner components: review upstream changes and local adaptations.

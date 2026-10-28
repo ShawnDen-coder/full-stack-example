@@ -16,8 +16,8 @@
 
 ## 扩展步骤
 
-1. 可复用基础组件放入 `src/components`，业务组合留在 [web](../../apps/web/src)。沿用现有 Base UI／shadcn 约定、props 类型、variants 和 `cn`，不再并行引入一套 UI 体系。
-2. 复用 `src/styles/globals.css` 中的语义 token。主题调整在这里集中完成，避免在调用方分散硬编码颜色。
+1. 可复用基础组件放入 `src/components`，业务组合留在 [web](../../apps/web/src)。沿用现有 Radix／shadcn 约定、props 类型、variants 和 `cn`，不再并行引入一套 UI 体系。
+2. 复用 `src/styles/theme.css` 中的语义 token。主题调整在这里集中完成，避免在调用方分散硬编码颜色。
 3. 文件名与导出模式保持一致。新增 `.tsx` 组件可通过 `@full-stack-example/ui/components/name` 引入，通常不需要新增根 barrel。
 4. 保证标签、键盘／焦点行为、禁用和错误状态可访问。某个业务的加载、空状态和写入失败提示由 web 页面负责。
 5. 使用 shadcn 生成时遵循 [UI 定制说明](../../docs/development.zh-CN.md#ui-定制)，审查生成的依赖和配置变更。UI 库依赖放在本包，应用专用库留在 web。
@@ -53,9 +53,7 @@ viewBox、描边 2、圆润线头与转角；描边随图形缩放。保留 `cur
 默认图标仅作装饰；为外层按钮提供名称，独立图标则可传 `aria-label` 或
 `aria-labelledby`。加载图标仍需配合可见或读屏状态文本。
 
-桌面 Figma 规范采用控件圆角 6px、列表／菜单圆角 8px、内嵌面板圆角 12px、
-控件高度 36px 和任务行高 48px。这些是下一阶段布局实现的目标；现有生成控件的
-几何样式保留到布局落地时统一更新。[查看桌面设计](https://www.figma.com/design/pLdKCBQfL4BxqiTiO0TcuK/FullStack-Example?node-id=12-300)。
+以 Shadcn Admin 接入后的组件样式和 token 为当前规范，早期 Figma 稿保留作历史参考。
 
 ## 示例：增加共享 PendingButton
 
@@ -106,3 +104,16 @@ pnpm --filter web build
 ```
 
 在实际使用页面检查浅色／深色主题和键盘导航。认证或交互变更还需使用专用测试服务运行 `pnpm test:e2e`。共享基础组件不导入 domain、数据库或服务端代码。
+
+## Shadcn Admin 来源
+
+共享基础组件与主题取自 satnaing/shadcn-admin 提交
+`e16c87f213a5ba5e45964e9b67c792105ec74d26`。参见
+[迁移说明](../../docs/frontend.zh-CN.md) 和
+[MIT 声明](../../third-party/shadcn-admin.LICENSE)。
+统一采用 Radix 的 `asChild`，不再使用 Base UI 的 `render` 组合方式。
+移除了未被应用使用的 attachment、bubble、marker、message、
+message-scroller、input-group、empty 生成组件。后续组件沿用 Radix 基线。
+主题 token 位于 `src/styles/theme.css`，全局规则位于 `globals.css`。
+sidebar、sheet、dialog、dropdown-menu、separator、sonner 等定制组件
+更新时需人工审查差异，不能直接用 CLI 覆盖。

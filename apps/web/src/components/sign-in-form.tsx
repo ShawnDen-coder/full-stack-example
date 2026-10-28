@@ -60,9 +60,12 @@ export default function SignInForm({
 	}
 
 	return (
-		<div className="mx-auto mt-10 w-full max-w-md p-6">
-			<h1 className="mb-6 text-center font-bold text-3xl">Welcome Back</h1>
+		<div className="w-full">
+			<h1 className="mb-2 font-semibold text-xl tracking-tight">Sign in</h1>
 
+			<p className="mb-6 text-muted-foreground text-sm">
+				Enter your email and password to access your account.
+			</p>
 			<form
 				noValidate
 				onSubmit={(e) => {
@@ -92,6 +95,7 @@ export default function SignInForm({
 											: undefined
 									}
 									type="email"
+									autoComplete="email"
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
@@ -128,6 +132,7 @@ export default function SignInForm({
 											: undefined
 									}
 									type="password"
+									autoComplete="current-password"
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}

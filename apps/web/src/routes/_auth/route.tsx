@@ -1,4 +1,5 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { AppLayout } from "@/components/layout/app-layout";
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
 import { safeReturnTo } from "@/lib/return-to";
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/_auth")({
 		synchronizeIdentity(session.data?.user.id ?? null);
 		if (!session.data) {
 			throw redirect({
-				to: "/login",
+				to: "/sign-in",
 				search: { redirect: safeReturnTo(location.href) },
 			});
 		}
@@ -30,5 +31,5 @@ function AuthLayout() {
 		live.data.user.id !== session.data?.user.id
 	)
 		return <Loader />;
-	return <Outlet />;
+	return <AppLayout />;
 }

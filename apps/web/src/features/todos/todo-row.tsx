@@ -39,7 +39,7 @@ export function TodoRow({
 		requestAnimationFrame(() => editButton.current?.focus());
 	};
 	return (
-		<li className="rounded-md border p-2">
+		<li className="px-4 py-2 text-sm">
 			{editing ? (
 				<TodoEditor todo={todo} busy={busy} onSave={onRename} onClose={close} />
 			) : (

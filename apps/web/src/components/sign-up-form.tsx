@@ -63,9 +63,14 @@ export default function SignUpForm({
 	}
 
 	return (
-		<div className="mx-auto mt-10 w-full max-w-md p-6">
-			<h1 className="mb-6 text-center font-bold text-3xl">Create Account</h1>
+		<div className="w-full">
+			<h1 className="mb-2 font-semibold text-xl tracking-tight">
+				Create an account
+			</h1>
 
+			<p className="mb-6 text-muted-foreground text-sm">
+				Enter your details to create your account.
+			</p>
 			<form
 				noValidate
 				onSubmit={(e) => {
@@ -130,6 +135,7 @@ export default function SignUpForm({
 											: undefined
 									}
 									type="email"
+									autoComplete="email"
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
@@ -166,6 +172,7 @@ export default function SignUpForm({
 											: undefined
 									}
 									type="password"
+									autoComplete="new-password"
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}

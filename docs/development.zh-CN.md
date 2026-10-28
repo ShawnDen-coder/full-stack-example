@@ -117,7 +117,7 @@ Worker 校验任务载荷，并使用自己的 `UsersService` 实例。队列名
 
 本项目的 React 前端通过 `packages/ui` 共享 shadcn/ui 基础组件。
 
-- 在 `packages/ui/src/styles/globals.css` 修改设计变量和全局样式。
+- 在 `packages/ui/src/styles/theme.css` / `packages/ui/src/styles/globals.css` 修改设计变量和全局样式。
 - 在 `packages/ui/src/components/*` 修改共享基础组件。
 - 在 `packages/ui/components.json` 和 `apps/web/components.json` 调整 shadcn 别名或样式配置。
 
@@ -126,7 +126,7 @@ Worker 校验任务载荷，并使用自己的 `UsersService` 实例。队列名
 在项目根目录执行以下命令，将更多基础组件加入共享 UI 包：
 
 ```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+npx shadcn@latest add accordion popover table -c packages/ui
 ```
 
 按以下方式导入共享组件：
@@ -196,3 +196,5 @@ const status = await client.users.getProfileReadJob({ id: job.id });
 `todo.list({ cursor?, limit? })` 返回 `{ items, nextCursor }`，按 ID 降序排列。每页默认 20 条，最多 100 条；游标为上一页最后一条记录的 ID。文本会去除首尾空白，长度限制为 1–500 个字符。创建和切换完成状态操作返回 `{ id, text, completed }`，删除操作返回 `{ id }`。旧的 `todo.getAll` 接口已移除。引入新的查询方式时，应同时增加相应索引和经过审查的迁移，并使用 PostgreSQL 验证。
 
 需要登录的页面放在 `_auth` 布局下，查询键包含当前用户 ID。身份发生变化时，会话边界组件会取消并清除查询缓存，使路由上下文失效；来自旧身份的延迟 RPC 响应会被拒绝。收到 `UNAUTHORIZED` 响应后，清除私有状态并跳转到登录页，返回地址仅接受经过校验的相对路径。写操作统一显示错误通知，页面可通过自己的 `onError` 覆盖。不要自动重试写操作。
+
+[前端路由与 Shadcn Admin 集成](frontend.zh-CN.md)

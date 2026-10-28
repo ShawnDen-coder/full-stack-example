@@ -140,7 +140,7 @@ directly rather than through a scaffolding CLI.
 
 React web apps in this stack share shadcn/ui primitives through `packages/ui`.
 
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
+- Change design tokens and global styles in `packages/ui/src/styles/theme.css` / `packages/ui/src/styles/globals.css`
 - Update shared primitives in `packages/ui/src/components/*`
 - Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
 
@@ -149,7 +149,7 @@ React web apps in this stack share shadcn/ui primitives through `packages/ui`.
 Run this from the project root to add more primitives to the shared UI package:
 
 ```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+npx shadcn@latest add accordion popover table -c packages/ui
 ```
 
 Import shared components like this:
@@ -239,3 +239,5 @@ context when identity changes; delayed RPC responses from an older identity are
 rejected. A `UNAUTHORIZED` response clears private state and returns to login with
 a validated relative return path. Mutations have a shared error notification,
 which a page-specific `onError` may override. Never retry writes automatically.
+
+[Frontend routes and Shadcn Admin integration](frontend.md)
