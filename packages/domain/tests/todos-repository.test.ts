@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { type TestContext, test } from "node:test";
 import { createDb } from "@full-stack-example/db";
 import { createTodosRepository } from "../src/todos/repository";
+import { createTodosService } from "../src/todos/service";
 
 type Query = { text: string; values: unknown[] };
 
@@ -18,7 +19,11 @@ function fixture(t: TestContext, rows: unknown[][] = []) {
 			return { rows, rowCount: rows.length };
 		},
 	);
-	return { repository: createTodosRepository({ db }), queries };
+	return {
+		repository: createTodosRepository({ db }),
+		service: createTodosService({ db }),
+		queries,
+	};
 }
 
 function assertFilter(query: Query, column: string, value: unknown) {
@@ -82,4 +87,35 @@ test("Todo insertion failures reject instead of returning an empty success", asy
 			message: "Todo insert returned no row",
 		},
 	);
+});
+
+test("rename scopes cannot change another owner's task and return null for missing rows", async (t) => {
+	const { repository, queries } = fixture(t);
+	const alice = repository.forUser("alice");
+	const bob = repository.forUser("bob");
+	assert.equal(await alice.rename({ id: 7, text: "Alice edit" }), null);
+	assert.equal(await bob.rename({ id: 7, text: "Bob edit" }), null);
+	for (const [index, query] of queries.entries()) {
+		assertFilter(query, "id", 7);
+		assertFilter(query, "user_id", index === 0 ? "alice" : "bob");
+		assert.match(query.text, /returning "id", "text", "completed"$/);
+	}
+});
+
+test("rename normalizes text and rejects invalid service input before executing SQL", async (t) => {
+	const { service, queries } = fixture(t, [[7, "Updated task", true]]);
+	assert.deepEqual(
+		await service.rename({ userId: "alice", id: 7, text: "  Updated task  " }),
+		{ id: 7, text: "Updated task", completed: true },
+	);
+	assert.ok(queries[0]?.values.includes("Updated task"));
+	for (const text of ["", " \t\n ", "x".repeat(501)]) {
+		await assert.rejects(
+			() => service.rename({ userId: "alice", id: 7, text }),
+			/1–500/,
+		);
+	}
+	assert.equal(queries.length, 1);
+	await service.rename({ userId: "alice", id: 7, text: "x".repeat(500) });
+	assert.equal(queries.length, 2);
 });

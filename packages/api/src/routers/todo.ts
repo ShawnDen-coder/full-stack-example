@@ -37,6 +37,16 @@ export const todoRouter = {
 				text: input.text,
 			}),
 		),
+	rename: protectedProcedure
+		.input(z.object({ id, text: z.string().trim().min(1).max(500) }))
+		.handler(async ({ input, context }) => {
+			const updated = await context.services.todosService.rename({
+				...input,
+				userId: context.session.user.id,
+			});
+			if (!updated) throw new ORPCError("NOT_FOUND");
+			return updated;
+		}),
 	setCompleted: setCompletedProcedure,
 	// Compatibility alias for existing clients.
 	toggle: setCompletedProcedure,

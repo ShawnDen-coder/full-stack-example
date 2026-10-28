@@ -3,8 +3,8 @@
 [English](extension-examples.md) · [简体中文](extension-examples.zh-CN.md) · [Development guide](development.md) · [Project overview](../README.md)
 
 These are implementation walkthroughs built from the current Todo and profile-job
-code. The proposed operations below are not already available. Apply each case
-as one coordinated change; snippets explicitly identify their insertion points.
+code. Todo rename is implemented; the remaining operations are proposed extensions.
+Apply each proposed case as one coordinated change; snippets identify insertion points.
 Commands run from the repository root unless stated otherwise.
 
 Read the [architecture diagrams](development.md#architecture-overview) first to
@@ -32,40 +32,27 @@ remains `{ id, text, completed }`. No schema change is involved.
 | `packages/domain/src/todos/service.ts` | Validate/normalize text and observe `todos.rename` |
 | `packages/api/src/routers/todo.ts` | Add the authenticated `rename` procedure and map no match to `NOT_FOUND` |
 | `apps/server/src/services.ts` | Reuse the existing `createTodosService({ db })` instance |
-| `apps/web/src/routes/_auth/todos.tsx` | Add an edit form and typed mutation; preserve identity-scoped cache invalidation |
+| `apps/web/src/features/todos/` | Inline edit form and typed mutation; preserve identity-scoped cache invalidation |
 
-First apply the [repository/service example](../packages/domain/README.md#example-rename-an-owned-todo),
-then the [API example](../packages/api/README.md#example-expose-todorename).
+The implemented flow follows the [repository/service example](../packages/domain/README.md#example-rename-an-owned-todo),
+and the [API example](../packages/api/README.md#example-expose-todorename).
 `Services.todosService` already uses the inferred `TodosService`, and
 `appRouter.todo` is already mounted. Adding this operation needs no new server
 client, `Services` property or package export. Update typed service fakes in tests.
 
-In `TodosRoute`, add this alongside the existing mutations, after `refresh`:
+The route in `apps/web/src/routes/_auth/todos.tsx` passes the authenticated user
+identity to `features/todos/todos-screen.tsx`. That screen owns the queries and
+mutations. `features/todos/todo-row.tsx` contains the inline TanStack Form editor,
+with a labelled input, Save, Cancel and Escape support. Empty or overlong text
+is rejected; failed writes keep the draft and show an inline retry message.
+Saving blocks duplicate submissions and conflicting page actions. Cancel restores
+the original text; save/cancel returns focus to the row's edit button.
 
-```ts
-const renameMutation = useMutation(
-  orpc.todo.rename.mutationOptions({
-    retry: false,
-    onSuccess: refresh,
-  }),
-);
-```
-
-Include `renameMutation.isPending` in the existing `busy` expression. A new row
-edit form should keep its own draft text, provide a labelled input, and submit
-only when `!busy` and the trimmed value has 1–500 characters:
-
-```ts
-renameMutation.mutate({ id: todo.id, text: draftText });
-```
-
-Here `todo` is the rendered row and `draftText` is its local edit state; these
-are not new router-context fields. Use the
-[PendingButton example](../packages/ui/README.md#example-add-a-shared-pendingbutton)
-if the busy behavior is shared by several forms. Keep drafts on failure; the
-existing mutation error handler displays the failure. Preserve
-`["user", userId, "todos"]` as the cache prefix and let `refresh` invalidate all
-pages for that user. Never add an owner field to the request.
+The rename mutation updates matching cached rows from the server response and
+invalidates all pages under `["user", userId, "todos"]`. Thus a failed background
+refresh still shows the saved text. Ordinary rename failures are handled by the
+editor; unauthorized failures still pass through the global session boundary.
+Requests never include ownership from the browser.
 
 For a genuinely new service rather than a method, the server wiring expands:
 add its domain package export, construct its factory in `createServices`, add

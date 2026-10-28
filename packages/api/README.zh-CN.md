@@ -27,7 +27,7 @@
 
 ## 示例：开放 todo.rename
 
-先实现 [domain 的 rename 方法](../domain/README.zh-CN.md#示例重命名自己的-todo)，再将下面的属性加入 [src/routers/todo.ts](src/routers/todo.ts) 的 `todoRouter`。该文件已导入 `z`、`ORPCError` 和 `protectedProcedure`：
+[src/routers/todo.ts](src/routers/todo.ts) 已实现 `todoRouter.rename`，调用 [domain 的 rename 方法](../domain/README.zh-CN.md#示例重命名自己的-todo)。其校验与归属边界如下：
 
 ```ts
 rename: protectedProcedure
@@ -46,7 +46,7 @@ rename: protectedProcedure
   }),
 ```
 
-当前 router 尚未实现此操作。添加后，已有 `appRouter.todo` 注册和推导出的客户端类型会开放 `client.todo.rename({ id: 7, text: "Book tickets" })`。无需接收 `userId`、创建新的 Service 实例或手写客户端接口。调用方式见[前端案例](../../docs/extension-examples.zh-CN.md#案例一重命名-todo)。
+当前 router 已实现此操作。已有 `appRouter.todo` 注册和推导出的客户端类型会开放 `client.todo.rename({ id: 7, text: "Book tickets" })`。无需接收 `userId`、创建新的 Service 实例或手写客户端接口。调用方式见[前端案例](../../docs/extension-examples.zh-CN.md#案例一重命名-todo)。
 
 扩展 [Server 模块测试](../../apps/server/tests/modules.test.ts)：未登录调用被拒绝；文本会 trim；空文本、超长文本和非法 ID 被校验拦截；Service 收到的用户 ID 来自 session。使用专用数据库的集成测试确认资源不存在和属于其他用户时均返回 `NOT_FOUND`。`TodosService` 增加 `rename` 后，同步更新测试中的 typed service fake。
 

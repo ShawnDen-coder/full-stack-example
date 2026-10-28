@@ -37,9 +37,9 @@ then the [database migration workflow](../db/README.md).
 
 ## Example: expose todo.rename
 
-After adding the [domain rename method](../domain/README.md#example-rename-an-owned-todo),
-insert this property into `todoRouter` in [src/routers/todo.ts](src/routers/todo.ts).
-The file already imports `z`, `ORPCError` and `protectedProcedure`:
+The implemented `todoRouter.rename` in [src/routers/todo.ts](src/routers/todo.ts)
+calls the [domain rename method](../domain/README.md#example-rename-an-owned-todo).
+Its validation and ownership boundary follow this pattern:
 
 ```ts
 rename: protectedProcedure
@@ -58,8 +58,7 @@ rename: protectedProcedure
   }),
 ```
 
-This operation is not implemented in the current router. Once added, the existing
-`appRouter.todo` registration and inferred client expose
+The existing `appRouter.todo` registration and inferred client expose
 `client.todo.rename({ id: 7, text: "Book tickets" })`. There is no `userId`
 input, new service instance or hand-written client interface. See the
 [web example](../../docs/extension-examples.md#case-1-rename-a-todo) for callers.

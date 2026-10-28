@@ -41,6 +41,22 @@ export function createTodosService({ db }: { db: Database }) {
 				repository.forUser(userId).setCompleted({ id, completed }),
 			);
 		},
+		async rename({
+			userId,
+			id,
+			text,
+		}: {
+			userId: string;
+			id: number;
+			text: string;
+		}) {
+			const normalized = text.trim();
+			if (!normalized || normalized.length > 500)
+				throw new Error("Todo text must contain 1–500 characters");
+			return observeOperation("todos.rename", async () =>
+				repository.forUser(userId).rename({ id, text: normalized }),
+			);
+		},
 		async delete({ userId, id }: { userId: string; id: number }) {
 			return observeOperation("todos.delete", async () =>
 				repository.forUser(userId).delete(id),

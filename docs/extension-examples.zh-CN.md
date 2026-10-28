@@ -2,7 +2,7 @@
 
 [English](extension-examples.md) · [简体中文](extension-examples.zh-CN.md) · [开发指南](development.zh-CN.md) · [项目说明](../README.zh-CN.md)
 
-这些案例以当前 Todo 和资料任务代码为基础，说明如何完成一次扩展；下文的新操作尚未实现。每个案例需要配套修改，代码片段会说明具体插入位置。除非另有说明，命令均在仓库根目录执行。
+这些案例以当前 Todo 和资料任务代码为基础，说明如何完成一次扩展；Todo 重命名已实现，其余操作是待实现的扩展示例。每个案例需要配套修改，代码片段会说明具体插入位置。除非另有说明，命令均在仓库根目录执行。
 
 扩展前，先阅读[架构图解](development.zh-CN.md#架构导览)，了解当前 Todo 请求和用户资料任务的完整流转。
 
@@ -27,28 +27,13 @@
 | `packages/domain/src/todos/service.ts` | 校验／规范文本，为 `todos.rename` 增加观测 |
 | `packages/api/src/routers/todo.ts` | 增加认证后的 `rename` procedure，无匹配资源时返回 `NOT_FOUND` |
 | `apps/server/src/services.ts` | 复用已有的 `createTodosService({ db })` 实例 |
-| `apps/web/src/routes/_auth/todos.tsx` | 增加编辑表单和类型安全 mutation，保留按身份隔离的缓存失效逻辑 |
+| `apps/web/src/features/todos/` | 行内编辑表单和类型安全 mutation，保留按身份隔离的缓存失效逻辑 |
 
-先完成 [Repository／Service 示例](../packages/domain/README.zh-CN.md#示例重命名自己的-todo)，再完成 [API 示例](../packages/api/README.zh-CN.md#示例开放-todorename)。`Services.todosService` 已使用推导出的 `TodosService`，`appRouter.todo` 也已挂载；增加这个操作无需新建 Server client、增加 `Services` 属性或 package export。同步修改测试中的 typed service fake。
+已实现的流程串联 [Repository／Service 示例](../packages/domain/README.zh-CN.md#示例重命名自己的-todo)，以及 [API 示例](../packages/api/README.zh-CN.md#示例开放-todorename)。`Services.todosService` 已使用推导出的 `TodosService`，`appRouter.todo` 也已挂载；增加这个操作无需新建 Server client、增加 `Services` 属性或 package export。同步修改测试中的 typed service fake。
 
-在 `TodosRoute` 内、`refresh` 之后，与已有 mutations 并列加入：
+`apps/web/src/routes/_auth/todos.tsx` 将认证用户身份传入 `features/todos/todos-screen.tsx`，由功能页面管理查询和 mutation。`features/todos/todo-row.tsx` 提供基于 TanStack Form 的行内编辑，包含标签、保存、取消和 Escape 操作。空白与超长文本会被拦截，写入失败保留草稿并显示行内重试提示；保存期间阻止重复提交和冲突的页面操作。取消恢复原文，保存或取消后焦点返回该行的编辑按钮。
 
-```ts
-const renameMutation = useMutation(
-  orpc.todo.rename.mutationOptions({
-    retry: false,
-    onSuccess: refresh,
-  }),
-);
-```
-
-将 `renameMutation.isPending` 加入已有 `busy` 表达式。每行的编辑表单维护自己的草稿，为输入框设置可访问标签，仅在 `!busy` 且 trim 后文本长度为 1–500 时提交：
-
-```ts
-renameMutation.mutate({ id: todo.id, text: draftText });
-```
-
-这里的 `todo` 是正在渲染的行，`draftText` 是该行的本地编辑状态，不是新增的 router context 字段。多个表单需要共享忙碌行为时，可使用 [PendingButton 示例](../packages/ui/README.zh-CN.md#示例增加共享-pendingbutton)。失败时保留草稿，沿用已有 mutation 错误提示。缓存前缀仍使用 `["user", userId, "todos"]`，由 `refresh` 使当前用户的所有分页失效；请求中不增加归属用户字段。
+重命名成功后，先使用服务端响应更新缓存中的对应行，再使 `["user", userId, "todos"]` 下所有分页失效。因此后台刷新失败也会显示已保存的文本。普通写入错误由编辑器处理，未授权错误仍进入全局会话边界。浏览器请求不携带归属用户字段。
 
 如果增加的是一个全新 Service，而不只是现有 Service 的方法，还需要：增加 domain package export，在 `createServices` 调用工厂，将具体服务类型加入 API `Services`，将实例放入返回的 `services`，并在 `appRouter` 注册新 router。共享 `db` 的 Service 不负责关闭数据库；新增独立 client 时，要补齐就绪、构造失败回滚和 drain 清理，并在依赖数据库的资源关闭后再关闭数据库。
 
