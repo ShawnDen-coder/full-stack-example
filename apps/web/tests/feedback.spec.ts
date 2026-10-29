@@ -2931,3 +2931,88 @@ test("workspace shell defaults to light and keeps desktop sidebar preference", a
 	await page.reload();
 	await expect(page.locator("html")).toHaveClass(/dark/);
 });
+
+test("mobile breadcrumbs and search preserve focus and workspace", async ({
+	page,
+}) => {
+	await mockSession(page);
+	await page.route("**/rpc/todo/list**", (route) =>
+		route.fulfill({ json: { json: { items: [], nextCursor: null } } }),
+	);
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto("/todos?workspace=application");
+	const header = page.getByRole("banner");
+	const toggle = header.getByRole("button", { name: "Toggle Sidebar" });
+	await expect(toggle).toBeVisible();
+	const bounds = await toggle.boundingBox();
+	expect(bounds?.x).toBe(8);
+	expect(bounds?.width).toBe(44);
+	const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
+	await expect(
+		breadcrumb.getByRole("link", { name: "Tool home" }),
+	).toBeVisible();
+	await expect(breadcrumb.getByText("Todos")).toBeVisible();
+	const trigger = page.getByRole("button", { name: "Search pages" });
+	await trigger.click();
+	await page.getByRole("combobox", { name: "Search pages" }).press("Escape");
+	await expect(trigger).toBeFocused();
+	await trigger.click();
+	await page.getByRole("combobox", { name: "Search pages" }).fill("Tool home");
+	await page.getByRole("option", { name: "Tool home" }).click();
+	await expect(page).toHaveURL(/\/apps\?workspace=application/);
+	await expect(page.getByRole("main")).toBeFocused();
+});
+
+test("job breadcrumb links to real queue jobs in the current workspace", async ({
+	page,
+}) => {
+	await mockSession(page);
+	await page.route("**/rpc/access/me", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
+	);
+	await page.route("**/rpc/queues/job**", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					...browserJob,
+					result: {},
+					stacktrace: null,
+					refreshedAt: new Date().toISOString(),
+				},
+			},
+		}),
+	);
+	await page.route("**/rpc/queues/logs**", (route) =>
+		route.fulfill({
+			json: {
+				json: { lines: [], total: 0, page: 1, pageSize: 50, clipped: false },
+			},
+		}),
+	);
+	await page.setViewportSize({ width: 390, height: 700 });
+	await page.goto("/queues/sample/jobs/long-job-id?workspace=application");
+	const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
+	await breadcrumb
+		.getByRole("button", { name: "Breadcrumb ancestors" })
+		.click();
+	const queues = page.getByRole("menuitem", { name: "Queues" });
+	const jobs = page.getByRole("menuitem", { name: "Jobs" });
+	await expect(queues).toHaveAttribute(
+		"href",
+		/\/queues\?workspace=application/,
+	);
+	await expect(jobs).toHaveAttribute(
+		"href",
+		/\/queues\/sample\/jobs\?workspace=application/,
+	);
+	await expect(page.getByRole("menu")).toContainText("long-job-id");
+});

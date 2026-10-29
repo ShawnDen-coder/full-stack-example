@@ -25,6 +25,7 @@ import { LayoutProvider, useLayout } from "@/context/layout-provider";
 import { useAccess, visibleNavigation } from "@/lib/access";
 import { useWorkspaceId } from "@/lib/workspace";
 import { queryClient, synchronizeWorkspace } from "@/utils/orpc";
+import { Breadcrumbs } from "./breadcrumbs";
 import { Header } from "./header";
 import { Main } from "./main";
 import { NavGroup } from "./nav-group";
@@ -114,8 +115,9 @@ function AppLayoutInner() {
 			</Sidebar>
 			<SidebarInset className="@container/content min-w-0 has-data-[layout=fixed]:h-svh peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]">
 				<Header>
-					<NavigationSearch />
-					<div className="ms-auto flex items-center gap-2">
+					<Breadcrumbs />
+					<div className="ms-auto flex shrink-0 items-center">
+						<NavigationSearch />
 						<ModeToggle />
 						<ConfigDrawer />
 					</div>

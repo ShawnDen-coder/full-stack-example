@@ -16,7 +16,7 @@ export function ModeToggle() {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" size="icon">
+				<Button variant="ghost" size="icon" className="size-11">
 					<Icon
 						icon={Sun}
 						size="toolbar"
