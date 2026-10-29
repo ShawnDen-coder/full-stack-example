@@ -3128,3 +3128,40 @@ test("cancelled search does not navigate when delayed preparation completes", as
 	await expect(page).toHaveURL(/\/apps\?workspace=application/);
 	await expect(trigger).toBeFocused();
 });
+
+test("search opens index routes and focuses main while preserving workspace", async ({
+	page,
+}) => {
+	await mockSession(page);
+	await page.route("**/rpc/access/me", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["todos", "queues", "apps"],
+				},
+			},
+		}),
+	);
+	await page.route("**/rpc/queues/list**", (route) =>
+		route.fulfill({ json: { json: [] } }),
+	);
+	for (const [name, path] of [
+		["Profile", "/settings"],
+		["Queues", "/queues"],
+	] as const) {
+		await page.goto("/apps?workspace=application");
+		await page.getByRole("button", { name: "Search pages" }).click();
+		await page.getByRole("combobox", { name: "Search pages" }).fill(name);
+		await page.getByRole("option", { name, exact: true }).click();
+		await expect
+			.poll(() => new URL(page.url()).pathname.replace(/\/$/, ""))
+			.toBe(path);
+		await expect
+			.poll(() => new URL(page.url()).searchParams.get("workspace"))
+			.toBe("application");
+		await expect(page.getByRole("main")).toBeFocused();
+	}
+});

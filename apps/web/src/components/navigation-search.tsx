@@ -19,6 +19,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccess, visibleNavigation } from "@/lib/access";
 import { useWorkspaceId } from "@/lib/workspace";
 
+function samePath(left: string | undefined, right: string | null): boolean {
+	if (left == null || right == null) return false;
+	const normalize = (path: string) =>
+		path === "/" ? path : path.replace(/\/+$/, "");
+	return normalize(left) === normalize(right);
+}
+
 export function NavigationSearch() {
 	const access = useAccess();
 	const workspace = useWorkspaceId();
@@ -39,7 +46,7 @@ export function NavigationSearch() {
 	const invalidated =
 		currentWorkspace.current !== workspace ||
 		(currentLocation.current !== location.href &&
-			destination.current !== location.pathname);
+			!samePath(location.pathname, destination.current));
 	if (invalidated) {
 		token.current++;
 		destination.current = null;
@@ -170,7 +177,7 @@ export function NavigationSearch() {
 										if (
 											!prepared ||
 											prepared.some((match) => match.status === "error") ||
-											prepared.at(-1)?.pathname !== item.to
+											!samePath(prepared.at(-1)?.pathname, item.to)
 										)
 											throw new Error("Unable to prepare navigation.");
 										await router.navigate({
@@ -179,7 +186,10 @@ export function NavigationSearch() {
 										});
 										if (operation !== token.current) return;
 										if (
-											router.state.resolvedLocation?.pathname !== item.to ||
+											!samePath(
+												router.state.resolvedLocation?.pathname,
+												item.to,
+											) ||
 											router.state.matches.some(
 												(match) => match.status === "error",
 											)
