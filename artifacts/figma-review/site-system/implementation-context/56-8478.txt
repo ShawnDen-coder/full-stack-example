@@ -1,0 +1,281 @@
+const imgIconPanelLeft = "https://www.figma.com/api/mcp/asset/10d4c678-d931-403b-b538-1ac0e97c100d.svg";
+const imgFrame = "https://www.figma.com/api/mcp/asset/223093e9-a367-400f-b9cf-39f593f39914.svg";
+const imgFrame1 = "https://www.figma.com/api/mcp/asset/49ca33a3-e9f2-4617-88ea-c15155ce9733.svg";
+const imgFrame2 = "https://www.figma.com/api/mcp/asset/9b864071-e157-4e0a-97d8-5560d5f2d335.svg";
+const imgFrame3 = "https://www.figma.com/api/mcp/asset/6c0eb544-774c-4af0-9c2e-24145e92ab64.svg";
+const imgFrame4 = "https://www.figma.com/api/mcp/asset/3afd1bbb-077f-4b91-97fe-d243bec4f398.svg";
+const imgFrame5 = "https://www.figma.com/api/mcp/asset/39ef20ac-2ec1-4080-896f-13fe7bff3a94.svg";
+const imgFrame6 = "https://www.figma.com/api/mcp/asset/8507f1d8-c0cc-4e69-966a-8741111f6bc0.svg";
+const imgFrame7 = "https://www.figma.com/api/mcp/asset/c06181e5-a60b-48a4-a945-c3082d768a06.svg";
+const imgFrame8 = "https://www.figma.com/api/mcp/asset/5a32a1af-845b-462e-a4e0-fecc4f5a1b72.svg";
+const imgFrame9 = "https://www.figma.com/api/mcp/asset/c954d415-1f21-4b09-ad33-cdde13a33d74.svg";
+
+export default function Component1920() {
+  return (
+    <div className="bg-[var(--background,#020618)] relative size-full" data-node-id="56:8478" data-name="主稿 / 1920 / 居中标准容器">
+      <div className="absolute bg-[var(--background,#020618)] h-[1000px] left-0 top-0 w-[1920px]" data-node-id="56:8479" data-name="Layout / Shell / expanded">
+        <div className="absolute bg-[var(--background,#020618)] content-stretch flex h-[64px] items-center left-[256px] pl-[16px] pr-[28px] right-[8px] top-[8px]" data-node-id="I56:8479;56:7307" data-name="Layout / Global header">
+          <div className="absolute bg-[var(--border,rgba(255,255,255,0.1))] bottom-0 h-px left-0 right-0" data-node-id="I56:8479;56:7307;56:7100" data-name="Header divider · border" />
+          <div className="content-stretch flex flex-[1_0_0] gap-[12px] h-[64px] items-center min-w-px overflow-clip relative" data-node-id="I56:8479;56:7307;77:1351" data-name="Header / leading · route slot">
+            <div className="bg-[var(--background,#020618)] border border-[var(--border,rgba(255,255,255,0.1))] border-solid relative rounded-[var(--radius-sm,6px)] shrink-0 size-[28px]" data-node-id="I56:8479;56:7307;59:2940" data-name="Sidebar toggle · 28">
+              <div className="absolute left-[5px] size-[16px] top-[5px]" data-node-id="I56:8479;56:7307;56:7076" data-name="Icon / PanelLeft">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgIconPanelLeft} />
+              </div>
+            </div>
+            <div className="bg-[var(--border,rgba(255,255,255,0.1))] h-[24px] relative shrink-0 w-px" data-node-id="I56:8479;56:7307;59:2941" data-name="Header separator · border" />
+            <div className="content-stretch flex flex-[1_0_0] items-center min-w-px relative" data-node-id="I56:8479;56:7307;66:4270" data-name="Breadcrumb · route">
+              <p className="[word-break:break-word] font-['Inter:Medium'] font-medium leading-[20px] not-italic relative shrink-0 text-[14px] text-[color:var(--foreground,#f8fafc)] whitespace-nowrap" data-node-id="I56:8479;56:7307;66:4270;66:4263">
+                Tool home
+              </p>
+            </div>
+          </div>
+          <div className="content-stretch flex h-[64px] items-center relative shrink-0 w-[132px]" data-node-id="I56:8479;56:7307;77:1352" data-name="Header / tools · fixed">
+            <a className="block cursor-pointer relative rounded-[var(--radius-md,8px)] shrink-0 size-[44px]" data-node-id="I56:8479;56:7307;56:7080" data-name="Search · 44">
+              <div className="absolute left-[14px] size-[16px] top-[14px]" data-node-id="I56:8479;56:7307;56:7080;56:7053" data-name="Icon / Search">
+                <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7307;56:7080;56:7053;2:137" data-name="Frame">
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame} />
+                </div>
+              </div>
+            </a>
+            <div className="h-px relative shrink-0 w-[16px]" data-node-id="I56:8479;56:7307;77:1353" data-name="Tool spacing · 16" />
+            <div className="relative shrink-0 size-[18px]" data-node-id="I56:8479;56:7307;56:7085" data-name="Icon / Sun">
+              <div className="absolute left-0 size-[18px] top-0" data-node-id="I56:8479;56:7307;56:7085;18:810" data-name="Frame">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame1} />
+              </div>
+            </div>
+            <div className="h-px relative shrink-0 w-[38px]" data-node-id="I56:8479;56:7307;77:1354" data-name="Tool spacing · 38" />
+            <div className="relative shrink-0 size-[16px]" data-node-id="I56:8479;56:7307;56:7096" data-name="Icon / Settings">
+              <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7307;56:7096;2:144" data-name="Frame">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame2} />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="absolute border border-[var(--sidebar-border,rgba(255,255,255,0.1))] border-solid drop-shadow-[0px_1px_1px_rgba(0,0,0,0.1),0px_1px_1.5px_rgba(0,0,0,0.1)] inset-[8px_8px_8px_256px] rounded-[var(--radius-xl,14px)]" data-node-id="I56:8479;59:2948" data-name="Sidebar Inset · workspace surface" />
+        <div className="absolute bg-[var(--sidebar,#020618)] bottom-0 content-stretch flex flex-col gap-[8px] items-start left-0 p-[8px] top-0 w-[256px]" data-node-id="I56:8479;56:7340" data-name="Layout / Sidebar / expanded">
+          <div className="content-stretch flex flex-col items-start overflow-clip pt-[8px] px-[8px] relative shrink-0 w-[240px]" data-node-id="I56:8479;56:7340;56:7102" data-name="Sidebar Header">
+            <div className="content-stretch flex gap-[var(--calc(var(--spacing)*2),8px)] h-[48px] items-center px-[var(--calc(var(--spacing)*2),8px)] relative rounded-[var(--radius-md,8px)] shrink-0 w-[224px]" data-node-id="I56:8479;56:7340;56:7103" data-name="Workspace Switcher">
+              <div className="bg-[var(--sidebar-primary,#e2e8f0)] overflow-clip relative rounded-[10px] shrink-0 size-[32px]" data-node-id="I56:8479;56:7340;56:7103;2:110" data-name="Frame">
+                <div className="absolute left-[8px] size-[16px] top-[8px]" data-node-id="I56:8479;56:7340;56:7103;2:231" data-name="Icon / Building2">
+                  <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7340;56:7103;2:231;2:130" data-name="Frame">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame3} />
+                  </div>
+                </div>
+              </div>
+              <p className="[word-break:break-word] flex-[1_0_0] font-['Inter:Semi_Bold'] font-semibold leading-[20px] min-w-px not-italic relative text-[14px] text-[color:var(--sidebar-foreground,#f8fafc)]" data-node-id="I56:8479;56:7340;56:7103;2:112">
+                Application
+              </p>
+              <div className="relative shrink-0 size-[16px]" data-node-id="I56:8479;56:7340;56:7103;2:238" data-name="Icon / ChevronsUpDown">
+                <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7340;56:7103;2:238;2:182" data-name="Frame">
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame4} />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="content-stretch flex flex-col items-start overflow-clip p-[8px] relative shrink-0 w-[240px]" data-node-id="I56:8479;56:7340;56:7104" data-name="Workspace">
+            <div className="content-stretch flex h-[32px] items-center overflow-clip pl-[8px] relative shrink-0 w-[224px]" data-node-id="I56:8479;56:7340;56:7105" data-name="Group label">
+              <div className="[word-break:break-word] flex flex-col font-['Inter:Medium'] font-medium h-[32px] justify-center leading-[0] not-italic opacity-70 relative shrink-0 text-[12px] text-[color:var(--sidebar-foreground,#f8fafc)] w-[180px]" data-node-id="I56:8479;56:7340;56:7106">
+                <p className="leading-[16px]">Workspace</p>
+              </div>
+            </div>
+            <div className="content-stretch flex flex-col items-start overflow-clip relative shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7107" data-name="Sidebar Menu">
+              <div className="bg-[var(--sidebar-accent,#1d293d)] content-stretch flex gap-[8px] h-[32px] items-center px-[8px] relative rounded-[var(--radius-md,8px)] shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7108" data-name="Sidebar Menu Button">
+                <div className="relative shrink-0 size-[16px]" data-node-id="I56:8479;56:7340;56:7108;2:219" data-name="Icon / Package">
+                  <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7340;56:7108;2:219;2:148" data-name="Frame">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame5} />
+                  </div>
+                </div>
+                <p className="[word-break:break-word] font-['Inter:Medium'] font-medium leading-[20px] not-italic relative shrink-0 text-[14px] text-[color:var(--sidebar-foreground,#f8fafc)] whitespace-nowrap" data-node-id="I56:8479;56:7340;56:7108;1:236">
+                  Tool home
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="content-stretch flex flex-col items-start overflow-clip p-[8px] relative shrink-0 w-[240px]" data-node-id="I56:8479;56:7340;56:7109" data-name="Tools">
+            <div className="content-stretch flex h-[32px] items-center overflow-clip pl-[8px] relative shrink-0 w-[224px]" data-node-id="I56:8479;56:7340;56:7110" data-name="Group label">
+              <div className="[word-break:break-word] flex flex-col font-['Inter:Medium'] font-medium h-[32px] justify-center leading-[0] not-italic opacity-70 relative shrink-0 text-[12px] text-[color:var(--sidebar-foreground,#f8fafc)] w-[180px]" data-node-id="I56:8479;56:7340;56:7111">
+                <p className="leading-[16px]">Tools</p>
+              </div>
+            </div>
+            <div className="content-stretch flex flex-col items-start overflow-clip relative shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7112" data-name="Sidebar Menu">
+              <div className="content-stretch flex gap-[8px] h-[32px] items-center px-[8px] relative rounded-[var(--radius-md,8px)] shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7113" data-name="Sidebar Menu Button">
+                <div className="relative shrink-0 size-[16px]" data-node-id="I56:8479;56:7340;56:7113;2:213" data-name="Icon / SquareCheckBig">
+                  <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7340;56:7113;2:213;2:154" data-name="Frame">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame6} />
+                  </div>
+                </div>
+                <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-[color:var(--sidebar-foreground,#f8fafc)] whitespace-nowrap" data-node-id="I56:8479;56:7340;56:7113;1:234">
+                  Todos
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="content-stretch flex flex-col items-start overflow-clip p-[8px] relative shrink-0 w-[240px]" data-node-id="I56:8479;56:7340;56:7114" data-name="Account">
+            <div className="content-stretch flex h-[32px] items-center overflow-clip pl-[8px] relative shrink-0 w-[224px]" data-node-id="I56:8479;56:7340;56:7115" data-name="Group label">
+              <div className="[word-break:break-word] flex flex-col font-['Inter:Medium'] font-medium h-[32px] justify-center leading-[0] not-italic opacity-70 relative shrink-0 text-[12px] text-[color:var(--sidebar-foreground,#f8fafc)] w-[180px]" data-node-id="I56:8479;56:7340;56:7116">
+                <p className="leading-[16px]">Account</p>
+              </div>
+            </div>
+            <div className="content-stretch flex flex-col gap-[4px] items-start overflow-clip relative shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7117" data-name="Sidebar Menu">
+              <div className="content-stretch flex gap-[8px] h-[32px] items-center px-[8px] relative rounded-[var(--radius-md,8px)] shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7118" data-name="Sidebar Menu Button">
+                <div className="relative shrink-0 size-[16px]" data-node-id="I56:8479;56:7340;56:7118;2:213" data-name="Icon / Settings">
+                  <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7340;56:7118;2:213;2:144" data-name="Frame">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame2} />
+                  </div>
+                </div>
+                <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-[color:var(--sidebar-foreground,#f8fafc)] whitespace-nowrap" data-node-id="I56:8479;56:7340;56:7118;1:234">
+                  Profile
+                </p>
+              </div>
+              <div className="content-stretch flex gap-[8px] h-[32px] items-center px-[8px] relative rounded-[var(--radius-md,8px)] shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7119" data-name="Sidebar Menu Button">
+                <div className="relative shrink-0 size-[16px]" data-node-id="I56:8479;56:7340;56:7119;2:213" data-name="Icon / Settings">
+                  <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7340;56:7119;2:213;2:144" data-name="Frame">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame2} />
+                  </div>
+                </div>
+                <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-[color:var(--sidebar-foreground,#f8fafc)] whitespace-nowrap" data-node-id="I56:8479;56:7340;56:7119;1:234">
+                  Appearance
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="content-stretch flex flex-col items-start overflow-clip p-[8px] relative shrink-0 w-[240px]" data-node-id="I56:8479;56:7340;56:7120" data-name="Template examples">
+            <div className="content-stretch flex h-[32px] items-center overflow-clip pl-[8px] relative shrink-0 w-[224px]" data-node-id="I56:8479;56:7340;56:7121" data-name="Group label">
+              <div className="[word-break:break-word] flex flex-col font-['Inter:Medium'] font-medium h-[32px] justify-center leading-[0] not-italic opacity-70 relative shrink-0 text-[12px] text-[color:var(--sidebar-foreground,#f8fafc)] w-[180px]" data-node-id="I56:8479;56:7340;56:7122">
+                <p className="leading-[16px]">Template examples</p>
+              </div>
+            </div>
+            <div className="content-stretch flex flex-col gap-[4px] items-start overflow-clip relative shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7123" data-name="Sidebar Menu">
+              <div className="content-stretch flex gap-[8px] h-[32px] items-center px-[8px] relative rounded-[var(--radius-md,8px)] shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7124" data-name="Sidebar Menu Button">
+                <div className="relative shrink-0 size-[16px]" data-node-id="I56:8479;56:7340;56:7124;2:213" data-name="Icon / LayoutDashboard">
+                  <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7340;56:7124;2:213;2:166" data-name="Frame">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame7} />
+                  </div>
+                </div>
+                <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-[color:var(--sidebar-foreground,#f8fafc)] whitespace-nowrap" data-node-id="I56:8479;56:7340;56:7124;1:234">
+                  Dashboard example
+                </p>
+              </div>
+              <div className="content-stretch flex gap-[8px] h-[32px] items-center px-[8px] relative rounded-[var(--radius-md,8px)] shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7125" data-name="Sidebar Menu Button">
+                <div className="relative shrink-0 size-[16px]" data-node-id="I56:8479;56:7340;56:7125;2:213" data-name="Icon / ListTodo">
+                  <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7340;56:7125;2:213;2:172" data-name="Frame">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame8} />
+                  </div>
+                </div>
+                <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-[color:var(--sidebar-foreground,#f8fafc)] whitespace-nowrap" data-node-id="I56:8479;56:7340;56:7125;1:234">
+                  Tasks example
+                </p>
+              </div>
+              <div className="content-stretch flex gap-[8px] h-[32px] items-center px-[8px] relative rounded-[var(--radius-md,8px)] shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7126" data-name="Sidebar Menu Button">
+                <div className="relative shrink-0 size-[16px]" data-node-id="I56:8479;56:7340;56:7126;2:213" data-name="Icon / Package">
+                  <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7340;56:7126;2:213;2:148" data-name="Frame">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame5} />
+                  </div>
+                </div>
+                <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-[color:var(--sidebar-foreground,#f8fafc)] whitespace-nowrap" data-node-id="I56:8479;56:7340;56:7126;1:234">
+                  Integration examples
+                </p>
+              </div>
+              <div className="content-stretch flex gap-[8px] h-[32px] items-center px-[8px] relative rounded-[var(--radius-md,8px)] shrink-0 w-full" data-node-id="I56:8479;56:7340;56:7127" data-name="Sidebar Menu Button">
+                <div className="relative shrink-0 size-[16px]" data-node-id="I56:8479;56:7340;56:7127;2:213" data-name="Icon / MessageSquare">
+                  <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7340;56:7127;2:213;2:179" data-name="Frame">
+                    <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame9} />
+                  </div>
+                </div>
+                <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-[color:var(--sidebar-foreground,#f8fafc)] whitespace-nowrap" data-node-id="I56:8479;56:7340;56:7127;1:234">
+                  Chats example
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex-[1_0_0] min-h-px relative w-px" data-node-id="I56:8479;56:7340;56:7128" data-name="Frame" />
+          <div className="content-stretch flex flex-col items-start overflow-clip p-[8px] relative shrink-0 w-[240px]" data-node-id="I56:8479;56:7340;56:7129" data-name="Sidebar Footer">
+            <div className="content-stretch flex gap-[8px] h-[48px] items-center px-[8px] relative shrink-0 w-[224px]" data-node-id="I56:8479;56:7340;56:7130" data-name="User Menu">
+              <div className="bg-[var(--muted,#1d293d)] overflow-clip relative rounded-[8px] shrink-0 size-[32px]" data-node-id="I56:8479;56:7340;56:7130;2:1164" data-name="Frame">
+                <p className="[word-break:break-word] absolute font-['Inter:Medium'] font-medium leading-[normal] left-[4px] not-italic text-[14px] text-[color:var(--foreground,#f8fafc)] top-[8px] whitespace-nowrap" data-node-id="I56:8479;56:7340;56:7130;2:1165">
+                  FE
+                </p>
+              </div>
+              <div className="[word-break:break-word] content-stretch flex flex-[1_0_0] flex-col items-start min-w-px not-italic overflow-clip relative text-[color:var(--foreground,#f8fafc)] whitespace-nowrap" data-node-id="I56:8479;56:7340;56:7130;2:1166" data-name="Frame">
+                <p className="font-['Inter:Semi_Bold'] font-semibold leading-[17.5px] relative shrink-0 text-[14px]" data-node-id="I56:8479;56:7340;56:7130;2:1167">
+                  Feedback tester
+                </p>
+                <p className="font-['Inter:Regular'] font-normal leading-[15px] relative shrink-0 text-[12px]" data-node-id="I56:8479;56:7340;56:7130;2:1168">
+                  feedback@example.test
+                </p>
+              </div>
+              <div className="relative shrink-0 size-[16px]" data-node-id="I56:8479;56:7340;56:7130;2:1169" data-name="Icon / ChevronsUpDown">
+                <div className="absolute left-0 size-[16px] top-0" data-node-id="I56:8479;56:7340;56:7130;2:1169;2:182" data-name="Frame">
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame4} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="absolute content-stretch flex items-start justify-center left-[256px] overflow-clip right-[8px] top-[96px]" data-node-id="77:443" data-name="Main · responsive centering region">
+        <div className="content-stretch flex flex-[1_0_0] flex-col h-[240px] items-start max-w-[1280px] min-w-px overflow-clip px-[24px] relative" data-node-id="77:444" data-name="Main · max 1280 including padding">
+          <div className="content-stretch flex flex-col gap-[var(--calc(var(--spacing)*6),24px)] items-start relative shrink-0 w-full" data-node-id="56:8614" data-name="Main · standard / content slot">
+            <div className="border border-[var(--border,rgba(255,255,255,0.1))] border-solid h-[240px] relative shrink-0 w-full" data-node-id="56:8618" data-name="Content slot · standard">
+              <p className="[word-break:break-word] absolute font-['Inter:Regular'] font-normal leading-[normal] left-[15px] not-italic text-[14px] text-[color:var(--muted-foreground,#90a1b9)] top-[15px] whitespace-nowrap" data-node-id="56:8619">
+                Content slot
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <a className="absolute bg-[rgba(0,0,0,0)] block cursor-pointer h-[48px] left-[16px] top-[16px] w-[224px]" data-node-id="77:4241" data-name="Prototype · Open workspace menu" />
+    </div>
+  );
+}
+
+SUPER CRITICAL: The generated React+Tailwind code MUST be converted to match the target project's technology stack and styling system.
+1. Analyze the target codebase to identify: technology stack, styling approach, component patterns, and design tokens
+2. Convert React syntax to the target framework/library
+3. Transform all Tailwind classes to the target styling system while preserving exact visual design
+4. Follow the project's existing patterns and conventions
+DO NOT install any Tailwind as a dependency unless the user instructs you to do so.
+
+
+Node ids have been added to the code as data attributes, e.g. `data-node-id="1:2"`.
+
+These styles are contained in the design: shadow-sm: Effect(type: DROP_SHADOW, color: #0000001A, offset: (0, 1), radius: 3, spread: 0); Effect(type: DROP_SHADOW, color: #0000001A, offset: (0, 1), radius: 2, spread: -1), text-sm-medium: Font(family: "Inter", style: Medium, size: 14, weight: 500, lineHeight: 20, letterSpacing: 0), text-sm: Font(family: "Inter", style: Regular, size: 14, weight: 400, lineHeight: 20, letterSpacing: 0).
+
+Component descriptions: The following components have usage descriptions or documentation links defined in Figma. These descriptions provide important context about the intended usage, best practices, and any constraints for each component. Follow these guidelines when implementing or using these components.
+
+## Layout / Shell / expanded
+**Node ID:** 56:7306
+
+Ordinary border-box shell; header 64px; sidebar 256px. Place a separate auto-layout page stack in the main region.
+
+## Layout / Breadcrumb
+**Node ID:** 66:4269
+
+Light/Dark semantic foreground; ancestor is a link, current page is text. Long labels truncate and retain full accessible name in implementation.
+
+## Sidebar Inset
+**Node ID:** 18:850
+
+sidebar.tsx SidebarInset: desktop margin top/right/bottom 8px, radius-xl, background, shadow-sm.
+
+## Layout / Sidebar / expanded
+**Node ID:** 56:7101
+
+app-layout.tsx: expanded inset sidebar with superadmin navigation matching the provided dark reference. Footer data is screenshot fixture.
+
+## Workspace Switcher
+**Node ID:** 2:109
+
+workspace-switcher.tsx; local Lucide instances; 48px button, 32px icon container.
+
+## Sidebar Menu Button
+**Node ID:** 1:239
+
+sidebar.tsx SidebarMenuButton, default size. Icon is nested local Lucide instance; swap as needed.
+
+## User Menu
+**Node ID:** 2:1163
+
+user-menu.tsx: fixture data only; avatar and label are editable.
+
+The generated code contains image and SVG URL constants, e.g. const image = 'https://www.figma.com/api/mcp/asset/550e8400-e29b-41d4-a716-446655440000.png'. These URLs are temporary download sources and expire after 7 days. Download each asset into the project with curl -L, then replace its URL in the generated code with a reference to the downloaded asset. Never use the temporary URLs as runtime image sources.

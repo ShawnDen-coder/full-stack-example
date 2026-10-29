@@ -9,6 +9,7 @@
 		"ignoreUnknown": false,
 		"includes": [
 			"**",
+			"!artifacts/figma-review",
 			"!**/.next",
 			"!**/dist",
 			"!**/.turbo",
