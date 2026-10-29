@@ -7,15 +7,23 @@ import { type FormEvent, useState } from "react";
 import { type client, orpc } from "@/utils/orpc";
 import { TodoRow } from "./todo-row";
 
-export function TodosScreen({ userId }: { userId: string | undefined }) {
+export function TodosScreen({
+	userId,
+	workspaceId,
+}: {
+	userId: string | undefined;
+	workspaceId: string;
+}) {
 	const [editingId, setEditingId] = useState<number | null>(null);
 	const queryClient = useQueryClient();
 	const [newTodoText, setNewTodoText] = useState("");
 	const [cursors, setCursors] = useState<(number | undefined)[]>([undefined]);
 	const cursor = cursors.at(-1);
-	const queryKey = ["user", userId, "todos"];
+	const queryKey = ["user", userId, "workspace", workspaceId, "todos"];
 	const todos = useQuery({
-		...orpc.todo.list.queryOptions({ input: { cursor, limit: 20 } }),
+		...orpc.todo.list.queryOptions({
+			input: { workspaceId, cursor, limit: 20 },
+		}),
 		queryKey: [...queryKey, cursor],
 		meta: { errorHandledLocally: true },
 	});
@@ -73,7 +81,7 @@ export function TodosScreen({ userId }: { userId: string | undefined }) {
 	const handleAddTodo = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		if (!navigationLocked && newTodoText.trim())
-			createMutation.mutate({ text: newTodoText });
+			createMutation.mutate({ workspaceId, text: newTodoText });
 	};
 	return (
 		<div className="space-y-6">
@@ -141,15 +149,22 @@ export function TodosScreen({ userId }: { userId: string | undefined }) {
 								onEdit={() => setEditingId(todo.id)}
 								onClose={() => setEditingId(null)}
 								onRename={async (text) => {
-									await renameMutation.mutateAsync({ id: todo.id, text });
+									await renameMutation.mutateAsync({
+										workspaceId,
+										id: todo.id,
+										text,
+									});
 								}}
 								onCompleted={() =>
 									setCompletedMutation.mutate({
+										workspaceId,
 										id: todo.id,
 										completed: !todo.completed,
 									})
 								}
-								onDelete={() => deleteMutation.mutate({ id: todo.id })}
+								onDelete={() =>
+									deleteMutation.mutate({ workspaceId, id: todo.id })
+								}
 							/>
 						))}
 					</ul>

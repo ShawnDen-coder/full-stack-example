@@ -23,7 +23,7 @@ trace the current Todo request and profile-job flow before extending them.
 
 ## Case 1: rename a Todo
 
-The user edits their own Todo text. Request input is `{ id, text }`; the result
+The user edits their own Todo text. Request input is `{ workspaceId, id, text }`; the result
 remains `{ id, text, completed }`. No schema change is involved.
 
 | Location | Concrete change |
@@ -41,7 +41,7 @@ and the [API example](../packages/api/README.md#example-expose-todorename).
 client, `Services` property or package export. Update typed service fakes in tests.
 
 The route in `apps/web/src/routes/_auth/todos.tsx` passes the authenticated user
-identity to `features/todos/todos-screen.tsx`. That screen owns the queries and
+identity and selected workspace to `features/todos/todos-screen.tsx`. That screen owns the queries and
 mutations. `features/todos/todo-row.tsx` contains the inline TanStack Form editor,
 with a labelled input, Save, Cancel and Escape support. Empty or overlong text
 is rejected; failed writes keep the draft and show an inline retry message.
@@ -49,10 +49,11 @@ Saving blocks duplicate submissions and conflicting page actions. Cancel restore
 the original text; save/cancel returns focus to the row's edit button.
 
 The rename mutation updates matching cached rows from the server response and
-invalidates all pages under `["user", userId, "todos"]`. Thus a failed background
+invalidates all pages under `["user", userId, "workspace", workspaceId, "todos"]`. Thus a failed background
 refresh still shows the saved text. Ordinary rename failures are handled by the
 editor; unauthorized failures still pass through the global session boundary.
-Requests never include ownership from the browser.
+Requests never include user ownership from the browser. The server checks workspace
+membership, tool enablement and page permission before binding the workspace scope.
 
 For a genuinely new service rather than a method, the server wiring expands:
 add its domain package export, construct its factory in `createServices`, add

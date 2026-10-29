@@ -4,11 +4,7 @@ import {
 	useListOrganizationMembers,
 	useListRoles,
 } from "@better-auth-ui/react/plugins/organization";
-import {
-	defaultMemberRole,
-	pages,
-	workspaceId,
-} from "@full-stack-example/access";
+import { defaultMemberRole, pages } from "@full-stack-example/access";
 import { Button } from "@full-stack-example/ui/components/button";
 import { Input } from "@full-stack-example/ui/components/input";
 import {
@@ -25,11 +21,10 @@ import {
 	TabsList,
 	TabsTrigger,
 } from "@full-stack-example/ui/components/tabs";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-
 import { EditMemberRolesDialog } from "@/components/auth/organization/edit-member-roles-dialog";
 import {
 	type Role,
@@ -38,17 +33,21 @@ import {
 import { useAccess } from "@/lib/access";
 import { organizationPlugin } from "@/lib/auth/organization-plugin";
 import { authClient } from "@/lib/auth-client";
+import { useWorkspaceId } from "@/lib/workspace";
+import { client } from "@/utils/orpc";
 
 const permissions = Object.fromEntries(
-	pages.map((page) => [
-		page.key,
-		{ label: page.title, actions: { read: `View ${page.title}` } },
-	]),
+	pages
+		.filter((page) => page.key !== "queues")
+		.map((page) => [
+			page.key,
+			{ label: page.title, actions: { read: `View ${page.title}` } },
+		]),
 );
 const plugin = organizationPlugin({
 	allowMultipleRoles: true,
 	roles: {
-		owner: "Super administrator",
+		owner: "Workspace owner",
 		admin: "Administrator",
 		member: "User",
 	},
@@ -56,6 +55,7 @@ const plugin = organizationPlugin({
 });
 
 export function AdminUsers() {
+	const workspaceId = useWorkspaceId();
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	return (
@@ -67,7 +67,7 @@ export function AdminUsers() {
 			}}
 			plugins={[plugin]}
 		>
-			<AccessManagement />
+			<AccessManagement key={workspaceId} />
 		</AuthProvider>
 	);
 }
@@ -85,6 +85,15 @@ function AccessManagement() {
 		}
 	};
 	const access = useAccess();
+	const workspaceId = useWorkspaceId() ?? "";
+	const [email, setEmail] = useState("");
+	const addMember = useMutation({
+		mutationFn: () => client.access.addMember({ workspaceId, email }),
+		onSuccess: () => {
+			setEmail("");
+			void members.refetch();
+		},
+	});
 	const queryClient = useQueryClient();
 	const [offset, setOffset] = useState(0);
 	const [search, setSearch] = useState("");
@@ -102,7 +111,7 @@ function AccessManagement() {
 	const deleteRole = useDeleteRole(authClient, workspaceId, {
 		onError: (error) => toast.error(error.message),
 	});
-	const owner = access.data?.role === "superadmin";
+	const owner = access.data?.workspaceRole?.split(",").includes("owner");
 	const roleOptions: Array<[string, string]> = [
 		...(owner ? [["admin", "Administrator"] as [string, string]] : []),
 		["member", "User"],
@@ -133,6 +142,23 @@ function AccessManagement() {
 					<TabsTrigger value="roles">Page roles</TabsTrigger>
 				</TabsList>
 				<TabsContent value="members" className="space-y-4 pt-4">
+					<form
+						className="flex max-w-lg gap-2"
+						onSubmit={(event) => {
+							event.preventDefault();
+							addMember.mutate();
+						}}
+					>
+						<Input
+							type="email"
+							required
+							aria-label="Member email"
+							placeholder="Existing account email"
+							value={email}
+							onChange={(event) => setEmail(event.target.value)}
+						/>
+						<Button disabled={addMember.isPending || !email}>Add member</Button>
+					</form>
 					<Input
 						className="max-w-sm"
 						aria-label="Filter this page of members"
@@ -226,8 +252,8 @@ function AccessManagement() {
 				<TabsContent value="roles" className="space-y-4 pt-4">
 					<div className="flex flex-wrap items-center justify-between gap-3">
 						<p className="text-muted-foreground text-sm">
-							New users receive the standard role. Unchecked pages are
-							inaccessible.
+							New members receive the standard role. Tools also require platform
+							enablement.
 						</p>
 						<Button
 							onClick={(event) => {
@@ -252,7 +278,7 @@ function AccessManagement() {
 							<TableHeader className="hidden lg:table-header-group">
 								<TableRow>
 									<TableHead>Role</TableHead>
-									<TableHead>Visible pages</TableHead>
+									<TableHead>Role grants</TableHead>
 									<TableHead>
 										<span className="sr-only">Actions</span>
 									</TableHead>

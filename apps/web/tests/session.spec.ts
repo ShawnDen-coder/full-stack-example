@@ -1,4 +1,6 @@
+import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
 
 const password = "playwright-test-password";
@@ -10,9 +12,29 @@ async function signup(page: Page, name: string) {
 	await page.getByLabel("Email", { exact: true }).fill(email);
 	await page.getByLabel("Password", { exact: true }).fill(password);
 	await page.getByRole("button", { name: "Sign Up", exact: true }).click();
-	await expect(page).toHaveURL(/\/apps$/);
+	await expect(page).toHaveURL(/\/apps(?:\?|$)/);
+	const session = await (
+		await page.request.get("http://127.0.0.1:43100/api/auth/get-session")
+	).json();
+	execFileSync(
+		"pnpm",
+		[
+			"--filter",
+			"server",
+			"exec",
+			"tsx",
+			"tests/workspace-browser-fixture.ts",
+			session.user.id,
+		],
+		{
+			cwd: fileURLToPath(new URL("../../../", import.meta.url)),
+			env: process.env,
+			stdio: "pipe",
+		},
+	);
+	await page.goto("/apps?workspace=application");
 	await page.getByRole("link", { name: "Todos", exact: true }).first().click();
-	await expect(page).toHaveURL(/\/todos$/);
+	await expect(page).toHaveURL(/\/todos(?:\?|$)/);
 	return email;
 }
 async function signout(page: Page, name: string) {
@@ -71,7 +93,7 @@ test("protected redirect, sign in return path, CRUD and account cache isolation"
 		.locator("form")
 		.getByRole("button", { name: "Sign In", exact: true })
 		.click();
-	await expect(page).toHaveURL(/\/todos$/);
+	await expect(page).toHaveURL(/\/todos(?:\?|$)/);
 	await page.getByRole("button", { name: "Delete Alice private task" }).click();
 	await expect(page.getByText("No todos yet. Add one above!")).toBeVisible();
 });
@@ -229,7 +251,7 @@ test("settings persist profile and theme, sidebar collapses and search navigates
 		.getByRole("link", { name: "Profile", exact: true })
 		.first()
 		.click();
-	await expect(page).toHaveURL(/\/settings$/);
+	await expect(page).toHaveURL(/\/settings(?:\?|$)/);
 	await page.getByLabel("Name", { exact: true }).fill("Updated name");
 	await page
 		.getByRole("button", { name: "Update profile", exact: true })
@@ -270,12 +292,12 @@ test("settings persist profile and theme, sidebar collapses and search navigates
 	await page.getByRole("button", { name: /Search pages/ }).click();
 	await page.getByRole("combobox").fill("Todos");
 	await page.getByRole("option", { name: "Todos", exact: true }).click();
-	await expect(page).toHaveURL(/\/todos$/);
+	await expect(page).toHaveURL(/\/todos(?:\?|$)/);
 	await expect(page.getByRole("dialog")).toHaveCount(0);
 	await page.goto("/settings/profile");
-	await expect(page).toHaveURL(/\/settings$/);
+	await expect(page).toHaveURL(/\/settings(?:\?|$)/);
 	await page.goto("/todos");
-	await expect(page).toHaveURL(/\/todos$/);
+	await expect(page).toHaveURL(/\/todos(?:\?|$)/);
 });
 
 test("legacy auth URLs preserve return paths and reject authentication loops", async ({
@@ -293,9 +315,9 @@ test("legacy auth URLs preserve return paths and reject authentication loops", a
 	await page.getByRole("button", { name: "Sign Up", exact: true }).click();
 	await expect(page).toHaveURL(/\/settings\/appearance$/);
 	await page.goto("/sign-in?redirect=%2Fsign-up");
-	await expect(page).toHaveURL(/\/apps$/);
+	await expect(page).toHaveURL(/\/apps(?:\?|$)/);
 	await page.goto("/register?redirect=https%3A%2F%2Fexample.com");
-	await expect(page).toHaveURL(/\/apps$/);
+	await expect(page).toHaveURL(/\/apps(?:\?|$)/);
 });
 
 test("round2: real sign-out cancels an authorized search transition", async ({
@@ -317,7 +339,14 @@ test("round2: real sign-out cancels an authorized search transition", async ({
 		}
 		await route
 			.fulfill({
-				json: { json: { role: "user", pages: ["queues", "apps", "todos"] } },
+				json: {
+					json: {
+						role: "user",
+						organizationId: "application",
+						platformRole: "superadmin",
+						pages: ["queues", "apps", "todos"],
+					},
+				},
 			})
 			.catch(() => {});
 	});
@@ -384,7 +413,14 @@ test("round2: late queue response from a signed-out owner cannot repopulate cach
 	await signup(page, "Queue owner");
 	await page.route("**/rpc/access/me", (route) =>
 		route.fulfill({
-			json: { json: { role: "user", pages: ["queues", "apps", "todos"] } },
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues", "apps", "todos"],
+				},
+			},
 		}),
 	);
 	let release = () => {};

@@ -21,6 +21,7 @@ export const catalogGroups = [
 	{ id: "workspace", label: "Workspace" },
 	{ id: "tools", label: "Tools" },
 	{ id: "admin", label: "Administration" },
+	{ id: "platform", label: "Platform" },
 	{ id: "account", label: "Account" },
 	{ id: "demo", label: "Template examples" },
 ] as const;
@@ -37,6 +38,7 @@ export type CatalogEntry = Common &
 		| { kind: "shell"; group: "workspace" }
 		| { kind: "real"; group: "tools" }
 		| { kind: "admin"; group: "admin" }
+		| { kind: "platform"; group: "platform" }
 		| { kind: "account"; group: "account" }
 		| { kind: "demo"; group: "demo" }
 	);
@@ -49,11 +51,11 @@ const path = (key: PageKey) => {
 export const catalog = [
 	{
 		id: "tool-center",
-		title: "Tool center",
+		title: "Tool home",
 		url: "/apps",
 		icon: Package,
 		group: "workspace",
-		description: "Find the tools available to your account.",
+		description: "Workspace tools.",
 		match: "exact",
 		kind: "shell",
 	},
@@ -72,10 +74,20 @@ export const catalog = [
 		title: "Queues",
 		url: path("queues"),
 		icon: Clock,
-		group: "tools",
+		group: "platform",
 		description: "Read-only queue and job monitoring.",
 		match: "prefix",
-		kind: "real",
+		kind: "platform",
+	},
+	{
+		id: "workspaces",
+		title: "Workspaces",
+		url: "/workspaces",
+		icon: Package,
+		group: "platform",
+		description: "Manage workspaces and enabled tools.",
+		match: "exact",
+		kind: "platform",
 	},
 	{
 		id: "users",

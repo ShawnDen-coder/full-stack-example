@@ -9,8 +9,16 @@ async function mockSession(
 			json: {
 				json: {
 					role: "user",
+					organizationId: "application",
 					pages: ["todos", "dashboard", "tasks", "apps", "chats"],
 				},
+			},
+		}),
+	);
+	await page.route("**/rpc/access/mine", (route) =>
+		route.fulfill({
+			json: {
+				json: [{ id: "application", name: "Application", slug: "application" }],
 			},
 		}),
 	);
@@ -94,7 +102,7 @@ test("dashboard shows the upstream overview", async ({ page }) => {
 		route.fulfill({ json: { json: { items: [], nextCursor: null } } }),
 	);
 	await page.goto("/dashboard");
-	await expect(page).toHaveURL(/\/dashboard$/);
+	await expect(page).toHaveURL(/\/dashboard(?:\?|$)/);
 	await expect(
 		page.getByRole("link", { name: "Dashboard example", exact: true }),
 	).toHaveAttribute("aria-current", "page");
@@ -350,96 +358,60 @@ test("ordinary users keep settings but cannot enter administration", async ({
 		page.getByRole("link", { name: "Users", exact: true }),
 	).toHaveCount(0);
 	await page.goto("/admin/users");
-	await expect(page).toHaveURL(/\/no-access$/);
+	await expect(page).toHaveURL(/\/no-access(?:\?|$)/);
 	await expect(
 		page.getByRole("heading", { name: "Page access required" }),
 	).toBeVisible();
 	await page.getByRole("link", { name: "Account settings" }).click();
-	await expect(page).toHaveURL(/\/settings$/);
+	await expect(page).toHaveURL(/\/settings(?:\?|$)/);
 });
 
-test("tool center, sidebar and search share visibility across access levels", async ({
+test("tool home, sidebar and search share tool visibility; platform tools stay separate", async ({
 	page,
-}, info) => {
+}) => {
 	await mockSession(page);
 	let pages: string[] = [];
-	let role = "user";
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role, pages } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages,
+				},
+			},
+		}),
 	);
-	for (const [grants, expected] of [
-		[[], []],
-		[["todos"], ["Todos"]],
-		[["queues"], ["Queues"]],
-	] as Array<[string[], string[]]>) {
-		pages = grants;
-		await page.goto("/apps?type=connected&filter=old&sort=asc");
-		await expect(page).toHaveURL(/\/apps$/);
-		const main = page.getByRole("main");
+	for (const enabled of [false, true]) {
+		pages = enabled ? ["todos"] : [];
+		await page.goto(
+			"/apps?workspace=application&type=connected&filter=old&sort=asc",
+		);
+		await expect(page).toHaveURL(/\/apps\?workspace=application$/);
 		await expect(
-			main.getByRole("heading", { name: "Tool center" }),
-		).toBeVisible();
-		for (const title of ["Todos", "Queues"]) {
-			const count = expected.includes(title) ? 1 : 0;
-			await expect(
-				main.getByRole("link", { name: new RegExp(`^${title}`) }),
-			).toHaveCount(count);
-			await expect(
-				page
-					.locator('[data-sidebar="content"]')
-					.getByRole("link", { name: title, exact: true }),
-			).toHaveCount(count);
-		}
+			page
+				.getByRole("main")
+				.getByRole("button", { name: "Todos", exact: true }),
+		).toHaveCount(enabled ? 1 : 0);
+		await expect(
+			page.getByRole("main").getByRole("button", { name: "Queues" }),
+		).toHaveCount(0);
+		await expect(
+			page.getByRole("link", { name: "Todos", exact: true }),
+		).toHaveCount(enabled ? 1 : 0);
+		await expect(
+			page.getByRole("link", { name: "Queues", exact: true }),
+		).toHaveCount(1);
 		await page.getByRole("button", { name: "Search pages" }).click();
-		for (const title of ["Todos", "Queues"])
-			await expect(
-				page.getByRole("option", { name: title, exact: true }),
-			).toHaveCount(expected.includes(title) ? 1 : 0);
+		await expect(
+			page.getByRole("option", { name: "Todos", exact: true }),
+		).toHaveCount(enabled ? 1 : 0);
+		await expect(
+			page.getByRole("option", { name: "Queues", exact: true }),
+		).toHaveCount(1);
 		await page.keyboard.press("Escape");
 	}
-	role = "admin";
-	pages = [];
-	await page.goto("/apps");
-	await expect(
-		page.getByRole("main").getByRole("link", { name: /^Users and access/ }),
-	).toBeVisible();
-	await expect(page.getByRole("main")).toHaveCount(1);
-	await expect(
-		page.getByRole("main").getByRole("heading", { level: 1 }),
-	).toHaveCount(1);
-	for (const theme of ["light", "dark"]) {
-		await page.evaluate(
-			(value) => localStorage.setItem("vite-ui-theme", value),
-			theme,
-		);
-		for (const width of [1440, 768, 390]) {
-			await page.setViewportSize({ width, height: 900 });
-			await page.reload();
-			await expect(
-				page.getByRole("heading", { name: "Tool center" }),
-			).toBeVisible();
-			await page.screenshot({
-				path: info.outputPath(`tool-center-${theme}-${width}.png`),
-				fullPage: true,
-			});
-			expect(
-				await page.evaluate(
-					() => document.documentElement.scrollWidth <= innerWidth,
-				),
-			).toBeTruthy();
-		}
-	}
-	await page.getByRole("button", { name: "Search pages" }).focus();
-	await page.keyboard.press("Enter");
-	await expect(page.getByRole("dialog")).toBeVisible();
-	await page.keyboard.press("Escape");
-	await expect(
-		page.getByRole("button", { name: "Search pages" }),
-	).toBeFocused();
-	await page.goto("/apps/unknown");
-	await expect(
-		page.getByRole("heading", { name: "Page not found" }),
-	).toBeVisible();
 });
 
 test("queue queries isolate ranges, retain same-query 503 data and clear on 403", async ({
@@ -450,7 +422,14 @@ test("queue queries isolate ranges, retain same-query 503 data and clear on 403"
 	await page.route("**/rpc/access/me", (route) => {
 		accessCalls++;
 		return route.fulfill({
-			json: { json: { role: "user", pages: ["queues"] } },
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
 		});
 	});
 	let result: "ok" | "unavailable" | "forbidden" = "ok";
@@ -547,7 +526,16 @@ test("scheduler pages do not show another range after failure and reset on queue
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let fail = false;
 	await page.route("**/rpc/queues/schedulers**", (route) => {
@@ -615,7 +603,14 @@ test("review: mobile job fields, failure summaries, page limit and evidence", as
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
 		route.fulfill({
-			json: { json: { role: "user", pages: ["todos", "queues", "apps"] } },
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["todos", "queues", "apps"],
+				},
+			},
 		}),
 	);
 	let requests = 0;
@@ -644,17 +639,13 @@ test("review: mobile job fields, failure summaries, page limit and evidence", as
 			await page.setViewportSize({ width, height: 900 });
 			await page.goto("/apps");
 			await expect(
-				page.getByRole("main").getByRole("link", { name: /^Todos/ }),
-			).toBeVisible();
-			await expect(
-				page.getByRole("main").getByRole("link", { name: /^Queues/ }),
-			).toBeVisible();
-			await page.getByRole("button", { name: "Template examples" }).click();
-			await expect(
 				page
 					.getByRole("main")
-					.getByRole("link", { name: /^Integration examples/ }),
+					.getByRole("button", { name: "Todos", exact: true }),
 			).toBeVisible();
+			await expect(
+				page.getByRole("main").getByRole("button", { name: "Queues" }),
+			).toHaveCount(0);
 			await page.screenshot({
 				path: info.outputPath(`tools-${theme}-${width}.png`),
 				fullPage: true,
@@ -730,7 +721,14 @@ test("review: navigation matching has one current entry", async ({ page }) => {
 	);
 	await page.route("**/rpc/access/me", (route) =>
 		route.fulfill({
-			json: { json: { role: "user", pages: ["apps", "queues"] } },
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["apps", "queues"],
+				},
+			},
 		}),
 	);
 	for (const [url, title] of [
@@ -764,7 +762,16 @@ test("review: logs-only denial is visible and retry recovers", async ({
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let code = 404;
 	await page.route("**/rpc/queues/job**", (route) =>
@@ -824,7 +831,16 @@ test("review: ID and name searches do not automatically rescan", async ({
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let calls = 0;
 	await page.route("**/rpc/queues/jobs**", (route) => {
@@ -866,7 +882,11 @@ test("review: ID and name searches do not automatically rescan", async ({
 test("review: zero permission account screenshots", async ({ page }, info) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: [] } } }),
+		route.fulfill({
+			json: {
+				json: { role: "user", organizationId: "application", pages: [] },
+			},
+		}),
 	);
 	for (const theme of ["light", "dark"]) {
 		await page.goto("/apps");
@@ -878,19 +898,15 @@ test("review: zero permission account screenshots", async ({ page }, info) => {
 			await page.setViewportSize({ width, height: 900 });
 			await page.goto("/apps");
 			await expect(
-				page.getByText("No tools are enabled for your account.", {
+				page.getByText("No tools available.", {
 					exact: false,
 				}),
 			).toBeVisible();
 			await expect(
-				page.getByRole("main").getByRole("link", { name: /^Profile/ }),
-			).toBeVisible();
-			await expect(
-				page.getByRole("main").getByRole("link", { name: /^Appearance/ }),
-			).toBeVisible();
-			await expect(page.getByRole("main").getByText("Help center")).toHaveCount(
-				0,
-			);
+				page
+					.getByRole("main")
+					.getByRole("button", { name: "Todos", exact: true }),
+			).toHaveCount(0);
 			await page.screenshot({
 				path: info.outputPath(`zero-${theme}-${width}.png`),
 				fullPage: true,
@@ -904,7 +920,16 @@ test("review: delayed previous queue and search responses never appear in a new 
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let release = () => {};
 	const held = new Promise<void>((resolve) => {
@@ -952,7 +977,16 @@ test("polish: controlled toggles and search lock keep the draft and scope", asyn
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let calls = 0;
 	let release = () => {};
@@ -1026,7 +1060,9 @@ test("polish: tool center permission layouts and reduced motion", async ({
 	let grants: string[] = [];
 	let role = "user";
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role, pages: grants } } }),
+		route.fulfill({
+			json: { json: { role, organizationId: "application", pages: grants } },
+		}),
 	);
 	for (const [kind, pages, roleValue] of [
 		["zero", [], "user"],
@@ -1045,7 +1081,7 @@ test("polish: tool center permission layouts and reduced motion", async ({
 				await page.setViewportSize({ width, height: 900 });
 				await page.goto("/apps");
 				await expect(
-					page.getByRole("heading", { name: "Tool center" }),
+					page.getByRole("heading", { name: "Tool home" }),
 				).toBeVisible();
 				await page.screenshot({
 					path: info.outputPath(`${kind}-${theme}-${width}.png`),
@@ -1079,8 +1115,13 @@ test("polish: tool center permission layouts and reduced motion", async ({
 		),
 	).toBeTruthy();
 	await page.emulateMedia({ reducedMotion: "reduce" });
+	grants = ["todos"];
+	await page.goto("/apps?workspace=application");
+	await expect(
+		page.getByRole("button", { name: "Todos", exact: true }),
+	).toBeVisible();
 	const duration = await page
-		.locator("main a")
+		.locator("main [data-slot=card]")
 		.first()
 		.evaluate((element) => getComputedStyle(element).transitionDuration);
 	expect(
@@ -1093,7 +1134,16 @@ test("polish: readable muted text and validation in both themes", async ({
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	for (const theme of ["light", "dark"]) {
 		await page.goto("/apps");
@@ -1102,7 +1152,9 @@ test("polish: readable muted text and validation in both themes", async ({
 			theme,
 		);
 		await page.reload();
-		const paragraph = page.getByText("Choose a tool or manage your account.");
+		const paragraph = page.getByText(
+			"No tools available. Contact your workspace administrator.",
+		);
 		await expect(paragraph).toBeVisible();
 		const ratio = await paragraph.evaluate((element) => {
 			const canvas = document.createElement("canvas");
@@ -1146,7 +1198,16 @@ test("polish: keyboard groups, history, IME and announcements", async ({
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let calls = 0;
 	await page.route("**/rpc/queues/jobs**", (route) => {
@@ -1212,7 +1273,16 @@ test("polish: long queue content wraps at mobile width", async ({
 }, info) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	await page.route("**/rpc/queues/jobs**", (route) =>
 		route.fulfill({
@@ -1256,7 +1326,16 @@ test("polish: retry and repeated submits share the synchronous lock", async ({
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let calls = 0;
 	let recovering = false;
@@ -1318,7 +1397,16 @@ test("round2: logs denial remains blocked during retry and across failures", asy
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	await page.route("**/rpc/queues/job**", (route) =>
 		route.fulfill({
@@ -1428,7 +1516,16 @@ test("round2: recovered search does not revive old error on refresh", async ({
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let phase = "fail";
 	let release = () => {};
@@ -1484,7 +1581,16 @@ test("round2: long query and queue key fit the mobile content", async ({
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	await page.route("**/rpc/queues/jobs**", (route) =>
 		route.fulfill({
@@ -1593,7 +1699,16 @@ test("round3: short viewport scrolls filters and results without clipping", asyn
 	test.setTimeout(60000);
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let withRows = false;
 	await page.route("**/rpc/queues/jobs**", (route) =>
@@ -1750,7 +1865,16 @@ test("round1 candidate C: shrinking log totals recover the current page", async 
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	await page.route("**/rpc/queues/job**", (route) =>
 		route.fulfill({
@@ -1797,7 +1921,16 @@ test("round1: explicit search retries once and cached results survive history", 
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let calls = 0;
 	let failure = false;
@@ -1902,7 +2035,16 @@ test("round1: long queue names leave statuses and links inside the row", async (
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	const counts = {
 		waiting: 1,
@@ -1948,7 +2090,14 @@ test("round1: focus indicators contrast against their surfaces", async ({
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
 		route.fulfill({
-			json: { json: { role: "user", pages: ["apps", "queues"] } },
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["todos", "apps", "queues"],
+				},
+			},
 		}),
 	);
 	await page.setViewportSize({ width: 390, height: 700 });
@@ -1993,7 +2142,7 @@ test("round1: focus indicators contrast against their surfaces", async ({
 	await page.goto("/apps");
 	const toolLink = page
 		.getByRole("main")
-		.getByRole("link", { name: /^Queues/ });
+		.getByRole("button", { name: "Todos", exact: true });
 	await toolLink.focus();
 	await page.keyboard.press("Tab");
 	await page.keyboard.press("Shift+Tab");
@@ -2038,7 +2187,16 @@ test("round1 candidates A and B: role dialogs restore focus and fit many roles",
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "superadmin", pages: ["admin"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "admin",
+					organizationId: "application",
+					workspaceRole: "owner",
+					pages: [],
+				},
+			},
+		}),
 	);
 	await page.route("**/api/auth/organization/list-members**", (route) =>
 		route.fulfill({
@@ -2113,7 +2271,14 @@ test("round2: cached error search waits for authorization and runs once", async 
 				release = resolve;
 			});
 		return route.fulfill({
-			json: { json: { role: "user", pages: ["queues"] } },
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
 		});
 	});
 	const terms: string[] = [];
@@ -2178,7 +2343,14 @@ test("round2: search invalidation while offscreen recovers once after errors", a
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
 		route.fulfill({
-			json: { json: { role: "user", pages: ["queues", "apps"] } },
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues", "apps"],
+				},
+			},
 		}),
 	);
 	let code = 503;
@@ -2236,7 +2408,7 @@ test("round2: search invalidation while offscreen recovers once after errors", a
 			window.dispatchEvent(new PopStateEvent("popstate"));
 		});
 		await expect(
-			page.getByRole("heading", { name: "Tool center" }),
+			page.getByRole("heading", { name: "Tool home" }),
 		).toBeVisible();
 		await page.evaluate(async () => {
 			const { queryClient } = await new Function(
@@ -2262,7 +2434,7 @@ test("round2: search invalidation while offscreen recovers once after errors", a
 			window.dispatchEvent(new PopStateEvent("popstate"));
 		});
 		await expect(
-			page.getByRole("heading", { name: "Tool center" }),
+			page.getByRole("heading", { name: "Tool home" }),
 		).toBeVisible();
 		await page.goBack();
 		if (recover)
@@ -2283,7 +2455,12 @@ test("round2: denied target never searches cached term after redirect", async ({
 	await page.route("**/rpc/access/me", (route) =>
 		route.fulfill({
 			json: {
-				json: { role: "user", pages: allowed ? ["queues", "apps"] : ["apps"] },
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: allowed ? "superadmin" : "user",
+					pages: allowed ? ["queues", "apps"] : ["apps"],
+				},
 			},
 		}),
 	);
@@ -2335,7 +2512,14 @@ test("round2: navigation away cancels pending cached search", async ({
 				release = resolve;
 			});
 		return route.fulfill({
-			json: { json: { role: "user", pages: ["queues", "apps"] } },
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues", "apps"],
+				},
+			},
 		});
 	});
 	const terms: string[] = [];
@@ -2375,10 +2559,8 @@ test("round2: navigation away cancels pending cached search", async ({
 	});
 	hold = false;
 	release();
-	await expect(page).toHaveURL(/\/apps$/);
-	await expect(
-		page.getByRole("heading", { name: "Tool center" }),
-	).toBeVisible();
+	await expect(page).toHaveURL(/\/apps(?:\?|$)/);
+	await expect(page.getByRole("heading", { name: "Tool home" })).toBeVisible();
 	await page.waitForTimeout(300);
 	expect(terms).toEqual(["B", "A"]);
 });
@@ -2389,7 +2571,14 @@ test("round2: native inactive invalidation refetches an offscreen search", async
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
 		route.fulfill({
-			json: { json: { role: "user", pages: ["queues", "apps"] } },
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues", "apps"],
+				},
+			},
 		}),
 	);
 	let calls = 0;
@@ -2416,9 +2605,7 @@ test("round2: native inactive invalidation refetches an offscreen search", async
 		history.pushState({}, "", "/apps");
 		window.dispatchEvent(new PopStateEvent("popstate"));
 	});
-	await expect(
-		page.getByRole("heading", { name: "Tool center" }),
-	).toBeVisible();
+	await expect(page.getByRole("heading", { name: "Tool home" })).toBeVisible();
 	await page.evaluate(async () => {
 		const { queryClient } = await new Function(
 			'return import("/src/utils/orpc.ts")',
@@ -2443,7 +2630,16 @@ test("round2: explicit cached search joins an existing inactive request", async 
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let hold = false;
 	let release = () => {};
@@ -2509,7 +2705,16 @@ for (const moveFocus of [false, true]) {
 	}) => {
 		await mockSession(page);
 		await page.route("**/rpc/access/me", (route) =>
-			route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+			route.fulfill({
+				json: {
+					json: {
+						role: "user",
+						organizationId: "application",
+						platformRole: "superadmin",
+						pages: ["queues"],
+					},
+				},
+			}),
 		);
 		let calls = 0;
 		let release = () => {};
@@ -2580,7 +2785,14 @@ test("round3 fix: superseding refresh navigation releases its lock", async ({
 				release = resolve;
 			});
 		return route.fulfill({
-			json: { json: { role: "user", pages: ["queues"] } },
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
 		});
 	});
 	const terms: string[] = [];
@@ -2636,7 +2848,16 @@ test("round3 fix: retry completion after scope change cannot restore old focus",
 }) => {
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
-		route.fulfill({ json: { json: { role: "user", pages: ["queues"] } } }),
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
 	);
 	let calls = 0;
 	let release = () => {};

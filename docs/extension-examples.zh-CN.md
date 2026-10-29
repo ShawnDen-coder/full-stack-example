@@ -19,7 +19,7 @@
 
 ## 案例一：重命名 Todo
 
-用户编辑自己的 Todo 文本，请求为 `{ id, text }`，返回值仍是 `{ id, text, completed }`，不涉及 schema 变更。
+用户编辑自己的 Todo 文本，请求为 `{ workspaceId, id, text }`，返回值仍是 `{ id, text, completed }`，不涉及 schema 变更。
 
 | 位置 | 具体改动 |
 | --- | --- |
@@ -31,9 +31,9 @@
 
 已实现的流程串联 [Repository／Service 示例](../packages/domain/README.zh-CN.md#示例重命名自己的-todo)，以及 [API 示例](../packages/api/README.zh-CN.md#示例开放-todorename)。`Services.todosService` 已使用推导出的 `TodosService`，`appRouter.todo` 也已挂载；增加这个操作无需新建 Server client、增加 `Services` 属性或 package export。同步修改测试中的 typed service fake。
 
-`apps/web/src/routes/_auth/todos.tsx` 将认证用户身份传入 `features/todos/todos-screen.tsx`，由功能页面管理查询和 mutation。`features/todos/todo-row.tsx` 提供基于 TanStack Form 的行内编辑，包含标签、保存、取消和 Escape 操作。空白与超长文本会被拦截，写入失败保留草稿并显示行内重试提示；保存期间阻止重复提交和冲突的页面操作。取消恢复原文，保存或取消后焦点返回该行的编辑按钮。
+`apps/web/src/routes/_auth/todos.tsx` 将认证用户身份及所选 workspace 传入 `features/todos/todos-screen.tsx`，由功能页面管理查询和 mutation。`features/todos/todo-row.tsx` 提供基于 TanStack Form 的行内编辑，包含标签、保存、取消和 Escape 操作。空白与超长文本会被拦截，写入失败保留草稿并显示行内重试提示；保存期间阻止重复提交和冲突的页面操作。取消恢复原文，保存或取消后焦点返回该行的编辑按钮。
 
-重命名成功后，先使用服务端响应更新缓存中的对应行，再使 `["user", userId, "todos"]` 下所有分页失效。因此后台刷新失败也会显示已保存的文本。普通写入错误由编辑器处理，未授权错误仍进入全局会话边界。浏览器请求不携带归属用户字段。
+重命名成功后，先使用服务端响应更新缓存中的对应行，再使 `["user", userId, "workspace", workspaceId, "todos"]` 下所有分页失效。因此后台刷新失败也会显示已保存的文本。普通写入错误由编辑器处理，未授权错误仍进入全局会话边界。浏览器请求不携带归属用户字段；服务端先校验空间成员资格、工具启用状态及页面权限，再绑定 workspace 范围。
 
 如果增加的是一个全新 Service，而不只是现有 Service 的方法，还需要：增加 domain package export，在 `createServices` 调用工厂，将具体服务类型加入 API `Services`，将实例放入返回的 `services`，并在 `appRouter` 注册新 router。共享 `db` 的 Service 不负责关闭数据库；新增独立 client 时，要补齐就绪、构造失败回滚和 drain 清理，并在依赖数据库的资源关闭后再关闭数据库。
 
