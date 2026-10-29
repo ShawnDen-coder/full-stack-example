@@ -40,6 +40,7 @@ export function WorkspaceSwitcher() {
 					<DropdownMenuTrigger asChild>
 						<SidebarMenuButton
 							size="lg"
+							className="group-data-[collapsible=icon]:h-12!"
 							tooltip={current?.name ?? "Workspaces"}
 							aria-label={`Switch workspace: ${current?.name ?? "None selected"}`}
 						>
