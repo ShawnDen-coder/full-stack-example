@@ -26,21 +26,24 @@ export function NavigationSearch() {
 	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [pending, setPending] = useState(false);
+	const pendingRef = useRef(false);
 	const [error, setError] = useState("");
 	const trigger = useRef<HTMLButtonElement>(null);
 	const origin = useRef<HTMLElement | null>(null);
 	const token = useRef(0);
 	const destination = useRef<string | null>(null);
 	const focusMain = useRef(false);
+	const skipFocus = useRef(false);
 	const currentWorkspace = useRef(workspace);
 	const currentLocation = useRef(location.href);
-	if (
+	const invalidated =
 		currentWorkspace.current !== workspace ||
 		(currentLocation.current !== location.href &&
-			destination.current !== location.pathname)
-	) {
+			destination.current !== location.pathname);
+	if (invalidated) {
 		token.current++;
 		destination.current = null;
+		skipFocus.current = true;
 		currentWorkspace.current = workspace;
 	}
 	currentLocation.current = location.href;
@@ -51,10 +54,19 @@ export function NavigationSearch() {
 				: null;
 		token.current++;
 		focusMain.current = false;
+		skipFocus.current = false;
+		pendingRef.current = false;
 		setPending(false);
 		setError("");
 		setOpen(true);
 	}, []);
+	useEffect(() => {
+		if (invalidated) {
+			pendingRef.current = false;
+			setPending(false);
+			setOpen(false);
+		}
+	}, [invalidated]);
 	useEffect(
 		() => () => {
 			token.current++;
@@ -104,12 +116,17 @@ export function NavigationSearch() {
 					if (!value) {
 						token.current++;
 						destination.current = null;
+						pendingRef.current = false;
 						setPending(false);
 					}
 					setOpen(value);
 				}}
 				onCloseAutoFocus={(event) => {
 					event.preventDefault();
+					if (skipFocus.current) {
+						skipFocus.current = false;
+						return;
+					}
 					if (focusMain.current) {
 						focusMain.current = false;
 						const operation = token.current;
@@ -138,12 +155,24 @@ export function NavigationSearch() {
 								key={item.to}
 								disabled={pending}
 								onSelect={async () => {
-									if (pending) return;
+									if (pendingRef.current) return;
+									pendingRef.current = true;
 									const operation = ++token.current;
 									destination.current = item.to;
 									setPending(true);
 									setError("");
 									try {
+										const prepared = await router.preloadRoute({
+											to: item.to,
+											search: { workspace },
+										});
+										if (operation !== token.current) return;
+										if (
+											!prepared ||
+											prepared.some((match) => match.status === "error") ||
+											prepared.at(-1)?.pathname !== item.to
+										)
+											throw new Error("Unable to prepare navigation.");
 										await router.navigate({
 											to: item.to,
 											search: { workspace },
@@ -167,7 +196,10 @@ export function NavigationSearch() {
 											setError("Unable to open that page. Please try again.");
 										}
 									} finally {
-										if (operation === token.current) setPending(false);
+										if (operation === token.current) {
+											pendingRef.current = false;
+											setPending(false);
+										}
 									}
 								}}
 							>

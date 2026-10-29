@@ -3045,3 +3045,86 @@ test("long tasks and actions remain inside a narrow workspace", async ({
 	).toBeVisible();
 	await page.screenshot({ path: info.outputPath("todos-320-edit.png") });
 });
+
+test("search preserves its query when route preparation fails", async ({
+	page,
+}) => {
+	await mockSession(page);
+	let fail = false;
+	await page.route("**/rpc/access/me", (route) =>
+		fail
+			? route.abort("failed")
+			: route.fulfill({
+					json: {
+						json: {
+							role: "user",
+							organizationId: "application",
+							pages: ["todos", "apps"],
+						},
+					},
+				}),
+	);
+	await page.route("**/rpc/todo/list**", (route) =>
+		route.fulfill({ json: { json: { items: [], nextCursor: null } } }),
+	);
+	await page.goto("/apps?workspace=application");
+	await page.getByRole("button", { name: "Search pages" }).click();
+	const query = page.getByRole("combobox", { name: "Search pages" });
+	await query.fill("Todos");
+	fail = true;
+	await page.getByRole("option", { name: "Todos", exact: true }).click();
+	await expect(page.getByRole("alert")).toContainText(
+		"Unable to open that page",
+	);
+	await expect(query).toHaveValue("Todos");
+	await expect(page).toHaveURL(/\/apps\?workspace=application/);
+	fail = false;
+	await page.getByRole("option", { name: "Todos", exact: true }).click();
+	await expect(page).toHaveURL(/\/todos\?workspace=application/);
+	await expect(page.getByRole("main")).toBeFocused();
+});
+
+test("cancelled search does not navigate when delayed preparation completes", async ({
+	page,
+}) => {
+	await mockSession(page);
+	let delay = false;
+	let release = () => {};
+	let seen = () => {};
+	const requested = new Promise<void>((resolve) => {
+		seen = resolve;
+	});
+	const held = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	await page.route("**/rpc/access/me", async (route) => {
+		if (delay) {
+			seen();
+			await held;
+		}
+		await route
+			.fulfill({
+				json: {
+					json: {
+						role: "user",
+						organizationId: "application",
+						pages: ["todos", "apps"],
+					},
+				},
+			})
+			.catch(() => {});
+	});
+	await page.goto("/apps?workspace=application");
+	const trigger = page.getByRole("button", { name: "Search pages" });
+	await trigger.click();
+	await page.getByRole("combobox", { name: "Search pages" }).fill("Todos");
+	delay = true;
+	await page.getByRole("option", { name: "Todos", exact: true }).click();
+	await requested;
+	await page.keyboard.press("Escape");
+	await expect(trigger).toBeFocused();
+	release();
+	await page.waitForTimeout(500);
+	await expect(page).toHaveURL(/\/apps\?workspace=application/);
+	await expect(trigger).toBeFocused();
+});
