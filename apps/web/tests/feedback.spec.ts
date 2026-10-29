@@ -3016,3 +3016,32 @@ test("job breadcrumb links to real queue jobs in the current workspace", async (
 	);
 	await expect(page.getByRole("menu")).toContainText("long-job-id");
 });
+
+test("long tasks and actions remain inside a narrow workspace", async ({
+	page,
+}, info) => {
+	await mockSession(page);
+	const text = "LongUnbrokenTask".repeat(20);
+	await page.route("**/rpc/todo/list**", (route) =>
+		route.fulfill({
+			json: {
+				json: { items: [{ id: 1, text, completed: false }], nextCursor: null },
+			},
+		}),
+	);
+	await page.setViewportSize({ width: 320, height: 600 });
+	await page.goto("/todos?workspace=application");
+	const row = page.getByRole("listitem").filter({ has: page.getByText(text) });
+	await expect(row).toBeVisible();
+	const box = await row.boundingBox();
+	const edit = row.getByRole("button", { name: `Edit ${text}` });
+	const actionBox = await edit.boundingBox();
+	if (!box || !actionBox) throw new Error("Task bounds unavailable");
+	expect(actionBox.x + actionBox.width).toBeLessThanOrEqual(box.x + box.width);
+	await edit.click();
+	await expect(page.getByLabel("Task name")).toBeFocused();
+	await expect(
+		page.getByRole("button", { name: "Save", exact: true }),
+	).toBeVisible();
+	await page.screenshot({ path: info.outputPath("todos-320-edit.png") });
+});

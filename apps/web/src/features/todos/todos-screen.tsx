@@ -86,12 +86,16 @@ export function TodosScreen({
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="font-bold text-3xl tracking-tight">Todos</h1>
+				<h1 className="sr-only">Todos</h1>
 				<p className="text-muted-foreground">Manage your personal tasks.</p>
 			</div>
 			<div>
-				<form onSubmit={handleAddTodo} className="mb-6 flex items-center gap-2">
+				<form
+					onSubmit={handleAddTodo}
+					className="mb-6 flex min-w-0 items-center gap-2"
+				>
 					<Input
+						className="min-w-0 flex-1"
 						aria-label="New task"
 						value={newTodoText}
 						onChange={(event) => setNewTodoText(event.target.value)}

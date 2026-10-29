@@ -43,8 +43,8 @@ export function TodoRow({
 			{editing ? (
 				<TodoEditor todo={todo} busy={busy} onSave={onRename} onClose={close} />
 			) : (
-				<div className="flex items-center justify-between gap-2">
-					<div className="flex min-w-0 items-center gap-2">
+				<div className="flex min-w-0 items-start justify-between gap-2">
+					<div className="flex min-w-0 flex-1 items-start gap-2">
 						<Checkbox
 							id={`todo-${todo.id}`}
 							checked={todo.completed}
@@ -53,7 +53,7 @@ export function TodoRow({
 						/>
 						<label
 							htmlFor={`todo-${todo.id}`}
-							className={`min-w-0 break-words ${todo.completed ? "line-through" : ""}`}
+							className={`min-w-0 [overflow-wrap:anywhere] ${todo.completed ? "line-through" : ""}`}
 						>
 							{todo.text}
 						</label>
@@ -185,7 +185,7 @@ function TodoEditor({
 				})}
 			>
 				{({ canSubmit, isSubmitting }) => (
-					<div className="flex justify-end gap-2">
+					<div className="flex flex-wrap justify-end gap-2">
 						<Button
 							type="button"
 							variant="outline"
