@@ -55,6 +55,7 @@ function AppLayoutInner() {
 	const { pathname } = useLocation();
 	const matches = useMatches();
 	const fixed = matches.some((match) => match.staticData.layout === "fixed");
+	const fluid = matches.some((match) => match.staticData.layout === "fluid");
 	const workspaceId = useWorkspaceId();
 	const access = useAccess();
 	const navigate = useNavigate();
@@ -119,7 +120,7 @@ function AppLayoutInner() {
 						<ConfigDrawer />
 					</div>
 				</Header>
-				<Main fixed={fixed} id="content" tabIndex={-1}>
+				<Main fixed={fixed} fluid={fluid} id="content" tabIndex={-1}>
 					{canVisit(access.data, pathname) ? (
 						<Outlet key={workspaceId} />
 					) : null}

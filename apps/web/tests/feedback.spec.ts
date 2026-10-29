@@ -2909,3 +2909,25 @@ test("round3 fix: retry completion after scope change cannot restore old focus",
 	await expect(page.getByText("Search for A completed.")).toHaveCount(0);
 	expect(calls).toBe(2);
 });
+
+test("workspace shell defaults to light and keeps desktop sidebar preference", async ({
+	page,
+}) => {
+	await mockSession(page);
+	await page.setViewportSize({ width: 768, height: 600 });
+	await page.goto("/apps");
+	await expect(page.locator("html")).toHaveClass(/light/);
+	const toggle = page
+		.getByRole("banner")
+		.getByRole("button", { name: "Toggle Sidebar" });
+	await toggle.click();
+	await expect(toggle).toHaveAttribute("aria-expanded", "false");
+	await page.setViewportSize({ width: 767, height: 600 });
+	await page.setViewportSize({ width: 768, height: 600 });
+	await expect(toggle).toHaveAttribute("aria-expanded", "false");
+	await page.reload();
+	await expect(toggle).toHaveAttribute("aria-expanded", "false");
+	await page.evaluate(() => localStorage.setItem("vite-ui-theme", "dark"));
+	await page.reload();
+	await expect(page.locator("html")).toHaveClass(/dark/);
+});
