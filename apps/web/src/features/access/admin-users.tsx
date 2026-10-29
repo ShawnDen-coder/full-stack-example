@@ -27,7 +27,7 @@ import {
 } from "@full-stack-example/ui/components/tabs";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { EditMemberRolesDialog } from "@/components/auth/organization/edit-member-roles-dialog";
@@ -35,7 +35,6 @@ import {
 	type Role,
 	RoleDialog,
 } from "@/components/auth/organization/role-dialog";
-import { Main } from "@/components/layout/main";
 import { useAccess } from "@/lib/access";
 import { organizationPlugin } from "@/lib/auth/organization-plugin";
 import { authClient } from "@/lib/auth-client";
@@ -74,6 +73,17 @@ export function AdminUsers() {
 }
 
 function AccessManagement() {
+	const dialogTrigger = useRef<HTMLButtonElement | null>(null);
+	const restoreFocus = (event: Event) => {
+		const active = document.activeElement;
+		event.preventDefault();
+		if (
+			active === document.body ||
+			(active instanceof Element && active.closest('[role="dialog"]'))
+		) {
+			dialogTrigger.current?.focus();
+		}
+	};
 	const access = useAccess();
 	const queryClient = useQueryClient();
 	const [offset, setOffset] = useState(0);
@@ -109,7 +119,7 @@ function AccessManagement() {
 			.includes(search.toLowerCase()),
 	);
 	return (
-		<Main>
+		<div>
 			<div className="mb-6">
 				<h1 className="font-semibold text-2xl">Users and access</h1>
 				<p className="mt-2 text-muted-foreground text-sm">
@@ -174,7 +184,10 @@ function AccessManagement() {
 														member.role.split(",").includes("owner") ||
 														(!owner && member.role.split(",").includes("admin"))
 													}
-													onClick={() => setEditingMember(member)}
+													onClick={(event) => {
+														dialogTrigger.current = event.currentTarget;
+														setEditingMember(member);
+													}}
 												>
 													Edit roles
 												</Button>
@@ -216,7 +229,14 @@ function AccessManagement() {
 							New users receive the standard role. Unchecked pages are
 							inaccessible.
 						</p>
-						<Button onClick={() => setEditingRole(null)}>Create role</Button>
+						<Button
+							onClick={(event) => {
+								dialogTrigger.current = event.currentTarget;
+								setEditingRole(null);
+							}}
+						>
+							Create role
+						</Button>
 					</div>
 					{roles.isError ? (
 						<p role="alert">
@@ -260,7 +280,10 @@ function AccessManagement() {
 												<Button
 													variant="outline"
 													aria-label={`Edit ${role.role}`}
-													onClick={() => setEditingRole(role)}
+													onClick={(event) => {
+														dialogTrigger.current = event.currentTarget;
+														setEditingRole(role);
+													}}
 												>
 													Edit
 												</Button>
@@ -294,6 +317,7 @@ function AccessManagement() {
 				</TabsContent>
 			</Tabs>
 			<RoleDialog
+				onCloseAutoFocus={restoreFocus}
 				open={editingRole !== undefined}
 				role={editingRole ?? undefined}
 				organizationId={workspaceId}
@@ -307,6 +331,7 @@ function AccessManagement() {
 			/>
 			{editingMember && (
 				<EditMemberRolesDialog
+					onCloseAutoFocus={restoreFocus}
 					open
 					member={editingMember}
 					organizationId={workspaceId}
@@ -319,6 +344,6 @@ function AccessManagement() {
 					}}
 				/>
 			)}
-		</Main>
+		</div>
 	);
 }

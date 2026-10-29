@@ -2,15 +2,20 @@ import { Badge } from "@full-stack-example/ui/components/badge";
 import { Button } from "@full-stack-example/ui/components/button";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { orpc } from "@/utils/orpc";
 import { formatTime } from "./format";
-import { QueueQueryState } from "./query-state";
+import { isRpcCode, QueueQueryState } from "./query-state";
 import { QueueNav } from "./queue-nav";
 
 const route = getRouteApi("/_auth/queues/$queueKey/jobs/$jobId");
 
 export function QueueJobDetail() {
+	const { queueKey, jobId } = route.useParams();
+	return <QueueJobDetailContent key={JSON.stringify([queueKey, jobId])} />;
+}
+
+function QueueJobDetailContent() {
 	const { queueKey, jobId } = route.useParams();
 	const search = route.useSearch();
 	const [page, setPage] = useState(1);
@@ -28,15 +33,58 @@ export function QueueJobDetail() {
 		refetchIntervalInBackground: false,
 		meta: { errorHandledLocally: true },
 	});
-	const detail = job.data;
+	const blocks = (error: unknown) =>
+		["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].some((code) =>
+			isRpcCode(error, code),
+		);
+	const resource = JSON.stringify([queueKey, jobId]);
+	const blocked = useRef<{
+		resource: string;
+		job: { error: unknown; updatedAt: number } | null;
+		logs: { error: unknown; updatedAt: number } | null;
+	}>({ resource, job: null, logs: null });
+	if (blocked.current.resource !== resource)
+		blocked.current = { resource, job: null, logs: null };
+	for (const [source, query] of [
+		["job", job],
+		["logs", logs],
+	] as const) {
+		if (blocks(query.error))
+			blocked.current[source] = {
+				error: query.error,
+				updatedAt: query.dataUpdatedAt,
+			};
+		else if (
+			blocked.current[source] &&
+			query.isSuccess &&
+			query.dataUpdatedAt !== blocked.current[source]?.updatedAt
+		)
+			blocked.current[source] = null;
+	}
+	const blockingJob = blocked.current.job;
+	const blockingLogs = blocked.current.logs;
+	const hidden = blockingJob || blockingLogs;
+	const detail = hidden ? undefined : job.data;
+	const logData = hidden ? undefined : logs.data;
 	const logPageCount = Math.min(
 		10000,
-		Math.max(1, Math.ceil((logs.data?.total ?? 0) / 50)),
+		Math.max(1, Math.ceil((logData?.total ?? 0) / 50)),
 	);
+	useEffect(() => {
+		if (
+			!hidden &&
+			logs.isSuccess &&
+			!logs.isFetching &&
+			logData &&
+			logData.page === page &&
+			page > logPageCount
+		)
+			setPage(logPageCount);
+	}, [hidden, logs.isSuccess, logs.isFetching, logData, page, logPageCount]);
 	return (
 		<div className="space-y-6">
 			<div className="flex flex-wrap items-end justify-between gap-3">
-				<div>
+				<div className="min-w-0">
 					<h1 className="font-bold text-2xl tracking-tight">Queues</h1>
 					<p className="break-all text-muted-foreground">
 						{queueKey} · {jobId}
@@ -53,10 +101,12 @@ export function QueueJobDetail() {
 				<QueueNav queueKey={queueKey} search={search} />
 			</div>
 			<QueueQueryState
-				isPending={job.isPending}
-				error={job.error}
-				hasData={!!job.data}
-				onRetry={() => void job.refetch()}
+				isPending={hidden ? false : job.isPending}
+				error={blockingJob?.error ?? blockingLogs?.error ?? job.error}
+				hasData={!!detail}
+				onRetry={() =>
+					void (blockingLogs && !blockingJob ? logs.refetch() : job.refetch())
+				}
 			/>
 			{detail && (
 				<>
@@ -147,27 +197,27 @@ export function QueueJobDetail() {
 						<QueueQueryState
 							isPending={logs.isPending}
 							error={logs.error}
-							hasData={!!logs.data}
+							hasData={!!logData}
 							onRetry={() => void logs.refetch()}
 						/>
-						{logs.data?.total === 0 && (
+						{logData?.total === 0 && (
 							<p className="text-muted-foreground text-sm">
 								No additional logs are available for this job.
 							</p>
 						)}
-						{logs.data && logs.data.lines.length > 0 && (
+						{logData && logData.lines.length > 0 && (
 							<div className="rounded-md border p-3">
 								<pre className="whitespace-pre-wrap break-all font-mono text-xs">
-									{logs.data.lines.join("\n")}
+									{logData.lines.join("\n")}
 								</pre>
 							</div>
 						)}
-						{logs.data?.clipped && (
+						{logData?.clipped && (
 							<p className="mt-2 text-muted-foreground text-xs">
 								Some lines were shortened.
 							</p>
 						)}
-						{logs.data && logs.data.total > 50 && (
+						{logData && logData.total > 50 && (
 							<div className="mt-3 flex flex-wrap items-center gap-2">
 								<Button
 									variant="outline"

@@ -2,6 +2,13 @@ import type { Database } from "@full-stack-example/db";
 import { observeOperation } from "@full-stack-example/observability";
 import { createTodosRepository } from "./repository";
 
+function normalizeText(text: string) {
+	const normalized = text.trim();
+	if (!normalized || normalized.length > 500)
+		throw new Error("Todo text must contain 1–500 characters");
+	return normalized;
+}
+
 export function createTodosService({ db }: { db: Database }) {
 	const repository = createTodosRepository({ db });
 	return {
@@ -24,8 +31,9 @@ export function createTodosService({ db }: { db: Database }) {
 			};
 		},
 		async create({ userId, text }: { userId: string; text: string }) {
+			const normalized = normalizeText(text);
 			return observeOperation("todos.create", async () =>
-				repository.forUser(userId).create({ text }),
+				repository.forUser(userId).create({ text: normalized }),
 			);
 		},
 		async setCompleted({
@@ -50,9 +58,7 @@ export function createTodosService({ db }: { db: Database }) {
 			id: number;
 			text: string;
 		}) {
-			const normalized = text.trim();
-			if (!normalized || normalized.length > 500)
-				throw new Error("Todo text must contain 1–500 characters");
+			const normalized = normalizeText(text);
 			return observeOperation("todos.rename", async () =>
 				repository.forUser(userId).rename({ id, text: normalized }),
 			);

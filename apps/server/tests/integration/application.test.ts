@@ -122,7 +122,7 @@ test("scoped Todo repositories isolate owners and participate in transaction rol
 test("migrations, real authentication, owner isolation, pagination and independent worker", {
 	timeout: 60000,
 }, async () => {
-	const runtime = createServices(config, logger);
+	const runtime = await createServices(config, logger);
 	const identities: string[] = [];
 	let worker: Awaited<ReturnType<typeof startWorker>> | undefined;
 	try {
@@ -397,7 +397,7 @@ test("failed jobs use bounded retries and expose no internal failure details", {
 	const { createProfileReadWorker } = await import(
 		"@full-stack-example/domain/users/jobs/profile-read/worker"
 	);
-	const runtime = createServices(config, logger);
+	const runtime = await createServices(config, logger);
 	let attempts = 0;
 	const worker = createProfileReadWorker({
 		redisUrl: config.REDIS_URL,
@@ -555,7 +555,7 @@ test("native BullMQ telemetry preserves producer trace context through Redis and
 			metricReader: null,
 		},
 	);
-	const runtime = createServices(config, logger);
+	const runtime = await createServices(config, logger);
 	let worker: Awaited<ReturnType<typeof startWorker>> | undefined;
 	try {
 		worker = await startWorker({

@@ -193,6 +193,7 @@ test("native Better Auth roles enforce page access and administrator boundaries"
 		assert.deepEqual((await access.getAccess(ordinary.headers)).pages, [
 			"todos",
 		]);
+		assert.equal(await access.canReadPage(ordinary.headers, "todos"), true);
 		assert.equal(
 			(
 				await post(
@@ -208,6 +209,7 @@ test("native Better Auth roles enforce page access and administrator boundaries"
 			200,
 		);
 		assert.deepEqual((await access.getAccess(ordinary.headers)).pages, []);
+		assert.equal(await access.canReadPage(ordinary.headers, "todos"), false);
 		assert.equal(
 			(
 				await post(

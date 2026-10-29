@@ -34,12 +34,16 @@ export function RoleDialog({
 	organizationId,
 	registry,
 	role,
+	onCloseAutoFocus,
 }: {
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
 	organizationId: string;
 	registry: Record<string, { label?: string; actions: Record<string, string> }>;
 	role?: Role;
+	onCloseAutoFocus?: React.ComponentProps<
+		typeof DialogContent
+	>["onCloseAutoFocus"];
 }) {
 	const { authClient, localization: authLocalization } =
 		useAuth<OrganizationRolesAuthClient>();
@@ -118,7 +122,10 @@ export function RoleDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+			<DialogContent
+				className="max-h-[85vh] overflow-y-auto sm:max-w-lg"
+				onCloseAutoFocus={onCloseAutoFocus}
+			>
 				<form.AppForm>
 					<form.AuthFormRoot className="flex flex-col gap-6">
 						<DialogHeader>

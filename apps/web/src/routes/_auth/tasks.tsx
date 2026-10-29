@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { Tasks } from "@/features/tasks";
 export const Route = createFileRoute("/_auth/tasks")({
+	staticData: { layout: "fixed" },
 	validateSearch: z.object({
 		page: z.number().int().positive().optional().catch(1),
 		pageSize: z.number().int().min(1).max(100).optional().catch(10),

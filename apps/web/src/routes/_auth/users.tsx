@@ -27,6 +27,7 @@ const usersSearchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_auth/users")({
+	staticData: { layout: "fixed" },
 	validateSearch: usersSearchSchema,
 	component: AdminUsers,
 });

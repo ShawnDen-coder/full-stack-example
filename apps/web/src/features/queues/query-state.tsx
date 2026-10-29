@@ -20,11 +20,13 @@ export function QueueQueryState({
 	error,
 	onRetry,
 	hasData = false,
+	retryBusy = false,
 }: {
 	isPending: boolean;
 	error: unknown;
 	onRetry: () => void;
 	hasData?: boolean;
+	retryBusy?: boolean;
 }) {
 	if (isPending) {
 		return (
@@ -60,7 +62,13 @@ export function QueueQueryState({
 							? "You do not have permission to view this queue."
 							: "The queue service did not respond."}
 				{hasData && " The results below are from the last successful request."}
-				<Button variant="outline" className="mt-3" onClick={onRetry}>
+				<Button
+					variant="outline"
+					className="mt-3"
+					onClick={onRetry}
+					disabled={retryBusy}
+					aria-busy={retryBusy}
+				>
 					Retry
 				</Button>
 			</AlertDescription>

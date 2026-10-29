@@ -11,35 +11,29 @@ import {
 } from "@full-stack-example/ui/components/table";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { orpc } from "@/utils/orpc";
 import { formatInterval, formatTime, shortId } from "./format";
-import { QueueQueryState } from "./query-state";
+import { isRpcCode, QueueQueryState } from "./query-state";
 import { QueueNav } from "./queue-nav";
 
 const route = getRouteApi("/_auth/queues/$queueKey/schedulers");
 
 export function QueueSchedulersScreen() {
 	const { queueKey } = route.useParams();
-	const [page, setPage] = useState(1);
+	const [pagination, setPagination] = useState({ queueKey, page: 1 });
+	const page = pagination.queueKey === queueKey ? pagination.page : 1;
+	const setPage = (page: number) => setPagination({ queueKey, page });
 	const schedulers = useQuery({
 		...orpc.queues.schedulers.queryOptions({ input: { queueKey, page } }),
-		placeholderData: (previous) => previous,
 		refetchInterval: 5000,
 		refetchIntervalInBackground: false,
 		meta: { errorHandledLocally: true },
 	});
-	const lastData = useRef<typeof schedulers.data>(undefined);
-	if (schedulers.isSuccess && !schedulers.isPlaceholderData)
-		lastData.current = schedulers.data;
-	const displayedData = schedulers.data ?? lastData.current;
-	const requestKey = JSON.stringify([queueKey, page]);
-	const request = useRef({
-		key: requestKey,
-		baseline: schedulers.dataUpdatedAt,
-	});
-	if (request.current.key !== requestKey)
-		request.current = { key: requestKey, baseline: schedulers.dataUpdatedAt };
+	const denied = ["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].some((code) =>
+		isRpcCode(schedulers.error, code),
+	);
+	const displayedData = denied ? undefined : schedulers.data;
 	const pageCount = Math.min(
 		10000,
 		Math.max(1, Math.ceil((displayedData?.total ?? 0) / 50)),
@@ -48,27 +42,26 @@ export function QueueSchedulersScreen() {
 		if (
 			schedulers.isSuccess &&
 			!schedulers.isFetching &&
-			!schedulers.isPlaceholderData &&
-			schedulers.dataUpdatedAt > request.current.baseline &&
 			schedulers.data?.page === page &&
 			page > pageCount
 		)
-			setPage(pageCount);
+			setPagination({ queueKey, page: pageCount });
 	}, [
 		schedulers.isSuccess,
 		schedulers.isFetching,
-		schedulers.isPlaceholderData,
-		schedulers.dataUpdatedAt,
 		schedulers.data,
 		page,
 		pageCount,
+		queueKey,
 	]);
 	return (
 		<div className="flex min-h-0 flex-1 flex-col gap-6">
 			<div className="flex flex-wrap items-end justify-between gap-3">
-				<div>
+				<div className="min-w-0">
 					<h1 className="font-bold text-2xl tracking-tight">Queues</h1>
-					<p className="text-muted-foreground">{queueKey} · Schedulers</p>
+					<p className="break-all text-muted-foreground">
+						{queueKey} · Schedulers
+					</p>
 				</div>
 				<QueueNav queueKey={queueKey} />
 			</div>
@@ -137,7 +130,8 @@ export function QueueSchedulersScreen() {
 				<div className="flex flex-wrap items-center gap-2">
 					<span className="text-sm">
 						{displayedData.total.toLocaleString()} schedulers · Page {page} of{" "}
-						{pageCount}
+						{pageCount} · Updated{" "}
+						{formatTime(Date.parse(displayedData.refreshedAt))}
 					</span>
 					<Button
 						variant="outline"

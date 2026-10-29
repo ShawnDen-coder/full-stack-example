@@ -53,17 +53,14 @@ async rename({ userId, id, text }: {
   id: number;
   text: string;
 }) {
-  const normalized = text.trim();
-  if (!normalized || normalized.length > 500) {
-    throw new Error("Todo text must contain 1–500 characters");
-  }
+  const normalized = normalizeText(text);
   return observeOperation("todos.rename", async () =>
     repository.forUser(userId).rename({ id, text: normalized }),
   );
 },
 ```
 
-Service 保证 HTTP 和未来的 Worker 调用都遵守文本规则。Repository 负责 SQL 和归属约束，API 将 `null` 映射为 `NOT_FOUND`。`TodosService` 由返回值推导，会自动包含新方法。接着阅读 [API 示例](../api/README.zh-CN.md#示例开放-todorename)和[应用接线案例](../../docs/extension-examples.zh-CN.md#案例一重命名-todo)。
+内部 `normalizeText` helper 会 trim 文本并拒绝不在 1–500 字符范围内的输入。Service 对创建和重命名都执行此规则，包括直接调用及未来的 Worker 调用。Repository 负责 SQL 和归属约束，API 将 `null` 映射为 `NOT_FOUND`。`TodosService` 由返回值推导，会自动包含新方法。接着阅读 [API 示例](../api/README.zh-CN.md#示例开放-todorename)和[应用接线案例](../../docs/extension-examples.zh-CN.md#案例一重命名-todo)。
 
 扩展 [Repository 测试](tests/todos-repository.test.ts)，检查 SQL 同时包含 `id` 和 `user_id` 条件、交错调用不串用户，以及没有匹配行时返回 `null`。增加 Service 测试覆盖 trim、空文本和超长文本。集成测试验证 Alice 可以重命名自己的 Todo，Bob 既不能修改，也无法据此判断它是否存在。
 

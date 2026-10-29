@@ -73,6 +73,10 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
 			>
 				<Link
 					to={item.url}
+					activeOptions={{
+						exact: item.match !== "prefix",
+						includeSearch: false,
+					}}
 					activeProps={{ "aria-current": "page" }}
 					onClick={() => setOpenMobile(false)}
 				>
@@ -116,7 +120,14 @@ function SidebarMenuCollapsible({
 									asChild
 									isActive={checkIsActive(href, subItem)}
 								>
-									<Link to={subItem.url} onClick={() => setOpenMobile(false)}>
+									<Link
+										to={subItem.url}
+										activeOptions={{
+											exact: subItem.match !== "prefix",
+											includeSearch: false,
+										}}
+										onClick={() => setOpenMobile(false)}
+									>
 										{subItem.icon && <subItem.icon />}
 										<span>{subItem.title}</span>
 										{subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}
@@ -161,6 +172,10 @@ function SidebarMenuCollapsedDropdown({
 						<DropdownMenuItem key={`${sub.title}-${sub.url}`} asChild>
 							<Link
 								to={sub.url}
+								activeOptions={{
+									exact: sub.match !== "prefix",
+									includeSearch: false,
+								}}
 								className={`${checkIsActive(href, sub) ? "bg-secondary" : ""}`}
 							>
 								{sub.icon && <sub.icon />}
@@ -177,14 +192,12 @@ function SidebarMenuCollapsedDropdown({
 	);
 }
 
-function checkIsActive(href: string, item: NavItem, mainNav = false) {
+function checkIsActive(href: string, item: NavItem, _mainNav = false) {
+	const path = href.split("?")[0]?.replace(/\/+$/, "") || "/";
+	const active = (url: string, match?: "exact" | "prefix") =>
+		path === url || (match === "prefix" && path.startsWith(`${url}/`));
 	return (
-		(item.url === "/queues" && href.split("?")[0].startsWith("/queues/")) ||
-		href === item.url || // /endpint?search=param
-		href.split("?")[0] === item.url || // endpoint
-		!!item?.items?.filter((i) => i.url === href).length || // if child nav is active
-		(mainNav &&
-			href.split("/")[1] !== "" &&
-			href.split("/")[1] === item?.url?.split("/")[1])
+		(!!item.url && active(item.url, item.match)) ||
+		!!item.items?.some((child) => active(child.url ?? "", child.match))
 	);
 }

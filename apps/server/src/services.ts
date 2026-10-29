@@ -5,7 +5,11 @@ import { createDb } from "@full-stack-example/db";
 import { createTodosService } from "@full-stack-example/domain/todos";
 import { createUsersService } from "@full-stack-example/domain/users";
 import { createProfileReadClient } from "@full-stack-example/domain/users/jobs/profile-read/producer";
-import { createLogger, type Logger } from "@full-stack-example/observability";
+import {
+	createLogger,
+	type Logger,
+	withDeadline,
+} from "@full-stack-example/observability";
 import {
 	summarizeProfileJobData,
 	summarizeProfileJobResult,
@@ -19,19 +23,32 @@ export type ServerConfig = {
 	CORS_ORIGIN: string;
 	DB_POOL_MAX?: number;
 	DB_QUERY_TIMEOUT_MS?: number;
+	SERVER_SHUTDOWN_TIMEOUT_MS?: number;
 };
 
-export function createServices(
+const defaultFactories = {
+	createDb,
+	createAuth,
+	createProfileReadClient,
+	createUsersService,
+	createTodosService,
+	createQueueMonitor,
+	createAccessService,
+};
+
+export async function createServices(
 	config: ServerConfig,
 	logger: Logger = createLogger("server"),
+	factories: Partial<typeof defaultFactories> = {},
 ) {
-	const db = createDb(config, {
+	const factory = { ...defaultFactories, ...factories };
+	const db = factory.createDb(config, {
 		max: config.DB_POOL_MAX,
 		queryTimeoutMillis: config.DB_QUERY_TIMEOUT_MS,
 		logger,
 		role: "server",
 	});
-	let profileJobs: ReturnType<typeof createProfileReadClient>;
+	let profileJobs: ReturnType<typeof createProfileReadClient> | undefined;
 	try {
 		const authConfig: AuthConfig = {
 			db,
@@ -39,14 +56,14 @@ export function createServices(
 			baseURL: config.BETTER_AUTH_URL,
 			trustedOrigins: [config.CORS_ORIGIN],
 		};
-		const auth = createAuth(authConfig);
-		profileJobs = createProfileReadClient({
+		const auth = factory.createAuth(authConfig);
+		profileJobs = factory.createProfileReadClient({
 			redisUrl: config.REDIS_URL,
 			logger,
 		});
-		const usersService = createUsersService({ db });
-		const todosService = createTodosService({ db });
-		const queueMonitor = createQueueMonitor([
+		const usersService = factory.createUsersService({ db });
+		const todosService = factory.createTodosService({ db });
+		const queueMonitor = factory.createQueueMonitor([
 			{
 				key: "user-profile",
 				name: "User profile",
@@ -55,6 +72,7 @@ export function createServices(
 				summarizeResult: summarizeProfileJobResult,
 			},
 		]);
+		const producer = profileJobs;
 		let closePromise: Promise<void> | undefined;
 		return {
 			db,
@@ -66,16 +84,16 @@ export function createServices(
 				todosService,
 				profileJobs,
 				queueMonitor,
-				accessService: createAccessService(auth),
+				accessService: factory.createAccessService(auth),
 			},
 			async checkReady() {
 				await db.$client.query("SELECT 1");
 			},
-			checkJobsReady: () => profileJobs.checkReady(),
+			checkJobsReady: () => producer.checkReady(),
 			close() {
 				closePromise ??= (async () => {
 					try {
-						await profileJobs.close();
+						await producer.close();
 					} finally {
 						await db.close();
 					}
@@ -84,9 +102,38 @@ export function createServices(
 			},
 		};
 	} catch (error) {
-		void db
-			.close()
-			.catch((err: unknown) => logger.error({ err }, "Startup cleanup failed"));
+		const report = (err: unknown, resource?: string) => {
+			try {
+				logger.error({ err, resource }, "Startup cleanup failed");
+			} catch {
+				// A broken logger must not replace the assembly failure.
+			}
+		};
+		// Start both cleanups even if one hangs or throws synchronously.
+		const resources = [
+			...(profileJobs
+				? [{ name: "producer", close: () => profileJobs?.close() }]
+				: []),
+			{ name: "database", close: () => db.close() },
+		];
+		const cleanup = Promise.all(
+			resources.map(async ({ name, close }) => {
+				try {
+					await Promise.resolve().then(close);
+				} catch (err) {
+					report(err, name);
+				}
+			}),
+		);
+		try {
+			await withDeadline(
+				cleanup,
+				config.SERVER_SHUTDOWN_TIMEOUT_MS ?? 30000,
+				"Startup cleanup timed out",
+			);
+		} catch (err) {
+			report(err);
+		}
 		throw error;
 	}
 }

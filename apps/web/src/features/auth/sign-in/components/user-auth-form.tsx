@@ -7,7 +7,10 @@ export function UserAuthForm({ redirectTo }: { redirectTo?: string }) {
 		<SignInForm
 			returnTo={safeReturnTo(redirectTo)}
 			onSwitchToSignUp={() =>
-				void navigate({ to: "/sign-up", search: { redirect: "/" } })
+				void navigate({
+					to: "/sign-up",
+					search: { redirect: safeReturnTo(redirectTo) },
+				})
 			}
 		/>
 	);

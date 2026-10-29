@@ -31,13 +31,23 @@ export const queuesRouter = {
 	),
 	jobs: procedure
 		.input(
-			z.object({
-				queueKey,
-				status: z.enum(jobStatuses).default("waiting"),
-				page,
-				pageSize,
-				jobId: jobId.optional(),
-			}),
+			z
+				.object({
+					queueKey,
+					status: z.enum(jobStatuses).default("waiting"),
+					page,
+					pageSize,
+					jobId: jobId.optional(),
+					mode: z.enum(["browse", "id", "name"]).optional(),
+					query: jobId.optional(),
+				})
+				.refine(
+					(input) =>
+						!input.mode ||
+						input.mode === "browse" ||
+						!!input.query ||
+						(input.mode === "id" && !!input.jobId),
+				),
 		)
 		.handler(({ context, input }) =>
 			run(() => context.services.queueMonitor.jobs(input)),

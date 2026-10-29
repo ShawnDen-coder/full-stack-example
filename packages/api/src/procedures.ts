@@ -38,10 +38,11 @@ export const protectedProcedure = publicProcedure.use(requireAuth);
 
 export function pageProcedure(page: PageKey) {
 	return protectedProcedure.use(async ({ context, next }) => {
-		const access = await context.services.accessService.getAccess(
+		const allowed = await context.services.accessService.canReadPage(
 			context.headers,
+			page,
 		);
-		if (!access.pages.includes(page)) throw new ORPCError("FORBIDDEN");
+		if (!allowed) throw new ORPCError("FORBIDDEN");
 		return next();
 	});
 }

@@ -1,9 +1,24 @@
-import { type Access, pageKeys, workspaceId } from "@full-stack-example/access";
+import {
+	type Access,
+	type PageKey,
+	pageKeys,
+	workspaceId,
+} from "@full-stack-example/access";
 import type { Auth } from "./auth";
 
 // A transport adapter only: Better Auth owns membership, storage and authorization.
 export function createAccessService(auth: Auth) {
 	return {
+		async canReadPage(headers: Headers, page: PageKey): Promise<boolean> {
+			const permission = await auth.api.hasPermission({
+				headers,
+				body: {
+					organizationId: workspaceId,
+					permissions: { [page]: ["read"] },
+				},
+			});
+			return permission.success;
+		},
 		async getAccess(headers: Headers): Promise<Access> {
 			const current = await auth.api.getActiveMember({
 				headers,

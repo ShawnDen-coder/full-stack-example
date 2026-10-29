@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const password = "roles-browser-test-password";
@@ -36,7 +36,36 @@ test("administrators configure native page roles through real services", async (
 		await target.getByLabel("Email", { exact: true }).fill(email);
 		await target.getByLabel("Password", { exact: true }).fill(password);
 		await target.getByRole("button", { name: "Sign In", exact: true }).click();
-		await expect(target).toHaveURL(/\/todos$/);
+		await expect(target).toHaveURL(/\/apps$/);
+	}
+	async function findMember(target: Page, email: string) {
+		const member = target.getByRole("button", {
+			name: `Edit roles for ${email}`,
+			exact: true,
+		});
+		const previous = target.getByRole("button", {
+			name: "Previous",
+			exact: true,
+		});
+		const next = target.getByRole("button", { name: "Next", exact: true });
+		const firstRow = target.locator("tbody tr").first();
+		await expect(firstRow).toBeVisible();
+		async function turn(button: typeof next) {
+			const before = await firstRow.innerText();
+			await button.click();
+			await expect
+				.poll(async () => {
+					const text = await firstRow.innerText().catch(() => "");
+					return text !== "" && text !== before;
+				})
+				.toBe(true);
+		}
+		while (await previous.isEnabled()) await turn(previous);
+		while (!(await member.isVisible())) {
+			await expect(next).toBeEnabled();
+			await turn(next);
+		}
+		return member;
 	}
 	try {
 		const owner = await signup("Access owner");
@@ -61,12 +90,7 @@ test("administrators configure native page roles through real services", async (
 			.click();
 		await expect(page.getByRole("dialog")).toHaveCount(0);
 		await page.getByRole("tab", { name: "Members", exact: true }).click();
-		await page
-			.getByRole("button", {
-				name: `Edit roles for ${person.email}`,
-				exact: true,
-			})
-			.click();
+		await (await findMember(page, person.email)).click();
 		await page
 			.getByRole("checkbox", { name: "standard", exact: true })
 			.uncheck();
@@ -78,6 +102,13 @@ test("administrators configure native page roles through real services", async (
 			.click();
 		await expect(page.getByRole("dialog")).toHaveCount(0);
 		await ordinary.reload();
+		await expect(ordinary).toHaveURL(/\/apps$/);
+		await expect(
+			ordinary.getByText("No tools are enabled for your account.", {
+				exact: false,
+			}),
+		).toBeVisible();
+		await ordinary.goto("/todos");
 		await expect(ordinary).toHaveURL(/\/no-access$/);
 		await expect(
 			ordinary.getByRole("link", { name: "Todos", exact: true }),
@@ -101,12 +132,7 @@ test("administrators configure native page roles through real services", async (
 			).toBeTruthy();
 		}
 		await page.setViewportSize({ width: 1440, height: 1000 });
-		await page
-			.getByRole("button", {
-				name: `Edit roles for ${staff.email}`,
-				exact: true,
-			})
-			.click();
+		await (await findMember(page, staff.email)).click();
 		await page
 			.getByRole("checkbox", { name: "Administrator", exact: true })
 			.check();
@@ -116,12 +142,7 @@ test("administrators configure native page roles through real services", async (
 		await expect(page.getByRole("dialog")).toHaveCount(0);
 		await login(manager, staff.email);
 		await manager.goto("/admin/users");
-		await expect(
-			manager.getByRole("button", {
-				name: `Edit roles for ${owner.email}`,
-				exact: true,
-			}),
-		).toBeDisabled();
+		await expect(await findMember(manager, owner.email)).toBeDisabled();
 		await manager.getByRole("tab", { name: "Page roles" }).click();
 		await manager
 			.getByRole("button", { name: "Edit browser-limited", exact: true })

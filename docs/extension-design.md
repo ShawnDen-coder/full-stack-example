@@ -326,3 +326,6 @@ real-service and production validation run in CI, not in the offline test suite.
     cardinality grows only with static definitions.
 12. Use dedicated PostgreSQL/Redis for integration/E2E, verify isolated production
     packages and production Compose, and retain the BullMQ race regression checks.
+
+
+A new tool also needs a stable access page key/path, a route and display metadata in the web catalog. Authorize its API with `pageProcedure`, derive ownership from the session, and keep domain ownership checks independent of the UI. Register any worker consumer explicitly; the catalog does not wire runtime resources.

@@ -1,0 +1,100 @@
+{
+	"round": 3,
+	"reviewer": "Coco",
+	"browser": "156.0.8078.4",
+	"captureMethod": "Existing production build via vite preview; API requests intercepted with synthetic fixtures; deviceScaleFactor=1; reducedMotion=reduce; no screenshot-only UI edits",
+	"version": {
+		"branch": "app-platform-evolution",
+		"head": "ef912997dc117b871e08197f7f570e558730526f",
+		"uncommittedChanges": true,
+		"buildIndexSha256": "48b3859d2e7a8cdd2bf5bd9c559990506ae9ba1f8510495f1202727d89040c2f",
+		"buildIndexMtime": "2026-10-29T04:25:57.645Z",
+		"sourceFiles": {
+			"apps/web/src/features/queues/jobs-screen.tsx": "ee7f333e5ee5b03902ffda66e4997852434bcdd5adffe51c71bc211ad8c09def",
+			"apps/web/src/features/queues/search-invalidation.ts": "c0b4d118208350b18caa374f8c939656de8a7ccaeebb4f31d46bbdba7e40bb97",
+			"apps/web/src/utils/orpc.ts": "6e6ae3e3c4b0d37cb9bef80f1450c34898c4fedc54080cbc399b1d678a4d0bbb"
+		}
+	},
+	"visualReview": "All five PNGs opened and visually inspected individually by Coco after round 3 closing verification; content, themes and absence of devtool overlays confirmed.",
+	"notice": "Synthetic demo account and mocked API responses. No real user data or credentials; these images do not claim production operation. Captured from existing production build (vite preview); no screenshot-only UI edits. Re-capture affected images after any later UI changes.",
+	"createdAt": "2026-10-29T04:37:12.440Z",
+	"captures": [
+		{
+			"file": "01-tool-center-desktop-light.png",
+			"bytes": 61774,
+			"sha256": "f25aedb953c6451f019751ca7c3b73b032eddaba15d32494e8bfcd9e5fc7c95b",
+			"visualChecked": true,
+			"width": 1440,
+			"height": 900,
+			"theme": "light",
+			"route": "/apps",
+			"state": "User with Todos, Queues and integration demo access; demo collapsed",
+			"data": "API-mocked synthetic demonstration; not production",
+			"visualReviewedAt": "2026-10-29T04:38:01.061047+00:00"
+		},
+		{
+			"file": "01-tool-center-desktop-dark.png",
+			"bytes": 62443,
+			"sha256": "14c7c1efaa63e191db29d169772b7b6cd3e7b18d9d95b1cb62c075ff9cf447fa",
+			"visualChecked": true,
+			"width": 1440,
+			"height": 900,
+			"theme": "dark",
+			"route": "/apps",
+			"state": "User with Todos, Queues and integration demo access; demo collapsed",
+			"data": "API-mocked synthetic demonstration; not production",
+			"visualReviewedAt": "2026-10-29T04:38:01.061047+00:00"
+		},
+		{
+			"file": "02-tool-center-mobile-light.png",
+			"bytes": 31414,
+			"sha256": "864dc9a05203fe1cbe26b4045bef05e0e07c7b7e926b13a08a0c69f2a54749b6",
+			"visualChecked": true,
+			"width": 390,
+			"height": 900,
+			"theme": "light",
+			"route": "/apps",
+			"state": "Same access, mobile single-column tool/account hierarchy",
+			"data": "API-mocked synthetic demonstration; not production",
+			"visualReviewedAt": "2026-10-29T04:38:01.061047+00:00"
+		},
+		{
+			"file": "03-queue-failed-desktop-light.png",
+			"bytes": 148045,
+			"sha256": "4614b0f9542cdf245423d00b2cf1ffae085a11d0f458265655b6bf7aa4bbef28",
+			"visualChecked": true,
+			"width": 1440,
+			"height": 900,
+			"theme": "light",
+			"route": "/queues/user-profile/jobs?status=failed",
+			"state": "Browse Failed state; six synthetic profile jobs, attempt counts and failure reasons",
+			"data": "API-mocked synthetic demonstration; not production",
+			"visualReviewedAt": "2026-10-29T04:38:01.061047+00:00"
+		},
+		{
+			"file": "04-queue-name-search-mobile-dark.png",
+			"bytes": 71427,
+			"sha256": "c0b6fa27132f1ade70d80237352d84e4fc6aaa6cb0184e1ba3f1c8c06932f819",
+			"visualChecked": true,
+			"width": 390,
+			"height": 900,
+			"theme": "dark",
+			"route": "/queues/user-profile/jobs?mode=name&query=profile",
+			"state": "Full name bounded search: 700 checked, 2 returned, scan incomplete explicitly indicated",
+			"data": "API-mocked synthetic demonstration; not production",
+			"visualReviewedAt": "2026-10-29T04:38:01.061047+00:00"
+		}
+	],
+	"visualReviewedAt": "2026-10-29T04:38:01.061047+00:00",
+	"closingVerification": {
+		"round": 3,
+		"additionalRound": false,
+		"status": "Coco passed five targeted production-browser closing checks",
+		"sourceDetectorTargets": 2,
+		"sourceDetectorFindings": 0,
+		"sessionFixture": "Synthetic identities from one consistent get-session source; identity focus verified through Better Auth storage-session event; no real backend authentication claim",
+		"buildLocalTime": "2026-10-29 12:25:57 Asia/Shanghai",
+		"captureLocalTime": "2026-10-29 12:37:12 Asia/Shanghai",
+		"limits": "Chromium CSS viewport screenshots, deviceScaleFactor 1, reduced motion emulation; no physical device/native zoom/real touch/screen-reader certification"
+	}
+}

@@ -227,28 +227,33 @@ test("redis failures become unavailable and schedulers mark inferred runs", asyn
 	);
 });
 
-test("exact lookup matches names and IDs across states without duplicates", async () => {
-	const makeJob = (id: string, name: string, state: string): Job => ({
-		id,
-		name,
+test("ID lookup does one direct read and never scans names", async () => {
+	let reads = 0;
+	let states = 0;
+	let scans = 0;
+	const job: Job = {
+		id: "profile",
+		name: "profile",
 		timestamp: 1,
 		data: {},
 		returnvalue: null,
-		getState: async () => state,
-	});
-	const first = makeJob("profile", "profile", "failed");
-	const second = makeJob("2", "profile", "completed");
+		getState: async () => {
+			states++;
+			return "failed";
+		},
+	};
 	const subject = monitor(
 		{
 			getJobCounts: async () => ({}),
 			isPaused: async () => false,
-			getJob: async (id) => (id === "profile" ? first : undefined),
-			getJobs: async (states) =>
-				states[0] === "failed"
-					? [first]
-					: states[0] === "completed"
-						? [second]
-						: [],
+			getJob: async () => {
+				reads++;
+				return job;
+			},
+			getJobs: async () => {
+				scans++;
+				return [];
+			},
 			getJobSchedulers: async () => [],
 			getJobSchedulersCount: async () => 0,
 		},
@@ -259,37 +264,39 @@ test("exact lookup matches names and IDs across states without duplicates", asyn
 		status: "waiting",
 		page: 1,
 		pageSize: 20,
-		jobId: "profile",
+		mode: "id",
+		query: "profile",
 	});
-	assert.equal(result?.total, 2);
-	assert.deepEqual(result?.items.map((item) => item.state).sort(), [
-		"completed",
-		"failed",
-	]);
+	assert.equal(result?.items.length, 1);
+	assert.equal(reads, 1);
+	assert.equal(states, 1);
+	assert.equal(scans, 0);
 });
 
-test("exact name search scans beyond the first batch and paginates matches", async () => {
-	const jobs = Array.from(
-		{ length: 502 },
-		(_, index): Job => ({
-			id: String(index),
-			name: index >= 500 ? "target" : "other",
-			timestamp: index,
-			data: {},
-			returnvalue: null,
-			getState: async () => "completed",
-		}),
-	);
-	const ranges: Array<[number, number]> = [];
+test("name search bounds each state, deduplicates IDs and reports truncation", async () => {
+	const ranges: Array<[string, number, number]> = [];
 	const subject = monitor(
 		{
 			getJobCounts: async () => ({}),
 			isPaused: async () => false,
-			getJob: async () => undefined,
+			getJob: async () => {
+				throw new Error("unexpected direct read");
+			},
 			getJobs: async (states, start = 0, end = 0) => {
-				if (states[0] !== "completed") return [];
-				ranges.push([start, end]);
-				return jobs.slice(start, end + 1);
+				ranges.push([states[0] ?? "", start, end]);
+				return Array.from(
+					{ length: 101 },
+					(_, index): Job => ({
+						id: String(index),
+						name: index < 60 ? "target" : "other",
+						timestamp: 1,
+						data: {},
+						returnvalue: null,
+						getState: async () => {
+							throw new Error("unexpected state read");
+						},
+					}),
+				);
 			},
 			getJobSchedulers: async () => [],
 			getJobSchedulersCount: async () => 0,
@@ -299,14 +306,17 @@ test("exact name search scans beyond the first batch and paginates matches", asy
 	const result = await subject.jobs({
 		queueKey: "user-profile",
 		status: "waiting",
-		page: 2,
-		pageSize: 1,
-		jobId: "target",
+		page: 1,
+		pageSize: 20,
+		mode: "name",
+		query: "target",
 	});
-	assert.equal(result?.total, 2);
-	assert.equal(result?.items[0]?.id, "501");
-	assert.deepEqual(ranges, [
-		[0, 499],
-		[500, 999],
-	]);
+	assert.equal(result?.mode, "name");
+	if (result?.mode !== "name") throw new Error("wrong mode");
+	assert.equal(result.scannedCount, 700);
+	assert.equal(result.items.length, 50);
+	assert.equal(result.scanTruncated, true);
+	assert.equal(result.resultsTruncated, true);
+	assert.equal(ranges.length, 7);
+	assert.ok(ranges.every(([, start, end]) => start === 0 && end === 100));
 });

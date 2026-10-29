@@ -16,3 +16,6 @@ Keep settings/help accessible and preserve owner-scoped business queries.
 
 See [architecture](../../docs/access-control.md). Validate with the package tests
 and pnpm check-types.
+
+
+`/apps` is the authenticated shell entry for every account. The `apps` page grant controls `/apps/integrations-demo`; unknown `/apps/*` paths remain denied. New tools need a stable page key and path, a web catalog entry and route, and a corresponding API page authorization. Keep owner scope in domain and explicitly register any new worker consumer.

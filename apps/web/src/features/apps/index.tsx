@@ -14,7 +14,7 @@ import type { ChangeEvent } from "react";
 import { toast } from "sonner";
 import { apps } from "./data/apps";
 
-const route = getRouteApi("/_auth/apps");
+const route = getRouteApi("/_auth/apps_/integrations-demo");
 
 type AppType = "all" | "connected" | "notConnected";
 
@@ -76,10 +76,11 @@ export function Apps() {
 			<div className="flex flex-1 flex-col">
 				<div>
 					<h1 className="font-bold text-2xl tracking-tight">
-						App Integrations
+						Integration examples
 					</h1>
 					<p className="text-muted-foreground">
-						Browse app integrations. Sample connections shown.
+						Demo only: these connections are examples and are not connected to
+						your account.
 					</p>
 				</div>
 				<div className="my-4 flex items-end justify-between sm:my-0 sm:items-center">

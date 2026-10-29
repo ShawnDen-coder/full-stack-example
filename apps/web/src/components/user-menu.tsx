@@ -83,7 +83,7 @@ export default function UserMenu() {
 									clearSessionData();
 									await navigate({
 										to: "/sign-in",
-										search: { redirect: "/tasks" },
+										search: { redirect: "/" },
 									});
 								} catch {
 									toast.error("Sign out failed. Please retry.");

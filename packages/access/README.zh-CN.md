@@ -13,3 +13,6 @@
 不能替代接口鉴权。保持设置、帮助可达，继续校验业务数据所有权。
 
 参见[架构](../../docs/access-control.zh-CN.md)。运行本包测试和 pnpm check-types 验证。
+
+
+`/apps` 是所有已登录账户的工具中心。`apps` 页面权限控制 `/apps/integrations-demo`；未知 `/apps/*` 路径默认拒绝。新增工具需增加稳定页面 key 和路径、web 目录与路由，并在 API 检查页面权限；domain 保持 owner 范围，新增 Worker 消费者须显式注册。

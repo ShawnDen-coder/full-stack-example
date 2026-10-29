@@ -144,3 +144,9 @@ alert/alert-dialog, popover, collapsible, scroll-area, calendar, switch and inpu
 `form` is the upstream React Hook Form adapter; existing TanStack Form screens can
 continue using the lower-level input/label primitives. App-specific table toolbars,
 columns, URL state and business dialogs remain in web rather than this package.
+
+`CommandDialog` accepts `onCloseAutoFocus` when its trigger lives outside the dialog, allowing callers to restore keyboard focus.
+
+`Field` is shared with the existing authentication forms. `Empty` supplies a minimal neutral empty-state structure; feature copy and actions remain in web. `ToggleGroup` wraps the Radix single/multiple controls with local semantic styling.
+
+`CommandDialog` accepts `commandLabel` to name its search input (default: “Search commands”).

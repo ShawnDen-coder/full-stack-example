@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { mock, test } from "node:test";
-import type { Session } from "@full-stack-example/api/auth";
+import { createAccessService } from "@full-stack-example/api/access";
+import type { Auth, Session } from "@full-stack-example/api/auth";
 import type { ContextDependencies } from "@full-stack-example/api/context";
 import { createApi } from "@full-stack-example/api/create-api";
 import type { AppRouterClient } from "@full-stack-example/api/routers/index";
@@ -11,6 +12,7 @@ import { createQueueConnection } from "@full-stack-example/queue";
 import { serve } from "@hono/node-server";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
+import { APIError } from "better-auth/api";
 
 const now = new Date("2026-01-01T00:00:00Z");
 const profile = {
@@ -63,6 +65,8 @@ async function fixture(
 		},
 		services: {
 			accessService: {
+				canReadPage: async (_headers, page) =>
+					pages.includes(page as "todos" | "queues"),
 				getAccess: async () => ({
 					role: "user" as const,
 					pages,
@@ -563,11 +567,9 @@ test("Todo rename validates input, uses session ownership and hides missing reso
 
 test("page denial blocks Todo operations before reaching the repository", async () => {
 	const f = await fixture();
+	const query = mock.method(f.db.$client, "query");
 	try {
-		f.deps.services.accessService.getAccess = async () => ({
-			role: "user",
-			pages: [],
-		});
+		f.deps.services.accessService.canReadPage = async () => false;
 		const { app } = createApi({
 			...f.deps,
 			corsOrigin: "http://localhost:3001",
@@ -587,7 +589,95 @@ test("page denial blocks Todo operations before reaching the repository", async 
 				"code" in error &&
 				error.code === "FORBIDDEN",
 		);
+		assert.equal(query.mock.callCount(), 0);
 	} finally {
+		query.mock.restore();
+		await f.close();
+	}
+});
+
+test("Todo create validates and trims API input before calling the service", async () => {
+	const f = await fixture();
+	const create = mock.method(
+		f.deps.services.todosService,
+		"create",
+		async (
+			input: Parameters<typeof f.deps.services.todosService.create>[0],
+		) => ({
+			id: 7,
+			text: input.text,
+			completed: false,
+		}),
+	);
+	try {
+		assert.deepEqual(await f.client.todo.create({ text: "  task  " }), {
+			id: 7,
+			text: "task",
+			completed: false,
+		});
+		assert.deepEqual(create.mock.calls[0]?.arguments[0], {
+			userId: "user-1",
+			text: "task",
+		});
+		for (const text of [" ", "x".repeat(501)]) {
+			await assert.rejects(() => f.client.todo.create({ text }), {
+				code: "BAD_REQUEST",
+			});
+		}
+		assert.equal(create.mock.callCount(), 1);
+	} finally {
+		create.mock.restore();
+		await f.close();
+	}
+});
+
+test("page authorization checks only the requested native permission on every request", async () => {
+	const f = await fixture();
+	const checks: unknown[] = [];
+	let allowed = true;
+	let failure: APIError | undefined;
+	const auth = {
+		api: {
+			getActiveMember: async () => {
+				throw new Error("unexpected snapshot lookup");
+			},
+			hasPermission: async (input: unknown) => {
+				checks.push(input);
+				if (failure) throw failure;
+				return { success: allowed };
+			},
+		},
+	} as unknown as Auth;
+	f.deps.services.accessService = createAccessService(auth);
+	const list = mock.method(f.deps.services.todosService, "list", async () => ({
+		items: [],
+		nextCursor: null,
+	}));
+	try {
+		assert.deepEqual(await f.client.todo.list({}), {
+			items: [],
+			nextCursor: null,
+		});
+		assert.equal(checks.length, 1);
+		assert.deepEqual((checks[0] as { body: unknown }).body, {
+			organizationId: "application",
+			permissions: { todos: ["read"] },
+		});
+		allowed = false;
+		await assert.rejects(() => f.client.todo.list({}), { code: "FORBIDDEN" });
+		assert.equal(checks.length, 2);
+		assert.equal(list.mock.callCount(), 1);
+		for (const [status, code] of [
+			["UNAUTHORIZED", "UNAUTHORIZED"],
+			["FORBIDDEN", "FORBIDDEN"],
+			["INTERNAL_SERVER_ERROR", "INTERNAL_SERVER_ERROR"],
+		] as const) {
+			failure = new APIError(status);
+			await assert.rejects(() => f.client.todo.list({}), { code });
+		}
+		assert.equal(list.mock.callCount(), 1);
+	} finally {
+		list.mock.restore();
 		await f.close();
 	}
 });

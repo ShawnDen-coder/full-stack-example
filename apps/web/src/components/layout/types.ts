@@ -16,6 +16,7 @@ type Team = {
 type BaseNavItem = {
 	title: string;
 	badge?: string;
+	match?: "exact" | "prefix";
 	icon?: LucideIcon;
 };
 

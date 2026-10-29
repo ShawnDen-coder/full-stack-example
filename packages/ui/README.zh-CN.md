@@ -122,3 +122,9 @@ sidebar、sheet、dialog、dropdown-menu、separator、sonner 等定制组件
 popover、collapsible、scroll-area、calendar、switch 和 input-otp。
 `form` 是上游 React Hook Form 适配层；既有 TanStack Form 页面继续使用 input/label
 等基础组件。业务表格工具栏、列定义、URL 状态和业务弹窗仍放在 web，不进入 UI 包。
+
+`CommandDialog` 支持 `onCloseAutoFocus`；触发按钮位于对话框外时，调用方可恢复键盘焦点。
+
+`Field` 与现有认证表单共享。`Empty` 提供最小的中性空状态结构，业务文案和操作留在 web。`ToggleGroup` 封装 Radix 单选／多选控件并使用本地语义样式。
+
+`CommandDialog` 支持通过 `commandLabel` 命名搜索输入框（默认值为 “Search commands”）。

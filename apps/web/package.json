@@ -11,6 +11,7 @@
 		"check-types": "tsc -b ../../packages/api && pnpm routes:generate && tsc --noEmit",
 		"env:generate": "varlock codegen",
 		"test:e2e": "playwright test",
+		"test": "node --test scripts/*.test.mjs",
 		"routes:generate": "node scripts/generate-routes.mjs"
 	},
 	"dependencies": {

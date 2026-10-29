@@ -233,3 +233,6 @@ flowchart TB
 10. 关闭期间发生循环拒绝仍计入失败；关闭引起的正常结束不会被误判为新的运行故障。
 11. 关闭 Collector 不影响业务和就绪检查；新增消费者的标签数量只随静态注册项增长。
 12. 使用专用 PostgreSQL／Redis 运行 `pnpm test:integration`、`pnpm test:e2e`，并通过隔离部署包和生产 Compose 检查；不修改已有 BullMQ 竞态回归测试来掩盖失败。
+
+
+新增工具还需要稳定的 access 页面 key／路径、web 路由及展示目录元数据。API 使用 `pageProcedure` 授权并从 session 获取 owner；domain 独立执行归属检查。Worker 消费者须显式注册，展示目录不负责运行时接线。
