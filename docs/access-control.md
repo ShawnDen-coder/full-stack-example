@@ -1,83 +1,69 @@
-# Roles and page access
+# Workspace access
 
-[English](access-control.md) · [简体中文](access-control.zh-CN.md)
+[简体中文](access-control.zh-CN.md)
 
-Authorization uses Better Auth's official Organization plugin with dynamic access
-control. One fixed internal organization (`application`) scopes the application.
-There is no organization creation/switching UI. Better Auth stores memberships in
-`member` and editable permissions in `organization_role`; the application has no
-parallel permission tables or permission evaluator.
+Better Auth Organization is the workspace model. Global `user.role=superadmin`
+permits platform management; local owner/admin/member roles govern one workspace.
+A workspace owner does not become a platform superadmin. A platform superadmin
+cannot read workspace business data without membership and applicable grants.
 
-## Roles
+## User flow
 
-| Role | Responsibility |
-| --- | --- |
-| `owner` | Workspace super administrator; appoint/demote administrators |
-| `admin` | Edit page-role templates and assign them to ordinary members |
-| `member` | Ordinary user identity; no page access by itself |
-| Dynamic roles, initially `standard` | Sets of page `read` permissions |
+The sidebar switcher lists memberships. `/apps?workspace=<id>` is the tool home;
+links retain the explicit URL scope and every Todo RPC captures `workspaceId` in its
+input. A workspace is never selected through shared session mutable state, so tabs
+can operate independently. Switching clears query state and rejects late oRPC
+responses; Todo query keys and editor lifetimes include the workspace.
 
-Members can hold multiple roles; permissions are additive, as defined by Better
-Auth. There is no per-user deny override or independent delegation scope. To
-restrict a member, remove broader roles before assigning a narrower role. Editing
-a template changes every member holding it. Admins and owners can use all registered
-pages; they still obey Todo data ownership.
+Tool home uses existing theme, Sidebar and Card components. Cards are three columns
+on wide content, two on medium content and one on phones. Desktop double-click,
+keyboard activation and touch click open a full tool page. The Hammer is a neutral
+fallback logo. Only real enabled tools appear. Template examples remain separate.
+The former Tasks demo is not a workspace task center.
 
-Registration enrolls users as `member,standard`. The migration seeds `standard`
-with the existing five pages and enrolls existing users and sessions, preserving
-access on upgrade. Future pages must be explicitly added to dynamic roles.
-`queues` is one of those later pages: owners and admins receive it from the
-static role definitions, and `standard` does not include it until an administrator
-grants it.
-`standard` cannot be deleted, and editable role keys cannot be renamed.
+## Management and authorization
 
-The Admin plugin is separate: `user.role` is the global account-management role,
-not the workspace role. Bootstrap grants `superadmin` limited native account
-list/get/ban and session list/revoke permissions. Ordinary workspace admins do not
-receive global account permissions. No blanket `/admin/*` interception exists.
+- `/workspaces`: platform metadata list, transactional creation with an existing
+  account owner, and tool enable/disable. Creator membership is never implicit.
+- `/admin/users?workspace=<id>`: local owner/admin adds existing accounts by exact
+  email and manages native page-role templates. Only owners may manage admins.
+- `/queues`: platform-only operational monitoring, outside workspace tool grants.
+- Todo: membership **and** enabled configuration **and** native page permission;
+  domain SQL additionally filters workspace and authenticated owner on every operation.
+- Missing tool configuration denies access, including owner/admin. Disable preserves
+  data and role grants; re-enable restores access subject to current membership.
+- New accounts have no automatic workspace membership. Settings and a waiting state
+  remain accessible. No organization/owner removal or transfer API is exposed.
 
-## Initialize
+Native Organization writes are allowlisted. Unsupported creation/update/invitation/
+removal paths reject requests; member/role mutations require an explicit organization
+and same-scope target. Dynamic templates cannot grant platform or administrative
+capabilities. The standard role cannot be deleted. Owner accounts cannot be banned
+or removed via the Admin API while they own workspaces.
 
-1. Run `pnpm db:migrate` using deployment credentials.
-2. Register the intended owner normally and obtain the user ID.
-3. Run `pnpm admin:bootstrap <user-id>` with deployment `DATABASE_URL`.
-4. Sign in again and open `/admin/users`.
+## Deployment
 
-Bootstrap atomically provisions the first workspace owner and global superadmin,
-revokes their sessions and refuses if a global superadmin already exists. Workspace
-owner membership is immutable through HTTP; planned owner changes require deployment
-provisioning. This avoids concurrent last-owner removal without replacing native
-role mutations with a custom transaction engine.
+1. Apply committed migrations with deployment credentials. Existing Todo records
+   are assigned to `application`; ownerless rows remain inaccessible.
+2. Run runtime role provisioning to grant the server access to `workspace_tool`.
+3. To initialize a fresh installation, register an account and run
+   `pnpm admin:bootstrap <user-id>` with deployment `DATABASE_URL`; sign in again.
+4. Create workspaces through `/workspaces` and specify the owner account email.
 
-## Enforcement and extension
+Migration unique constraints deliberately reject duplicate memberships/role names.
+Resolve legacy duplicates before rollout. No future Todo insert defaults to a workspace.
 
-- `packages/access` declares pages, navigation mapping and native plugin roles.
-- `packages/api/src/auth.ts` configures plugins and narrow policy hooks: only owners
-  manage admins; dynamic templates contain page-read permissions only; owner and
-  registration-role protections. The native plugin validates and persists mutations.
-- `packages/api/src/access.ts` adapts native `getActiveMember` and `hasPermission`
-  responses into a navigation snapshot. It does not compute role inheritance.
-- oRPC `access.me` returns this snapshot; management calls use native
-  `/api/auth/organization/*` endpoints. `pageProcedure(key)` checks server-side
-  permissions on each request, while Todo repositories still enforce ownership.
-- Better Auth UI's role editor, member-role dialog and data hooks are reused with
-  the existing Radix components. See [source and adaptations](../third-party/better-auth-ui.md).
-- Worker receives no grants to organization tables and imports no API modules.
+## Extend and verify
 
-To add a page, declare its key/path in `packages/access`, protect all backing
-operations with `pageProcedure`, and grant it to the desired dynamic roles through
-the admin screen. Menus, search and routes consume the same server snapshot.
-Settings/help remain available. Access refreshes on navigation, focus and API 403;
-changed access clears business-query caches. An idle browser is not push-cleared.
-The dashboard, integration examples, tasks and chats remain demo screens.
+Add a tool key and metadata, schema-backed enabled configuration, native role grants,
+workspace-aware RPC input and immutable domain scope. Do not merely add a menu entry.
+Worker contracts/registration stay in domain and worker; workspace scheduling, outbox,
+email invitations, owner transfer and workspace deletion are outside this increment.
 
-## Verify
+Run install, unit tests, type checks, build and Biome. Dedicated PostgreSQL/Redis
+integration tests cover multi-workspace CRUD, metadata visibility, creation rollback,
+raw native endpoint bypass, tool disable, and removed membership. Browser tests cover
+real creation, switching, double-click/keyboard entry, sidebar selection and layouts.
 
-Run `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm check-types`, `pnpm build`,
-`pnpm exec biome check .`, then integration/E2E against dedicated
-`TEST_DATABASE_URL`/`TEST_REDIS_URL`. Browser tests require a disposable database
-without an existing superadmin. Tests cover native endpoint escalation attempts,
-registration injection, role revocation, actual UI assignment and Todo API denial.
-
-
-The authenticated `/apps` tool center is available without page grants. The existing `apps` grant controls `/apps/integrations-demo`; unknown child routes remain denied. Add new tools to the web catalog and route, access policy, page-protected API and owner-scoped domain, and register any worker consumer explicitly.
+Bootstrap only assigns the platform role by default. To explicitly grant ownership of
+an existing workspace as well, use `pnpm admin:bootstrap <user-id> --workspace-owner <workspace-id>`.

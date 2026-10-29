@@ -9,8 +9,11 @@ const fields = { id: todo.id, text: todo.text, completed: todo.completed };
 export function createTodosRepository({ db }: { db: TodoExecutor }) {
 	return {
 		// Bind once per scope. Never store the current user on the shared repository.
-		forUser(userId: string) {
-			const owner = eq(todo.userId, userId);
+		forUser(userId: string, workspaceId: string) {
+			const owner = and(
+				eq(todo.userId, userId),
+				eq(todo.workspaceId, workspaceId),
+			);
 			const ownedTodo = (id: number) => and(owner, eq(todo.id, id));
 			return {
 				async list({ cursor, limit }: { cursor?: number; limit: number }) {
@@ -29,7 +32,7 @@ export function createTodosRepository({ db }: { db: TodoExecutor }) {
 				async create({ text }: { text: string }) {
 					const [created] = await db
 						.insert(todo)
-						.values({ userId, text })
+						.values({ userId, workspaceId, text })
 						.returning(fields);
 					if (!created) throw new Error("Todo insert returned no row");
 					return created;

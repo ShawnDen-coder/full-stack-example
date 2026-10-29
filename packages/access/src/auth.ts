@@ -7,7 +7,7 @@ import { defaultStatements as organizationStatements } from "better-auth/plugins
 import { pageKeys } from "./index";
 
 export const pagePermissions = Object.fromEntries(
-	pageKeys.map((key) => [key, ["read"]]),
+	pageKeys.filter((key) => key !== "queues").map((key) => [key, ["read"]]),
 );
 const statements: Statements = {
 	...organizationStatements,

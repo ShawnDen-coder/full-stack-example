@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { createApi } from "@full-stack-example/api/create-api";
 import type { AppRouterClient } from "@full-stack-example/api/routers/index";
 import { createDb } from "@full-stack-example/db";
-import { user } from "@full-stack-example/db/schema/auth";
+import { member, user } from "@full-stack-example/db/schema/auth";
 import { todo } from "@full-stack-example/db/schema/todo";
 import { createLogger } from "@full-stack-example/observability";
 import { createORPCClient } from "@orpc/client";
@@ -69,15 +69,18 @@ test("scoped Todo repositories isolate owners and participate in transaction rol
 						})),
 					);
 					const repository = createTodosRepository({ db: tx });
-					const owner = repository.forUser(ownerId);
-					const other = repository.forUser(otherId);
+					const owner = repository.forUser(ownerId, "application");
+					const other = repository.forUser(otherId, "application");
 					const input = { text: "owner only", userId: otherId };
 					const first = await owner.create(input);
 					const foreign = await other.create({ text: "other only" });
 					const second = await owner.create({ text: "owner second" });
 					const [legacy] = await tx
 						.insert(todo)
-						.values({ text: "ownerless legacy todo" })
+						.values({
+							workspaceId: "application",
+							text: "ownerless legacy todo",
+						})
 						.returning({ id: todo.id });
 					assert.ok(legacy);
 					const [ownedRows, otherRows] = await Promise.all([
@@ -171,6 +174,13 @@ test("migrations, real authentication, owner isolation, pagination and independe
 				.object({ user: z.object({ id: z.string() }) })
 				.parse(await response.json());
 			identities.push(body.user.id);
+			await runtime.db.insert(member).values({
+				id: randomUUID(),
+				userId: body.user.id,
+				organizationId: "application",
+				role: "member,standard",
+				createdAt: new Date(),
+			});
 			const cookie = response.headers
 				.getSetCookie()
 				.map((value) => value.split(";")[0])
@@ -180,21 +190,40 @@ test("migrations, real authentication, owner isolation, pagination and independe
 		}
 		const a = await register("Alice");
 		const b = await register("Bob");
-		await assert.rejects(() => cookieClient().todo.list({}), {
-			code: "UNAUTHORIZED",
+		await assert.rejects(
+			() => cookieClient().todo.list({ workspaceId: "application" }),
+			{
+				code: "UNAUTHORIZED",
+			},
+		);
+		const one = await a.client.todo.create({
+			workspaceId: "application",
+			text: "  first  ",
 		});
-		const one = await a.client.todo.create({ text: "  first  " });
 		assert.equal(one.text, "first");
-		const two = await a.client.todo.create({ text: "second" });
-		const three = await a.client.todo.create({ text: "third" });
-		await b.client.todo.create({ text: "Bob only" });
-		const page1 = await a.client.todo.list({ limit: 2 });
+		const two = await a.client.todo.create({
+			workspaceId: "application",
+			text: "second",
+		});
+		const three = await a.client.todo.create({
+			workspaceId: "application",
+			text: "third",
+		});
+		await b.client.todo.create({
+			workspaceId: "application",
+			text: "Bob only",
+		});
+		const page1 = await a.client.todo.list({
+			workspaceId: "application",
+			limit: 2,
+		});
 		assert.deepEqual(
 			page1.items.map((item) => item.id),
 			[three.id, two.id],
 		);
 		assert.equal(page1.nextCursor, two.id);
 		const page2 = await a.client.todo.list({
+			workspaceId: "application",
 			cursor: page1.nextCursor ?? undefined,
 			limit: 2,
 		});
@@ -204,59 +233,122 @@ test("migrations, real authentication, owner isolation, pagination and independe
 		);
 		assert.equal(page2.nextCursor, null);
 		await assert.rejects(
-			() => b.client.todo.toggle({ id: one.id, completed: true }),
+			() =>
+				b.client.todo.toggle({
+					workspaceId: "application",
+					id: one.id,
+					completed: true,
+				}),
 			{ code: "NOT_FOUND" },
 		);
-		await assert.rejects(() => b.client.todo.delete({ id: one.id }), {
-			code: "NOT_FOUND",
-		});
-		await assert.rejects(() => a.client.todo.create({ text: " " }), {
-			code: "BAD_REQUEST",
-		});
 		await assert.rejects(
-			() => a.client.todo.create({ text: "x".repeat(501) }),
+			() => b.client.todo.delete({ workspaceId: "application", id: one.id }),
+			{
+				code: "NOT_FOUND",
+			},
+		);
+		await assert.rejects(
+			() => a.client.todo.create({ workspaceId: "application", text: " " }),
+			{
+				code: "BAD_REQUEST",
+			},
+		);
+		await assert.rejects(
+			() =>
+				a.client.todo.create({
+					workspaceId: "application",
+					text: "x".repeat(501),
+				}),
 			{ code: "BAD_REQUEST" },
 		);
-		await assert.rejects(() => a.client.todo.list({ limit: 101 }), {
-			code: "BAD_REQUEST",
-		});
 		await assert.rejects(
-			() => a.client.todo.toggle({ id: 1.5, completed: true }),
+			() => a.client.todo.list({ workspaceId: "application", limit: 101 }),
+			{
+				code: "BAD_REQUEST",
+			},
+		);
+		await assert.rejects(
+			() =>
+				a.client.todo.toggle({
+					workspaceId: "application",
+					id: 1.5,
+					completed: true,
+				}),
 			{ code: "BAD_REQUEST" },
 		);
 		assert.equal(
-			(await a.client.todo.toggle({ id: one.id, completed: true })).completed,
+			(
+				await a.client.todo.toggle({
+					workspaceId: "application",
+					id: one.id,
+					completed: true,
+				})
+			).completed,
 			true,
 		);
 		await assert.rejects(
-			() => b.client.todo.rename({ id: one.id, text: "foreign edit" }),
+			() =>
+				b.client.todo.rename({
+					workspaceId: "application",
+					id: one.id,
+					text: "foreign edit",
+				}),
 			{ code: "NOT_FOUND" },
 		);
 		await assert.rejects(
-			() => cookieClient().todo.rename({ id: one.id, text: "anonymous edit" }),
+			() =>
+				cookieClient().todo.rename({
+					workspaceId: "application",
+					id: one.id,
+					text: "anonymous edit",
+				}),
 			{ code: "UNAUTHORIZED" },
 		);
 		assert.deepEqual(
-			await a.client.todo.rename({ id: one.id, text: "  renamed task  " }),
+			await a.client.todo.rename({
+				workspaceId: "application",
+				id: one.id,
+				text: "  renamed task  ",
+			}),
 			{ ...one, text: "renamed task", completed: true },
 		);
 		assert.equal(
-			(await a.client.todo.list({})).items.find((item) => item.id === one.id)
-				?.text,
+			(await a.client.todo.list({ workspaceId: "application" })).items.find(
+				(item) => item.id === one.id,
+			)?.text,
 			"renamed task",
 		);
 		for (const text of [" ", "x".repeat(501)])
-			await assert.rejects(() => a.client.todo.rename({ id: one.id, text }), {
-				code: "BAD_REQUEST",
-			});
-		assert.deepEqual(await a.client.todo.delete({ id: one.id }), {
-			id: one.id,
-		});
-		await assert.rejects(() => a.client.todo.delete({ id: one.id }), {
-			code: "NOT_FOUND",
-		});
+			await assert.rejects(
+				() =>
+					a.client.todo.rename({
+						workspaceId: "application",
+						id: one.id,
+						text,
+					}),
+				{
+					code: "BAD_REQUEST",
+				},
+			);
+		assert.deepEqual(
+			await a.client.todo.delete({ workspaceId: "application", id: one.id }),
+			{
+				id: one.id,
+			},
+		);
 		await assert.rejects(
-			() => a.client.todo.rename({ id: one.id, text: "deleted" }),
+			() => a.client.todo.delete({ workspaceId: "application", id: one.id }),
+			{
+				code: "NOT_FOUND",
+			},
+		);
+		await assert.rejects(
+			() =>
+				a.client.todo.rename({
+					workspaceId: "application",
+					id: one.id,
+					text: "deleted",
+				}),
 			{ code: "NOT_FOUND" },
 		);
 		const job = await a.client.users.requestProfile();
@@ -277,9 +369,12 @@ test("migrations, real authentication, owner isolation, pagination and independe
 			headers: { Cookie: a.cookie, Origin: config.CORS_ORIGIN },
 		});
 		assert.equal(signout.status, 200);
-		await assert.rejects(() => a.client.todo.list({}), {
-			code: "UNAUTHORIZED",
-		});
+		await assert.rejects(
+			() => a.client.todo.list({ workspaceId: "application" }),
+			{
+				code: "UNAUTHORIZED",
+			},
+		);
 		const login = await app.request("/api/auth/sign-in/email", {
 			method: "POST",
 			headers: {

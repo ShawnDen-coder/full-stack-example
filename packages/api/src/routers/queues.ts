@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { pageProcedure } from "../procedures";
+import { platformProcedure } from "../procedures";
 import { jobStatuses, QueueMonitorUnavailableError } from "../queue-monitor";
 
 const queueKey = z.string().trim().min(1).max(64);
@@ -23,7 +23,7 @@ async function run<T>(work: () => Promise<T | null>) {
 	}
 }
 
-const procedure = pageProcedure("queues");
+const procedure = platformProcedure;
 
 export const queuesRouter = {
 	list: procedure.handler(({ context }) =>

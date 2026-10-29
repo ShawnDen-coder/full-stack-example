@@ -34,12 +34,14 @@
 ```ts
 rename: pageProcedure("todos")
   .input(z.object({
+    workspaceId: z.string().min(1).max(100),
     id: z.number().int().positive(),
     text: z.string().trim().min(1).max(500),
   }))
   .handler(async ({ input, context }) => {
     const updated = await context.services.todosService.rename({
       userId: context.session.user.id,
+      workspaceId: context.workspaceId,
       id: input.id,
       text: input.text,
     });
@@ -48,7 +50,7 @@ rename: pageProcedure("todos")
   }),
 ```
 
-当前 router 已实现此操作。已有 `appRouter.todo` 注册和推导出的客户端类型会开放 `client.todo.rename({ id: 7, text: "Book tickets" })`。无需接收 `userId`、创建新的 Service 实例或手写客户端接口。调用方式见[前端案例](../../docs/extension-examples.zh-CN.md#案例一重命名-todo)。
+当前 router 已实现此操作。已有 `appRouter.todo` 注册和推导出的客户端类型会开放 `client.todo.rename({ workspaceId, id: 7, text: "Book tickets" })`。无需接收 `userId`、创建新的 Service 实例或手写客户端接口。调用方式见[前端案例](../../docs/extension-examples.zh-CN.md#案例一重命名-todo)。
 
 扩展 [Server 模块测试](../../apps/server/tests/modules.test.ts)：未登录调用被拒绝；文本会 trim；空文本、超长文本和非法 ID 被校验拦截；Service 收到的用户 ID 来自 session。使用专用数据库的集成测试确认资源不存在和属于其他用户时均返回 `NOT_FOUND`。`TodosService` 增加 `rename` 后，同步更新测试中的 typed service fake。
 
@@ -68,3 +70,15 @@ pnpm --filter server test
 ## 角色与页面授权
 
 [实现与扩展规则](../../docs/access-control.zh-CN.md)。
+
+## Workspace API
+
+`createAccessService(auth, db)` 提供权限快照和空间管理适配器。`access.mine` 只列成员空间；
+`access.workspaces` 是平台分页元数据列表。`access.createWorkspace` 在同一事务内创建组织、
+指定 owner、standard 角色和工具配置，不自动将创建者加入空间。`access.setTool` 仅平台可用；
+本地 owner/admin 通过 `access.addMember` 按已有账号邮箱幂等添加普通成员。
+
+每个 Todo input 必须包含 `workspaceId`。`pageProcedure` 核实成员、工具启用与原生角色授权，
+将同一个不可变 scope 传给 service。不能依靠 session 的 activeOrganizationId 选择业务对象。
+原生 Organization 写接口使用允许列表，成员与角色必须属于显式指定的组织；owner 变更、移除、
+邀请和删除仍未开放。Queues 使用 `platformProcedure`；账号资料任务继续按用户隔离。

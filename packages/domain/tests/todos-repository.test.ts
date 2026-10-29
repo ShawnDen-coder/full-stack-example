@@ -34,8 +34,8 @@ function assertFilter(query: Query, column: string, value: unknown) {
 
 test("interleaved Todo scopes keep their own owner on reads and mutations", async (t) => {
 	const { repository, queries } = fixture(t);
-	const alice = repository.forUser("alice");
-	const bob = repository.forUser("bob");
+	const alice = repository.forUser("alice", "application");
+	const bob = repository.forUser("bob", "application");
 	assert.deepEqual(await alice.list({ cursor: 50, limit: 2 }), []);
 	assert.deepEqual(await bob.list({ limit: 3 }), []);
 	assert.equal(await alice.setCompleted({ id: 20, completed: true }), null);
@@ -67,22 +67,25 @@ test("Todo creation fixes the owner and projects only public fields", async (t) 
 		completed: true,
 		id: 999,
 	};
-	assert.deepEqual(await repository.forUser("alice").create(untrusted), {
-		id: 7,
-		text: "private",
-		completed: false,
-	});
+	assert.deepEqual(
+		await repository.forUser("alice", "application").create(untrusted),
+		{
+			id: 7,
+			text: "private",
+			completed: false,
+		},
+	);
 	assert.equal(queries.length, 1);
 	const [query] = queries;
 	assert.ok(query);
-	assert.deepEqual(query.values, ["alice", "private"]);
+	assert.deepEqual(query.values, ["application", "alice", "private"]);
 	assert.match(query.text, /returning "id", "text", "completed"$/);
 });
 
 test("Todo insertion failures reject instead of returning an empty success", async (t) => {
 	const { repository } = fixture(t);
 	await assert.rejects(
-		() => repository.forUser("alice").create({ text: "todo" }),
+		() => repository.forUser("alice", "application").create({ text: "todo" }),
 		{
 			message: "Todo insert returned no row",
 		},
@@ -91,8 +94,8 @@ test("Todo insertion failures reject instead of returning an empty success", asy
 
 test("rename scopes cannot change another owner's task and return null for missing rows", async (t) => {
 	const { repository, queries } = fixture(t);
-	const alice = repository.forUser("alice");
-	const bob = repository.forUser("bob");
+	const alice = repository.forUser("alice", "application");
+	const bob = repository.forUser("bob", "application");
 	assert.equal(await alice.rename({ id: 7, text: "Alice edit" }), null);
 	assert.equal(await bob.rename({ id: 7, text: "Bob edit" }), null);
 	for (const [index, query] of queries.entries()) {
@@ -105,40 +108,81 @@ test("rename scopes cannot change another owner's task and return null for missi
 test("rename normalizes text and rejects invalid service input before executing SQL", async (t) => {
 	const { service, queries } = fixture(t, [[7, "Updated task", true]]);
 	assert.deepEqual(
-		await service.rename({ userId: "alice", id: 7, text: "  Updated task  " }),
+		await service.rename({
+			workspaceId: "application",
+			userId: "alice",
+			id: 7,
+			text: "  Updated task  ",
+		}),
 		{ id: 7, text: "Updated task", completed: true },
 	);
 	assert.ok(queries[0]?.values.includes("Updated task"));
 	for (const text of ["", " \t\n ", "x".repeat(501)]) {
 		await assert.rejects(
-			() => service.rename({ userId: "alice", id: 7, text }),
+			() =>
+				service.rename({
+					workspaceId: "application",
+					userId: "alice",
+					id: 7,
+					text,
+				}),
 			/1–500/,
 		);
 	}
 	assert.equal(queries.length, 1);
-	await service.rename({ userId: "alice", id: 7, text: "x".repeat(500) });
+	await service.rename({
+		workspaceId: "application",
+		userId: "alice",
+		id: 7,
+		text: "x".repeat(500),
+	});
 	assert.equal(queries.length, 2);
 });
 
 test("create normalizes text and rejects invalid service input before executing SQL", async (t) => {
 	const { service, queries } = fixture(t, [[7, "New task", false]]);
 	assert.deepEqual(
-		await service.create({ userId: "alice", text: "  New task  " }),
+		await service.create({
+			workspaceId: "application",
+			userId: "alice",
+			text: "  New task  ",
+		}),
 		{
 			id: 7,
 			text: "New task",
 			completed: false,
 		},
 	);
-	assert.deepEqual(queries[0]?.values, ["alice", "New task"]);
+	assert.deepEqual(queries[0]?.values, ["application", "alice", "New task"]);
 	for (const text of ["", " \t\n ", "x".repeat(501)]) {
 		await assert.rejects(
-			() => service.create({ userId: "alice", text }),
+			() =>
+				service.create({ workspaceId: "application", userId: "alice", text }),
 			/1–500/,
 		);
 	}
 	assert.equal(queries.length, 1);
-	await service.create({ userId: "alice", text: ` ${"x".repeat(500)} ` });
+	await service.create({
+		workspaceId: "application",
+		userId: "alice",
+		text: ` ${"x".repeat(500)} `,
+	});
 	assert.equal(queries.length, 2);
-	assert.equal(queries[1]?.values[1], "x".repeat(500));
+	assert.equal(queries[1]?.values[2], "x".repeat(500));
+});
+
+test("the same user's workspace scopes constrain every read and mutation", async (t) => {
+	const { repository, queries } = fixture(t);
+	for (const workspaceId of ["space-a", "space-b"]) {
+		const scoped = repository.forUser("alice", workspaceId);
+		const start = queries.length;
+		await scoped.list({ limit: 10 });
+		await scoped.rename({ id: 7, text: "edit" });
+		await scoped.setCompleted({ id: 7, completed: true });
+		await scoped.delete(7);
+		for (const query of queries.slice(start)) {
+			assertFilter(query, "workspace_id", workspaceId);
+			assertFilter(query, "user_id", "alice");
+		}
+	}
 });

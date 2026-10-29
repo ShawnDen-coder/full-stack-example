@@ -96,3 +96,17 @@ data backfills or ownership changes need a separate explicit migration plan.
 ## Roles and page access
 
 [Implementation and extension rules](../../docs/access-control.md).
+
+## Workspace migration
+
+`20261029080802_material_black_cat` adds `workspace_tool`, membership/role uniqueness
+and Todo workspace scope. Existing Todos are assigned to `application`; rows without
+an owner remain inaccessible. There is no default workspace for future inserts.
+Duplicate legacy memberships or role names deliberately fail the unique-index migration;
+resolve duplicates before deployment rather than silently discard role assignments.
+Run runtime-role provisioning after migration to grant `app_server` access to the new
+table. Worker grants are unchanged. Bootstrap can initialize the first owner even though
+newly registered accounts no longer automatically join `application`.
+
+Bootstrap only assigns the platform role by default. To explicitly grant ownership of
+an existing workspace as well, use `pnpm admin:bootstrap <user-id> --workspace-owner <workspace-id>`.

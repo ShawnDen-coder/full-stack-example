@@ -1,9 +1,13 @@
 import "varlock/auto-load";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { createDb } from "./index";
 import { member, session, user } from "./schema";
 
 const userId = process.argv[2];
+const ownerWorkspace =
+	process.argv[3] === "--workspace-owner" ? process.argv[4] : undefined;
+if (process.argv.length > 3 && !ownerWorkspace)
+	throw new Error("Optional: --workspace-owner <workspace-id>");
 if (!userId || !process.env.DATABASE_URL)
 	throw new Error(
 		"Usage: pnpm admin:bootstrap <existing-user-id> with deployment DATABASE_URL",
@@ -28,18 +32,20 @@ try {
 			.set({ role: "superadmin" })
 			.where(eq(user.id, userId));
 		await tx.delete(session).where(eq(session.userId, userId));
-		const membership = await tx
-			.update(member)
-			.set({ role: "owner" })
-			.where(
-				and(
-					eq(member.userId, userId),
-					eq(member.organizationId, "application"),
-				),
-			)
-			.returning({ id: member.id });
-		if (membership.length !== 1)
-			throw new Error("An existing workspace membership is required");
+		if (ownerWorkspace)
+			await tx
+				.insert(member)
+				.values({
+					id: `bootstrap-${userId}`,
+					userId,
+					organizationId: ownerWorkspace,
+					role: "owner",
+					createdAt: new Date(),
+				})
+				.onConflictDoUpdate({
+					target: [member.organizationId, member.userId],
+					set: { role: "owner" },
+				});
 	});
 	console.log("Super administrator initialized. Sign in again.");
 } finally {

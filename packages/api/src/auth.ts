@@ -1,10 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
-import {
-	defaultMemberRole,
-	pageKeys,
-	workspaceId,
-} from "@full-stack-example/access";
+import { defaultMemberRole, pageKeys } from "@full-stack-example/access";
 import {
 	ac,
 	adminAccess,
@@ -21,6 +16,7 @@ import {
 } from "better-auth/api";
 import { admin, organization } from "better-auth/plugins";
 import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 
 export type AuthConfig = {
 	db: Database;
@@ -67,41 +63,135 @@ export function createAuth({
 				},
 			}),
 		],
-		databaseHooks: {
-			user: {
-				create: {
-					after: async (user) => {
-						await db.insert(schema.member).values({
-							id: randomUUID(),
-							userId: user.id,
-							organizationId: workspaceId,
-							role: `member,${defaultMemberRole}`,
-							createdAt: new Date(),
-						});
-					},
-				},
-			},
-			session: {
-				create: {
-					before: async (session) => ({
-						data: { ...session, activeOrganizationId: workspaceId },
-					}),
-				},
-			},
-		},
 		hooks: {
 			before: createAuthMiddleware(async (ctx) => {
+				const roleWrites = [
+					"/organization/update-member-role",
+					"/organization/create-role",
+					"/organization/update-role",
+					"/organization/delete-role",
+				];
+				const reads = [
+					"/organization/list",
+					"/organization/get-full-organization",
+					"/organization/get-active-member",
+					"/organization/get-active-member-role",
+					"/organization/list-members",
+					"/organization/list-roles",
+					"/organization/get-role",
+					"/organization/has-permission",
+					"/organization/list-invitations",
+					"/organization/list-user-invitations",
+				];
 				if (
-					[
-						"/organization/delete",
-						"/organization/leave",
-						"/organization/remove-member",
-					].includes(ctx.path)
+					ctx.path.startsWith("/organization/") &&
+					![...roleWrites, ...reads].includes(ctx.path)
 				)
 					throw new APIError("FORBIDDEN", {
-						message:
-							"The application workspace and memberships are managed through deployment provisioning",
+						message: "Use workspace management for this operation",
 					});
+				const workspaceId = ctx.body?.organizationId;
+				if (roleWrites.includes(ctx.path)) {
+					if (
+						ctx.body?.roleId !== undefined &&
+						ctx.body?.roleName !== undefined
+					)
+						throw new APIError("BAD_REQUEST", {
+							message: "Use only one role selector",
+						});
+					if (typeof workspaceId !== "string" || !workspaceId)
+						throw new APIError("BAD_REQUEST", {
+							message: "Explicit organizationId is required",
+						});
+					const session = await getSessionFromCtx(ctx);
+					if (!session) throw new APIError("UNAUTHORIZED");
+					const [manager] = await db
+						.select()
+						.from(schema.member)
+						.where(
+							and(
+								eq(schema.member.organizationId, workspaceId),
+								eq(schema.member.userId, session.user.id),
+							),
+						);
+					if (
+						!manager?.role
+							.split(",")
+							.some((role) => role === "owner" || role === "admin")
+					)
+						throw new APIError("FORBIDDEN");
+					if (ctx.body?.roleId) {
+						const [target] = await db
+							.select()
+							.from(schema.organizationRole)
+							.where(
+								and(
+									eq(schema.organizationRole.id, ctx.body.roleId),
+									eq(schema.organizationRole.organizationId, workspaceId),
+								),
+							);
+						if (!target) throw new APIError("FORBIDDEN");
+					}
+				}
+				if (ctx.path === "/admin/remove-user") throw new APIError("FORBIDDEN");
+				if (ctx.path === "/admin/ban-user") {
+					const current = await getSessionFromCtx(ctx);
+					if (!current) throw new APIError("UNAUTHORIZED");
+					if (current.user.role !== "superadmin")
+						throw new APIError("FORBIDDEN");
+					const parsed = z
+						.object({
+							userId: z.string().min(1),
+							banReason: z.string().max(1000).optional(),
+							banExpiresIn: z
+								.number()
+								.int()
+								.positive()
+								.max(315360000)
+								.optional(),
+						})
+						.safeParse(ctx.body);
+					if (!parsed.success || parsed.data.userId === current.user.id)
+						throw new APIError("BAD_REQUEST");
+					const input = parsed.data;
+					// Serialize with workspace creation's owner row lock. The check, ban and
+					// session revocation commit together; a pre-hook check alone races creation.
+					const banned = await db.transaction(async (tx) => {
+						const [target] = await tx
+							.select()
+							.from(schema.user)
+							.where(eq(schema.user.id, input.userId))
+							.for("update");
+						if (!target) throw new APIError("NOT_FOUND");
+						const memberships = await tx
+							.select()
+							.from(schema.member)
+							.where(eq(schema.member.userId, target.id));
+						if (
+							memberships.some((item) => item.role.split(",").includes("owner"))
+						)
+							throw new APIError("FORBIDDEN", {
+								message: "Workspace owners cannot be disabled",
+							});
+						const [updated] = await tx
+							.update(schema.user)
+							.set({
+								banned: true,
+								banReason: input.banReason || "No reason",
+								banExpires: input.banExpiresIn
+									? new Date(Date.now() + input.banExpiresIn * 1000)
+									: null,
+							})
+							.where(eq(schema.user.id, target.id))
+							.returning();
+						await tx
+							.delete(schema.session)
+							.where(eq(schema.session.userId, target.id));
+						return updated;
+					});
+					return ctx.json({ user: banned });
+				}
+
 				// Organization member hooks receive the target user, not the actor.
 				// Read the authenticated actor here, then let the native endpoint authorize and mutate.
 				if (ctx.path === "/organization/update-member-role") {
@@ -120,6 +210,8 @@ export function createAuth({
 						.select()
 						.from(schema.member)
 						.where(eq(schema.member.id, ctx.body.memberId));
+					if (!target || target.organizationId !== workspaceId)
+						throw new APIError("FORBIDDEN");
 					const assigned = (
 						Array.isArray(ctx.body.role) ? ctx.body.role : [ctx.body.role]
 					)
@@ -148,12 +240,15 @@ export function createAuth({
 						ctx.path,
 					)
 				) {
-					const permission = ctx.body?.permission ?? ctx.body?.data?.permission;
+					const permission =
+						ctx.path === "/organization/create-role"
+							? ctx.body?.permission
+							: ctx.body?.data?.permission;
 					if (
 						permission &&
 						Object.entries(permission).some(
 							([resource, actions]) =>
-								!pageKeys.some((key) => key === resource) ||
+								!pageKeys.some((key) => key !== "queues" && key === resource) ||
 								!Array.isArray(actions) ||
 								actions.some((action) => action !== "read"),
 						)
