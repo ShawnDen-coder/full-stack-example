@@ -3165,3 +3165,89 @@ test("search opens index routes and focuses main while preserving workspace", as
 		await expect(page.getByRole("main")).toBeFocused();
 	}
 });
+
+test("header tools and collapsed workspace switcher match approved geometry", async ({
+	page,
+}, info) => {
+	await mockSession(page);
+	await page.route("**/rpc/access/me", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["todos", "queues", "apps"],
+				},
+			},
+		}),
+	);
+	await page.route("**/rpc/queues/job**", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					...browserJob,
+					result: {},
+					stacktrace: null,
+					refreshedAt: new Date().toISOString(),
+				},
+			},
+		}),
+	);
+	await page.route("**/rpc/queues/logs**", (route) =>
+		route.fulfill({
+			json: {
+				json: { lines: [], total: 0, page: 1, pageSize: 50, clipped: false },
+			},
+		}),
+	);
+	for (const width of [390, 320, 1440]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto(
+			"/queues/sample/jobs/long-layout-test-name?workspace=application",
+		);
+		const search = page.getByRole("button", { name: "Search pages" });
+		await expect(search).toBeVisible();
+		const tools = [
+			search,
+			page.getByRole("button", { name: "Toggle theme" }),
+			page.getByRole("button", { name: "Open theme settings" }),
+		];
+		const boxes = await Promise.all(tools.map((tool) => tool.boundingBox()));
+		if (boxes.some((box) => !box)) throw new Error("Missing tool geometry");
+		const [first, second, third] = boxes;
+		if (!first || !second || !third) throw new Error("Missing tool geometry");
+		for (const box of [first, second, third]) expect(box.width).toBe(44);
+		expect(first.x + first.width).toBeLessThanOrEqual(second.x);
+		expect(second.x + second.width).toBeLessThanOrEqual(third.x);
+		expect(third.x + third.width).toBe(width - (width >= 768 ? 37 : 28));
+		if (width === 390) expect(first.x + first.width / 2).toBe(252);
+		const breadcrumb = await page
+			.getByRole("navigation", { name: "Breadcrumb" })
+			.boundingBox();
+		if (!breadcrumb) throw new Error("Missing breadcrumb geometry");
+		expect(breadcrumb.x + breadcrumb.width).toBeLessThanOrEqual(first.x);
+		await page.screenshot({ path: info.outputPath(`header-${width}.png`) });
+	}
+	await page.setViewportSize({ width: 768, height: 900 });
+	await page.goto("/apps?workspace=application");
+	await page.locator('[data-slot="sidebar-trigger"]').click();
+	const gap = page.locator('[data-slot="sidebar-gap"]');
+	const container = page.locator('[data-slot="sidebar-container"]');
+	const inset = page.locator('[data-slot="sidebar-inset"]');
+	const switcher = page.getByRole("button", { name: /Switch workspace/ });
+	await expect.poll(async () => (await gap.boundingBox())?.width).toBe(64);
+	await expect
+		.poll(async () => (await switcher.boundingBox())?.height)
+		.toBe(48);
+	const logo = await switcher.locator("div").first().boundingBox();
+	const fixed = await container.boundingBox();
+	const surface = await inset.boundingBox();
+	if (!logo || !fixed || !surface) throw new Error("Missing sidebar geometry");
+	expect(fixed.width).toBe(66);
+	expect(logo.x + logo.width / 2).toBe(32);
+	expect(logo.y).toBe(24);
+	expect(logo.y + logo.height).toBe(56);
+	expect(surface.x).toBe(72);
+	await page.screenshot({ path: info.outputPath("sidebar-768-collapsed.png") });
+});
