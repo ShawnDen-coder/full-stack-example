@@ -4,7 +4,11 @@ export const Route = createFileRoute("/_auth/apps")({
 	beforeLoad: ({ location }) => {
 		const params = new URLSearchParams(location.searchStr);
 		if (["type", "filter", "sort"].some((key) => params.has(key)))
-			throw redirect({ to: "/apps", search: {}, replace: true });
+			throw redirect({
+				to: "/apps",
+				search: { workspace: params.get("workspace") ?? undefined },
+				replace: true,
+			});
 	},
 	component: ToolCenter,
 });

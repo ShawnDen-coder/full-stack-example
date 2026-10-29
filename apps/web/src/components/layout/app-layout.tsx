@@ -1,59 +1,74 @@
-import { canVisit, landingPath } from "@full-stack-example/access";
+import { canVisit } from "@full-stack-example/access";
 import {
 	Sidebar,
 	SidebarContent,
 	SidebarFooter,
 	SidebarHeader,
 	SidebarInset,
-	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem,
 	SidebarProvider,
 	SidebarRail,
 } from "@full-stack-example/ui/components/sidebar";
 import {
-	Link,
 	Outlet,
 	useLocation,
 	useMatches,
 	useNavigate,
 } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
-import { Logo } from "@/assets/logo";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ConfigDrawer } from "@/components/config-drawer";
+import Loader from "@/components/loader";
 import { ModeToggle } from "@/components/mode-toggle";
 import { NavigationSearch } from "@/components/navigation-search";
 import UserMenu from "@/components/user-menu";
 import { DirectionProvider } from "@/context/direction-provider";
 import { LayoutProvider, useLayout } from "@/context/layout-provider";
 import { useAccess, visibleNavigation } from "@/lib/access";
-import { queryClient } from "@/utils/orpc";
-
+import { useWorkspaceId } from "@/lib/workspace";
+import { queryClient, synchronizeWorkspace } from "@/utils/orpc";
 import { Header } from "./header";
 import { Main } from "./main";
 import { NavGroup } from "./nav-group";
+import { WorkspaceSwitcher } from "./workspace-switcher";
 
 export function AppLayout() {
 	return (
 		<DirectionProvider>
 			<LayoutProvider>
-				<AppLayoutInner />
+				<WorkspaceBoundary />
 			</LayoutProvider>
 		</DirectionProvider>
 	);
 }
+function WorkspaceBoundary() {
+	const workspaceId = useWorkspaceId();
+	const [committed, setCommitted] = useState<{ id?: string }>();
+	useLayoutEffect(() => {
+		synchronizeWorkspace(workspaceId);
+		setCommitted({ id: workspaceId });
+	}, [workspaceId]);
+	if (!committed || committed.id !== workspaceId) return <Loader />;
+	return <AppLayoutInner />;
+}
+
 function AppLayoutInner() {
 	const { variant, collapsible } = useLayout();
 	const { pathname } = useLocation();
 	const matches = useMatches();
 	const fixed = matches.some((match) => match.staticData.layout === "fixed");
+	const workspaceId = useWorkspaceId();
 	const access = useAccess();
 	const navigate = useNavigate();
-	const previous = useRef<string | undefined>(undefined);
+	const previous = useRef<{ signature: string; workspaceId?: string }>(
+		undefined,
+	);
 	const signature = JSON.stringify(access.data);
 	useEffect(() => {
 		if (!access.data) return;
-		if (previous.current && previous.current !== signature) {
+		if (
+			previous.current &&
+			previous.current.workspaceId === workspaceId &&
+			previous.current.signature !== signature
+		) {
 			void queryClient.cancelQueries({
 				predicate: (q) => q.queryKey[0] !== "access",
 			});
@@ -61,10 +76,10 @@ function AppLayoutInner() {
 				predicate: (q) => q.queryKey[0] !== "access",
 			});
 		}
-		previous.current = signature;
+		previous.current = { signature, workspaceId };
 		if (!canVisit(access.data, pathname))
 			void navigate({ to: "/no-access", replace: true });
-	}, [access.data, signature, pathname, navigate]);
+	}, [access.data, signature, pathname, navigate, workspaceId]);
 	if (!access.data)
 		return (
 			<p role={access.isError ? "alert" : "status"}>
@@ -84,18 +99,7 @@ function AppLayoutInner() {
 		<SidebarProvider defaultOpen={defaultOpen}>
 			<Sidebar collapsible={collapsible} variant={variant}>
 				<SidebarHeader>
-					<SidebarMenu>
-						<SidebarMenuItem>
-							<SidebarMenuButton size="lg" asChild tooltip="FullStack">
-								<Link to={landingPath(access.data)}>
-									<div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-										<Logo />
-									</div>
-									<span className="font-semibold">FullStack</span>
-								</Link>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-					</SidebarMenu>
+					<WorkspaceSwitcher />
 				</SidebarHeader>
 				<SidebarContent>
 					{navGroups.map((group) => (
@@ -116,7 +120,9 @@ function AppLayoutInner() {
 					</div>
 				</Header>
 				<Main fixed={fixed} id="content" tabIndex={-1}>
-					{canVisit(access.data, pathname) ? <Outlet /> : null}
+					{canVisit(access.data, pathname) ? (
+						<Outlet key={workspaceId} />
+					) : null}
 				</Main>
 			</SidebarInset>
 		</SidebarProvider>

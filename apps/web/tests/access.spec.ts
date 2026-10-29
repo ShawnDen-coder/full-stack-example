@@ -28,6 +28,18 @@ test("administrators configure native page roles through real services", async (
 		expect(response.ok()).toBeTruthy();
 		const data = await response.json();
 		ids.push(data.user.id);
+		execFileSync(
+			"pnpm",
+			[
+				"--filter",
+				"server",
+				"exec",
+				"tsx",
+				"tests/workspace-browser-fixture.ts",
+				data.user.id,
+			],
+			{ cwd: root, env: process.env, stdio: "pipe" },
+		);
 		await request.dispose();
 		return { id: data.user.id as string, email };
 	}
@@ -36,7 +48,7 @@ test("administrators configure native page roles through real services", async (
 		await target.getByLabel("Email", { exact: true }).fill(email);
 		await target.getByLabel("Password", { exact: true }).fill(password);
 		await target.getByRole("button", { name: "Sign In", exact: true }).click();
-		await expect(target).toHaveURL(/\/apps$/);
+		await expect(target).toHaveURL(/\/apps(?:\?|$)/);
 	}
 	async function findMember(target: Page, email: string) {
 		const member = target.getByRole("button", {
@@ -71,11 +83,15 @@ test("administrators configure native page roles through real services", async (
 		const owner = await signup("Access owner");
 		const person = await signup("Access member");
 		const staff = await signup("Access manager");
-		execFileSync("pnpm", ["admin:bootstrap", owner.id], {
-			cwd: root,
-			env: { ...process.env, DATABASE_URL: process.env.TEST_DATABASE_URL },
-			stdio: "pipe",
-		});
+		execFileSync(
+			"pnpm",
+			["admin:bootstrap", owner.id, "--workspace-owner", "application"],
+			{
+				cwd: root,
+				env: { ...process.env, DATABASE_URL: process.env.TEST_DATABASE_URL },
+				stdio: "pipe",
+			},
+		);
 		await login(page, owner.email);
 		await login(ordinary, person.email);
 		await page.goto("/admin/users");
@@ -102,20 +118,20 @@ test("administrators configure native page roles through real services", async (
 			.click();
 		await expect(page.getByRole("dialog")).toHaveCount(0);
 		await ordinary.reload();
-		await expect(ordinary).toHaveURL(/\/apps$/);
+		await expect(ordinary).toHaveURL(/\/apps(?:\?|$)/);
 		await expect(
-			ordinary.getByText("No tools are enabled for your account.", {
+			ordinary.getByText("No tools available.", {
 				exact: false,
 			}),
 		).toBeVisible();
 		await ordinary.goto("/todos");
-		await expect(ordinary).toHaveURL(/\/no-access$/);
+		await expect(ordinary).toHaveURL(/\/no-access(?:\?|$)/);
 		await expect(
 			ordinary.getByRole("link", { name: "Todos", exact: true }),
 		).toHaveCount(0);
 		const api = await userContext.request.post(
 			"http://127.0.0.1:43100/rpc/todo/list",
-			{ data: { json: {} } },
+			{ data: { json: { workspaceId: "application" } } },
 		);
 		expect(api.status()).toBe(403);
 

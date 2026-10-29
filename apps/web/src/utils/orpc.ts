@@ -9,6 +9,18 @@ import { trackSearchInvalidations } from "../features/queues/search-invalidation
 
 let identity: string | null | undefined;
 let generation = 0;
+let workspace: string | undefined;
+export function synchronizeWorkspace(workspaceId: string | undefined) {
+	if (workspace === workspaceId) return;
+	workspace = workspaceId;
+	generation++;
+	void queryClient.cancelQueries();
+	queryClient.removeQueries({
+		predicate: (query) =>
+			!(query.queryKey[0] === "access" && query.queryKey[2] === workspaceId),
+	});
+	queryClient.getMutationCache().clear();
+}
 export const identityTicket = () => generation;
 export const isIdentityCurrent = (userId: string | null, ticket: number) =>
 	identity === userId && ticket === generation;
