@@ -10,6 +10,7 @@ import { focusFirstInvalidAuthFormControl } from "@/components/auth/auth-form";
 import { ContentSection } from "@/features/settings/content-section";
 import { authClient } from "@/lib/auth-client";
 export const Route = createFileRoute("/_auth/settings/")({
+	staticData: { breadcrumb: "profile" },
 	component: Profile,
 });
 function Profile() {

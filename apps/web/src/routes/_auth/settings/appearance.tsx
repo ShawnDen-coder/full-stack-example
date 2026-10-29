@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useTheme } from "@/components/theme-provider";
 import { ContentSection } from "@/features/settings/content-section";
 export const Route = createFileRoute("/_auth/settings/appearance")({
+	staticData: { breadcrumb: "appearance" },
 	component: Appearance,
 });
 function Appearance() {
