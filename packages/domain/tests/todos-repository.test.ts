@@ -119,3 +119,26 @@ test("rename normalizes text and rejects invalid service input before executing 
 	await service.rename({ userId: "alice", id: 7, text: "x".repeat(500) });
 	assert.equal(queries.length, 2);
 });
+
+test("create normalizes text and rejects invalid service input before executing SQL", async (t) => {
+	const { service, queries } = fixture(t, [[7, "New task", false]]);
+	assert.deepEqual(
+		await service.create({ userId: "alice", text: "  New task  " }),
+		{
+			id: 7,
+			text: "New task",
+			completed: false,
+		},
+	);
+	assert.deepEqual(queries[0]?.values, ["alice", "New task"]);
+	for (const text of ["", " \t\n ", "x".repeat(501)]) {
+		await assert.rejects(
+			() => service.create({ userId: "alice", text }),
+			/1–500/,
+		);
+	}
+	assert.equal(queries.length, 1);
+	await service.create({ userId: "alice", text: ` ${"x".repeat(500)} ` });
+	assert.equal(queries.length, 2);
+	assert.equal(queries[1]?.values[1], "x".repeat(500));
+});

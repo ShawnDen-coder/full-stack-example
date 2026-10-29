@@ -9,7 +9,7 @@ export type RuntimeConfig = ServerConfig & {
 	SERVER_SHUTDOWN_TIMEOUT_MS: number;
 };
 export async function startServer(config: RuntimeConfig, logger: Logger) {
-	const runtime = createServices(config, logger);
+	const runtime = await createServices(config, logger);
 	let ready = false;
 	let server: ReturnType<typeof serve> | undefined;
 	try {

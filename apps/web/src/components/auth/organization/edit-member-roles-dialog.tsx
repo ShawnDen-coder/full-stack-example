@@ -22,7 +22,7 @@ import {
 	RadioGroupItem,
 } from "@full-stack-example/ui/components/radio-group";
 import { ShieldCheck } from "lucide-react";
-import { useEffect } from "react";
+import { type ComponentProps, useEffect } from "react";
 import { toast } from "sonner";
 import {
 	Field,
@@ -47,6 +47,7 @@ export type EditMemberRolesDialogProps = {
 	roles: Array<[string, string]>;
 	protectedRole?: string;
 	protectedRoleRemovalDisabled?: boolean;
+	onCloseAutoFocus?: ComponentProps<typeof DialogContent>["onCloseAutoFocus"];
 };
 
 const selectedMemberRoles = (
@@ -74,6 +75,7 @@ export function EditMemberRolesDialog({
 	roles,
 	protectedRole,
 	protectedRoleRemovalDisabled,
+	onCloseAutoFocus,
 }: EditMemberRolesDialogProps) {
 	const { authClient, localization } = useAuth<OrganizationAuthClient>();
 	const { allowMultipleRoles, localization: organizationLocalization } =
@@ -124,7 +126,10 @@ export function EditMemberRolesDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent>
+			<DialogContent
+				className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+				onCloseAutoFocus={onCloseAutoFocus}
+			>
 				<form.AppForm>
 					<form.AuthFormRoot className="flex flex-col gap-6">
 						<DialogHeader>

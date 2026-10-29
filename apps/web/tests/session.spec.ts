@@ -10,8 +10,8 @@ async function signup(page: Page, name: string) {
 	await page.getByLabel("Email", { exact: true }).fill(email);
 	await page.getByLabel("Password", { exact: true }).fill(password);
 	await page.getByRole("button", { name: "Sign Up", exact: true }).click();
-	await expect(page).toHaveURL(/\/todos$/);
-	await page.getByRole("link", { name: "Todos", exact: true }).click();
+	await expect(page).toHaveURL(/\/apps$/);
+	await page.getByRole("link", { name: "Todos", exact: true }).first().click();
 	await expect(page).toHaveURL(/\/todos$/);
 	return email;
 }
@@ -29,7 +29,7 @@ test("protected redirect, sign in return path, CRUD and account cache isolation"
 	await page.goto("/todos");
 	await expect(page).toHaveURL(/sign-in.*redirect/);
 	const alice = await signup(page, "Alice");
-	await page.getByRole("link", { name: "Todos" }).click();
+	await page.getByRole("link", { name: "Todos", exact: true }).click();
 	await page
 		.getByRole("textbox", { name: "New task" })
 		.fill("Alice private task");
@@ -59,7 +59,7 @@ test("protected redirect, sign in return path, CRUD and account cache isolation"
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await route.continue();
 	});
-	await page.getByRole("link", { name: "Todos" }).click();
+	await page.getByRole("link", { name: "Todos", exact: true }).click();
 	await expect(page.getByText("No todos yet. Add one above!")).toBeVisible();
 	await expect(page.locator("body")).not.toHaveAttribute("data-leaked", "true");
 	await page.unroute("**/rpc/todo/list**");
@@ -132,19 +132,18 @@ test("late responses from the previous account never repopulate its cache", asyn
 		await held;
 		await route.fulfill({ response }).catch(() => {});
 	});
-	await page.getByRole("button", { name: "Settings", exact: true }).click();
 	await page
 		.getByRole("link", { name: "Profile", exact: true })
 		.first()
 		.click();
 	await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
-	await page.getByRole("link", { name: "Todos" }).click();
+	await page.getByRole("link", { name: "Todos", exact: true }).click();
 	await capture;
 	await signout(page, "Late Alice");
 	await signup(page, "Late Bob");
 	release();
 	await page.unroute("**/rpc/todo/list**");
-	await page.getByRole("link", { name: "Todos" }).click();
+	await page.getByRole("link", { name: "Todos", exact: true }).click();
 	await expect(page.getByText("No todos yet. Add one above!")).toBeVisible();
 	await expect(
 		page.getByText("Late private task", { exact: true }),
@@ -226,7 +225,6 @@ test("settings persist profile and theme, sidebar collapses and search navigates
 }, testInfo) => {
 	await page.setViewportSize({ width: 1440, height: 900 });
 	await signup(page, "Settings tester");
-	await page.getByRole("button", { name: "Settings", exact: true }).click();
 	await page
 		.getByRole("link", { name: "Profile", exact: true })
 		.first()
@@ -295,7 +293,145 @@ test("legacy auth URLs preserve return paths and reject authentication loops", a
 	await page.getByRole("button", { name: "Sign Up", exact: true }).click();
 	await expect(page).toHaveURL(/\/settings\/appearance$/);
 	await page.goto("/sign-in?redirect=%2Fsign-up");
-	await expect(page).toHaveURL(/\/todos$/);
+	await expect(page).toHaveURL(/\/apps$/);
 	await page.goto("/register?redirect=https%3A%2F%2Fexample.com");
-	await expect(page).toHaveURL(/\/todos$/);
+	await expect(page).toHaveURL(/\/apps$/);
+});
+
+test("round2: real sign-out cancels an authorized search transition", async ({
+	page,
+}) => {
+	await signup(page, "Search owner");
+	let hold = false;
+	let release = () => {};
+	let captured = () => {};
+	let waiting = new Promise<void>((resolve) => {
+		captured = resolve;
+	});
+	await page.route("**/rpc/access/me", async (route) => {
+		if (hold) {
+			captured();
+			await new Promise<void>((resolve) => {
+				release = resolve;
+			});
+		}
+		await route
+			.fulfill({
+				json: { json: { role: "user", pages: ["queues", "apps", "todos"] } },
+			})
+			.catch(() => {});
+	});
+	const terms: string[] = [];
+	await page.route("**/rpc/queues/jobs**", (route) => {
+		terms.push(route.request().postDataJSON().json.query);
+		return route.fulfill({
+			json: {
+				json: {
+					mode: "name",
+					items: [],
+					scannedCount: 0,
+					scanTruncated: false,
+					resultsTruncated: false,
+					refreshedAt: new Date().toISOString(),
+				},
+			},
+		});
+	});
+	await page.goto("/queues/sample/jobs?mode=name&query=B");
+	await expect(
+		page.getByText("No matches in the searched range."),
+	).toBeVisible();
+	await page.getByRole("textbox", { name: "Full job name" }).fill("A");
+	await page.getByRole("button", { name: "Search", exact: true }).click();
+	await expect.poll(() => terms.length).toBe(2);
+	await expect(
+		page.getByRole("button", { name: "Search", exact: true }),
+	).toBeEnabled();
+	hold = true;
+	waiting = new Promise<void>((resolve) => {
+		captured = resolve;
+	});
+	await page.getByRole("textbox", { name: "Full job name" }).fill("B");
+	await page.getByRole("button", { name: "Search", exact: true }).click();
+	await waiting;
+	await page.getByRole("button", { name: "Search owner", exact: true }).click();
+	await page.getByRole("menuitem", { name: "Sign Out" }).click();
+	await expect(
+		page.getByRole("button", { name: "Sign In", exact: true }),
+	).toBeVisible();
+	hold = false;
+	release();
+	await page.waitForTimeout(300);
+	expect(terms).toEqual(["B", "A"]);
+	const cached = await page.evaluate(async () => {
+		const { queryClient } = await new Function(
+			'return import("/src/utils/orpc.ts")',
+		)();
+		return queryClient
+			.getQueryCache()
+			.getAll()
+			.filter(
+				(query: { meta?: { explicitQueueSearch?: boolean } }) =>
+					query.meta?.explicitQueueSearch,
+			).length;
+	});
+	expect(cached).toBe(0);
+});
+
+test("round2: late queue response from a signed-out owner cannot repopulate cache", async ({
+	page,
+}) => {
+	await signup(page, "Queue owner");
+	await page.route("**/rpc/access/me", (route) =>
+		route.fulfill({
+			json: { json: { role: "user", pages: ["queues", "apps", "todos"] } },
+		}),
+	);
+	let release = () => {};
+	let captured = () => {};
+	const waiting = new Promise<void>((resolve) => {
+		captured = resolve;
+	});
+	await page.route("**/rpc/queues/jobs**", async (route) => {
+		captured();
+		await new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		await route
+			.fulfill({
+				json: {
+					json: {
+						mode: "name",
+						items: [],
+						scannedCount: 0,
+						scanTruncated: false,
+						resultsTruncated: false,
+						refreshedAt: new Date().toISOString(),
+					},
+				},
+			})
+			.catch(() => {});
+	});
+	await page.goto("/queues/sample/jobs?mode=name&query=late");
+	await waiting;
+	await page.getByRole("button", { name: "Queue owner", exact: true }).click();
+	await page.getByRole("menuitem", { name: "Sign Out" }).click();
+	await expect(
+		page.getByRole("button", { name: "Sign In", exact: true }),
+	).toBeVisible();
+	release();
+	await page.waitForTimeout(300);
+	const cached = await page.evaluate(async () => {
+		const { queryClient } = await new Function(
+			'return import("/src/utils/orpc.ts")',
+		)();
+		return queryClient
+			.getQueryCache()
+			.getAll()
+			.filter(
+				(query: { meta?: { explicitQueueSearch?: boolean } }) =>
+					query.meta?.explicitQueueSearch,
+			).length;
+	});
+	expect(cached).toBe(0);
 });

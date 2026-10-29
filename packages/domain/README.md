@@ -81,17 +81,16 @@ async rename({ userId, id, text }: {
   id: number;
   text: string;
 }) {
-  const normalized = text.trim();
-  if (!normalized || normalized.length > 500) {
-    throw new Error("Todo text must contain 1–500 characters");
-  }
+  const normalized = normalizeText(text);
   return observeOperation("todos.rename", async () =>
     repository.forUser(userId).rename({ id, text: normalized }),
   );
 },
 ```
 
-The service enforces the rule for HTTP and future Worker callers. The repository
+The private `normalizeText` helper trims and rejects text outside 1–500 characters.
+The service applies the same rule to both create and
+rename, including direct and future Worker calls. The repository
 owns SQL and ownership; API maps a `null` result to `NOT_FOUND`. The inferred
 `TodosService` type picks up the method automatically. Continue with the
 [API example](../api/README.md#example-expose-todorename) and

@@ -184,6 +184,13 @@ After changing auth plugins or schema options, run `pnpm run auth:generate` from
 
 Applications use explicit factories and dependency injection. Processes own creation and cleanup; importing modules starts neither connections nor consumption.
 
+Server callers await `createServices`. If assembly fails, it attempts to close every
+acquired producer and database concurrently within `SERVER_SHUTDOWN_TIMEOUT_MS`
+(30 seconds when omitted), logs cleanup failures or timeout, and rethrows the
+original assembly error. A timed-out close may still finish later. Successful
+shutdown remains idempotent and closes the producer before the database. Each
+resource factory remains responsible for allocations it has not returned.
+
 | Entry point | Responsibility |
 | --- | --- |
 | `apps/server/src/index.ts` | Serve Hono over HTTP and own API process shutdown |

@@ -9,7 +9,7 @@ function NoAccess() {
 			<p className="text-muted-foreground">
 				Ask an administrator to enable the pages you need.
 			</p>
-			<Link className="underline" to="/settings/account">
+			<Link className="underline" to="/settings">
 				Account settings
 			</Link>
 		</section>

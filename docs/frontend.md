@@ -12,10 +12,11 @@ collection, not a production backend. Its MIT notice is retained in
 
 | URL | Behavior |
 | --- | --- |
-| `/` | Redirect to `/tasks`; protected destinations require a session |
+| `/` | Redirect to `/apps`; protected destinations require a session |
 | `/dashboard` | Original overview and analytics with sample statistics |
 | `/tasks` | Original task table, filters, sorting, selection, dialogs and pagination; sample data |
-| `/apps` | Original integrations grid, filtering and sorting; sample connections |
+| `/apps` | Authenticated tool center; lists only visible tools and pages |
+| `/apps/integrations-demo` | Original integrations grid; sample connections |
 | `/users` | Original user table, roles, statuses, add/invite/delete dialogs; sample users |
 | `/chats` | Original conversation UI and sample conversations; no messages sent |
 | `/settings` | Live Better Auth profile update; email remains read-only |
@@ -28,7 +29,7 @@ collection, not a production backend. Its MIT notice is retained in
 | `/forgot-password`, `/otp` | Upstream UI previews; no email delivery, verification or session creation |
 | `/todos` | Existing live user-owned Todo CRUD, editing, recovery and cursor pagination |
 | `/queues` | Live read-only BullMQ overview for registered queues |
-| `/queues/$queueKey/jobs` | Live job table, status tabs, exact job ID lookup and server pagination |
+| `/queues/$queueKey/jobs` | State browsing with pagination, exact ID lookup, and explicitly submitted limited full-name search across all states |
 | `/queues/$queueKey/jobs/$jobId` | Live failure details and bounded additional logs |
 | `/queues/$queueKey/schedulers` | Live scheduler list; empty when none are registered |
 | Other URLs | Root not-found boundary |

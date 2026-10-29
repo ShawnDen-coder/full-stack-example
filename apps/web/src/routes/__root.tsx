@@ -105,3 +105,9 @@ function RootComponent() {
 		</>
 	);
 }
+
+declare module "@tanstack/react-router" {
+	interface StaticDataRouteOption {
+		layout?: "fixed" | "fluid";
+	}
+}

@@ -64,3 +64,6 @@ superadmin 原生账号查询、封禁和会话查询、撤销能力。普通工
 `pnpm exec biome check .`，再使用独立 TEST_DATABASE_URL / TEST_REDIS_URL 执行集成与浏览器测试。
 浏览器测试需要没有既存 superadmin 的一次性测试库。覆盖原生 API 提权拦截、注册字段注入、
 权限撤销、真实界面角色分配和 Todo API 拒绝。
+
+
+已登录用户无需页面授权即可访问 `/apps` 工具中心。原 `apps` 权限控制 `/apps/integrations-demo`，未知子路径默认拒绝。新增工具须同步 web 目录与路由、access 策略、API 页面授权及 domain owner 范围；新增 Worker 消费者须显式注册。

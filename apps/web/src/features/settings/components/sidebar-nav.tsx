@@ -8,7 +8,7 @@ import {
 	SelectValue,
 } from "@full-stack-example/ui/components/select";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { type JSX, useState } from "react";
+import type { JSX } from "react";
 import { cn } from "@/lib/utils";
 
 type SidebarNavProps = React.HTMLAttributes<HTMLElement> & {
@@ -22,17 +22,15 @@ type SidebarNavProps = React.HTMLAttributes<HTMLElement> & {
 export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
 	const { pathname } = useLocation();
 	const navigate = useNavigate();
-	const [val, setVal] = useState(pathname ?? "/settings");
 
 	const handleSelect = (e: string) => {
-		setVal(e);
 		navigate({ to: e });
 	};
 
 	return (
 		<>
 			<div className="p-1 md:hidden">
-				<Select value={val} onValueChange={handleSelect}>
+				<Select value={pathname} onValueChange={handleSelect}>
 					<SelectTrigger className="h-12 sm:w-48">
 						<SelectValue placeholder="Theme" />
 					</SelectTrigger>
@@ -64,6 +62,7 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
 					{items.map((item) => (
 						<Link
 							key={item.href}
+							aria-current={pathname === item.href ? "page" : undefined}
 							to={item.href}
 							className={cn(
 								buttonVariants({ variant: "ghost" }),

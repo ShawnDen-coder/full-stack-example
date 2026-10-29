@@ -69,7 +69,7 @@ operations with `pageProcedure`, and grant it to the desired dynamic roles throu
 the admin screen. Menus, search and routes consume the same server snapshot.
 Settings/help remain available. Access refreshes on navigation, focus and API 403;
 changed access clears business-query caches. An idle browser is not push-cleared.
-The sample dashboard/apps/tasks/chats remain demo screens.
+The dashboard, integration examples, tasks and chats remain demo screens.
 
 ## Verify
 
@@ -78,3 +78,6 @@ Run `pnpm install --frozen-lockfile`, `pnpm test`, `pnpm check-types`, `pnpm bui
 `TEST_DATABASE_URL`/`TEST_REDIS_URL`. Browser tests require a disposable database
 without an existing superadmin. Tests cover native endpoint escalation attempts,
 registration injection, role revocation, actual UI assignment and Todo API denial.
+
+
+The authenticated `/apps` tool center is available without page grants. The existing `apps` grant controls `/apps/integrations-demo`; unknown child routes remain denied. Add new tools to the web catalog and route, access policy, page-protected API and owner-scoped domain, and register any worker consumer explicitly.

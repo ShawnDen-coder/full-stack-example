@@ -20,7 +20,7 @@
 ## 扩展步骤
 
 1. 先在 [domain](../domain/README.zh-CN.md) 实现操作。将具体服务类型加入 `Services`，在 [server services](../../apps/server/src/services.ts) 中实例化，再注入 `createApi`。
-2. 在 `src/routers` 下增加路由，用 Zod 校验输入，再调用 `context.services`。私有数据使用 `protectedProcedure`，归属用户从 `context.session.user.id` 获取。
+2. 在 `src/routers` 下增加路由，用 Zod 校验输入，再调用 `context.services`。`protectedProcedure` 要求登录；每个工具操作使用 `pageProcedure(page)` 检查页面权限，并从 `context.session.user.id` 获取归属用户。新工具不能只依赖登录保护。
 3. 资源不存在和属于其他用户时统一返回 `NOT_FOUND`。将已知业务失败转换为稳定的 RPC 错误，不返回数据库驱动的内部错误信息。
 4. 在 `src/routers/index.ts` 注册路由。操作名表达具体含义，例如 `setCompleted`；已有客户端需要时保留兼容别名。
 5. 依赖创建、端口监听和退出仍由应用负责。只有其他包需要新入口时才增加 [package export](package.json)。
@@ -32,7 +32,7 @@
 [src/routers/todo.ts](src/routers/todo.ts) 已实现 `todoRouter.rename`，调用 [domain 的 rename 方法](../domain/README.zh-CN.md#示例重命名自己的-todo)。其校验与归属边界如下：
 
 ```ts
-rename: protectedProcedure
+rename: pageProcedure("todos")
   .input(z.object({
     id: z.number().int().positive(),
     text: z.string().trim().min(1).max(500),
@@ -52,7 +52,7 @@ rename: protectedProcedure
 
 扩展 [Server 模块测试](../../apps/server/tests/modules.test.ts)：未登录调用被拒绝；文本会 trim；空文本、超长文本和非法 ID 被校验拦截；Service 收到的用户 ID 来自 session。使用专用数据库的集成测试确认资源不存在和属于其他用户时均返回 `NOT_FOUND`。`TodosService` 增加 `rename` 后，同步更新测试中的 typed service fake。
 
-队列监控可跨任务状态精确查找任务 ID 或名称；调度读取接受页码，每页最多返回 50 条及总数。
+队列监控支持按状态浏览、精确任务 ID 和跨所有状态的完整名称匹配。名称搜索每个状态最多检查 100 条，额外读取一条判断是否截断，最多返回 50 个去重匹配，并报告扫描数和截断情况；结果不是快照或精确总数。旧 `jobId` 仅表示 ID 查询。调度读取每页最多返回 50 条。
 
 ## 验证
 

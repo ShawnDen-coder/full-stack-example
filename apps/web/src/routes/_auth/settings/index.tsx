@@ -6,6 +6,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import z from "zod";
+import { focusFirstInvalidAuthFormControl } from "@/components/auth/auth-form";
 import { ContentSection } from "@/features/settings/content-section";
 import { authClient } from "@/lib/auth-client";
 export const Route = createFileRoute("/_auth/settings/")({
@@ -52,7 +53,13 @@ function Profile() {
 				noValidate
 				onSubmit={(e) => {
 					e.preventDefault();
-					if (!form.state.isSubmitting) void form.handleSubmit();
+					if (!form.state.isSubmitting) {
+						const element = e.currentTarget;
+						void form.handleSubmit().then(() => {
+							if (!form.state.isValid)
+								focusFirstInvalidAuthFormControl(element);
+						});
+					}
 				}}
 			>
 				<form.Field name="name">

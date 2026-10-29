@@ -11,7 +11,13 @@ import {
 	SidebarProvider,
 	SidebarRail,
 } from "@full-stack-example/ui/components/sidebar";
-import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import {
+	Link,
+	Outlet,
+	useLocation,
+	useMatches,
+	useNavigate,
+} from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { Logo } from "@/assets/logo";
 import { ConfigDrawer } from "@/components/config-drawer";
@@ -39,6 +45,8 @@ export function AppLayout() {
 function AppLayoutInner() {
 	const { variant, collapsible } = useLayout();
 	const { pathname } = useLocation();
+	const matches = useMatches();
+	const fixed = matches.some((match) => match.staticData.layout === "fixed");
 	const access = useAccess();
 	const navigate = useNavigate();
 	const previous = useRef<string | undefined>(undefined);
@@ -107,14 +115,7 @@ function AppLayoutInner() {
 						<ConfigDrawer />
 					</div>
 				</Header>
-				<Main
-					fixed={
-						["/tasks", "/apps", "/users", "/chats"].includes(pathname) ||
-						/^\/queues(?:\/[^/]+\/(?:jobs|schedulers))?\/?$/.test(pathname)
-					}
-					id="content"
-					tabIndex={-1}
-				>
+				<Main fixed={fixed} id="content" tabIndex={-1}>
 					{canVisit(access.data, pathname) ? <Outlet /> : null}
 				</Main>
 			</SidebarInset>

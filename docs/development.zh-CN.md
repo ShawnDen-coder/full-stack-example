@@ -161,6 +161,12 @@ Vite 集成和 Node 服务启动入口会加载 Varlock。Node 部署产物包�
 
 应用使用显式工厂和依赖注入。依赖的创建和关闭由进程负责，仅导入模块不会建立连接或启动消费。
 
+Server 调用方需要 await `createServices`。组装失败时，服务会在
+`SERVER_SHUTDOWN_TIMEOUT_MS` 预算内并行尝试关闭已取得的 producer 和数据库
+（未提供时为 30 秒），记录清理失败或超时，并重新抛出原始组装错误。超时后的
+关闭操作仍可能继续完成。正常关闭保持幂等，并按 producer、数据库顺序执行。
+资源工厂仍需自行负责尚未返回给调用方的内部资源。
+
 | 入口 | 负责内容 |
 | --- | --- |
 | `apps/server/src/index.ts` | 启动 Hono HTTP 服务，管理 API 进程退出 |

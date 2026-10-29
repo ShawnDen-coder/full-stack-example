@@ -24,8 +24,10 @@ oRPC input validation, session resolution and transport error mapping.
    service type to `Services`; instantiate it in
    [server services](../../apps/server/src/services.ts) and pass it through `createApi`.
 2. Add a router under `src/routers`. Validate payloads with Zod and call
-   `context.services`; use `protectedProcedure` for private data and derive the
-   owner from `context.session.user.id`.
+   `context.services`. `protectedProcedure` requires login; use
+   `pageProcedure(page)` for page authorization on every tool operation, and
+   derive the owner from `context.session.user.id`. New tools must not rely on
+   login protection alone.
 3. Map missing and foreign resources to the same `NOT_FOUND`. Translate known
    domain failures to stable RPC errors, without returning driver error details.
 4. Register the router in `src/routers/index.ts`. Prefer explicit operation names
@@ -44,7 +46,7 @@ calls the [domain rename method](../domain/README.md#example-rename-an-owned-tod
 Its validation and ownership boundary follow this pattern:
 
 ```ts
-rename: protectedProcedure
+rename: pageProcedure("todos")
   .input(z.object({
     id: z.number().int().positive(),
     text: z.string().trim().min(1).max(500),
@@ -71,7 +73,7 @@ rejected; the service receives the session user ID. Test both missing and foreig
 Todos as `NOT_FOUND` with dedicated database integration tests. Update typed
 service fakes when their `TodosService` contract gains `rename`.
 
-Queue monitoring searches exact job IDs or names across job states; scheduler reads accept a page and return 50 items at most with the total count.
+Queue monitoring supports state browsing, exact job ID lookup and full-name matching across all states. Name search checks at most 100 jobs per state, reads one extra per state to detect truncation, and returns at most 50 deduplicated matches with scanned and truncation indicators; it is not a snapshot or an exact total. Legacy `jobId` means ID lookup only. Scheduler reads return at most 50 items per page.
 
 ## Verify
 

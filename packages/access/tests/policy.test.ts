@@ -19,8 +19,18 @@ test("navigation checks exact path boundaries and keeps basic account access", (
 		true,
 	);
 	assert.equal(canVisit({ role: "admin", pages: [] }, "/queues"), false);
-	assert.equal(landingPath(access), "/todos");
-	assert.equal(landingPath({ ...access, pages: [] }), "/no-access");
+	assert.equal(landingPath(access), "/apps");
+	assert.equal(landingPath({ ...access, pages: [] }), "/apps");
+	assert.equal(canVisit({ ...access, pages: [] }, "/apps/"), true);
+	assert.equal(canVisit({ ...access, pages: [] }, "/apps/unknown"), false);
+	assert.equal(
+		canVisit({ ...access, pages: [] }, "/apps/integrations-demo"),
+		false,
+	);
+	assert.equal(
+		canVisit({ ...access, pages: ["apps"] }, "/apps/integrations-demo"),
+		true,
+	);
 });
 test("native roles reserve administration for admins and owners", () => {
 	assert.equal(

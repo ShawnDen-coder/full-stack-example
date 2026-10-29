@@ -1,0 +1,33 @@
+{
+	"round": 3,
+	"phase": "closing verification; no additional round",
+	"reviewer": "Coco",
+	"verdict": "PASS for requested closing scope",
+	"repositoryEdits": false,
+	"checks": [
+		"Delayed 503 Retry restores input focus and completion announcement exactly once",
+		"User-moved focus is retained after successful Retry",
+		"Scope change suppresses late focus, stale result and announcement",
+		"Legal name A page=2 Refresh under slow auth is preempted by history C; lock released; request sequence C1,A2,C1",
+		"Consistent A-to-B session via installed Better Auth storage signal: late A Retry does not refill/announce/steal B focus; B draft remains editable"
+	],
+	"sourceDetector": {
+		"targets": 2,
+		"success": true,
+		"findings": 0,
+		"renderedDetector": false
+	},
+	"context": "Reused successful apps/web SCOPED_EXISTING_ALLOWED context; no init/hooks",
+	"screenshots": "/tmp/app-platform-delivery",
+	"manifest": "/tmp/app-platform-delivery/manifest.json",
+	"allImagesViewed": true,
+	"allBelow5MB": true,
+	"backend": "No real backend/DB/Redis used; all API and accounts synthetic",
+	"limits": [
+		"CSS viewport emulation, not native zoom or physical devices",
+		"No real screen reader or Safari certification",
+		"Session signal verification does not certify real backend sign-in"
+	],
+	"cleanup": "Production preview session 67990 stopped (exit 130); Chromium instances closed; dedicated containers untouched",
+	"memory": "Targeted search attempted; DNS failure"
+}

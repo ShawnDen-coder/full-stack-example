@@ -13,7 +13,7 @@ export function Tasks() {
 				</p>
 				<div className="flex flex-wrap items-end justify-between gap-2">
 					<div>
-						<h2 className="font-bold text-2xl tracking-tight">Tasks</h2>
+						<h1 className="font-bold text-2xl tracking-tight">Tasks</h1>
 						<p className="text-muted-foreground">
 							Here&apos;s a list of your tasks for this month!
 						</p>

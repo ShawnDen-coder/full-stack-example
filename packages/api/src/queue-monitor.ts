@@ -203,43 +203,63 @@ export function createQueueMonitor(
 			page,
 			pageSize,
 			jobId,
+			mode = jobId ? "id" : "browse",
+			query,
 		}: {
 			queueKey: string;
 			status: JobStatus;
 			page: number;
 			pageSize: number;
 			jobId?: string;
+			mode?: "browse" | "id" | "name";
+			query?: string;
 		}) {
 			const entry = requireQueue(queueKey);
 			if (!entry) return null;
 			return read(async () => {
 				const refreshedAt = new Date().toISOString();
-				if (jobId) {
-					const matches = new Map<string, MonitoredJob>();
-					const exact = await entry.adapter.getJob(jobId);
-					if (exact?.id) matches.set(exact.id, exact);
+				if (mode === "id") {
+					const job = await entry.adapter.getJob(query ?? jobId ?? "");
+					const item = job?.id
+						? project(entry.registration, job, await job.getState())
+						: null;
+					return {
+						mode,
+						items: item ? [item] : [],
+						total: item ? 1 : 0,
+						page: 1,
+						pageSize,
+						refreshedAt,
+					};
+				}
+				if (mode === "name") {
+					const matches = new Map<string, ReturnType<typeof project>>();
+					let scannedCount = 0;
+					let scanTruncated = false;
+					let resultsTruncated = false;
+					const seen = new Set<string>();
 					for (const state of jobStatuses) {
-						for (let start = 0; ; start += 500) {
-							const batch = await entry.adapter.getJobs(
-								[state],
-								start,
-								start + 499,
-							);
-							for (const job of batch)
-								if (job.id && job.name === jobId) matches.set(job.id, job);
-							if (batch.length < 500) break;
+						const batch = await entry.adapter.getJobs([state], 0, 100);
+						if (batch.length > 100) scanTruncated = true;
+						for (const job of batch.slice(0, 100)) {
+							scannedCount++;
+							if (!job.id || job.name !== query || seen.has(job.id)) continue;
+							seen.add(job.id);
+							if (matches.size >= 50) {
+								resultsTruncated = true;
+								continue;
+							}
+							matches.set(job.id, project(entry.registration, job, state));
 						}
 					}
-					const all = [...matches.values()];
-					const selected = all.slice((page - 1) * pageSize, page * pageSize);
-					const items = (
-						await Promise.all(
-							selected.map(async (job) =>
-								project(entry.registration, job, await job.getState()),
-							),
-						)
-					).filter((item) => item !== null);
-					return { items, total: all.length, page, pageSize, refreshedAt };
+					return {
+						mode,
+						items: [...matches.values()].filter((item) => item !== null),
+						scannedCount,
+						scanTruncated,
+						resultsTruncated,
+						refreshedAt,
+					};
 				}
 				const rawCounts = await entry.adapter.getJobCounts();
 				const start = (page - 1) * pageSize;
@@ -249,6 +269,7 @@ export function createQueueMonitor(
 					start + pageSize - 1,
 				);
 				return {
+					mode: "browse" as const,
 					items: jobs.flatMap((job) => {
 						const item = project(entry.registration, job, status);
 						return item ? [item] : [];
