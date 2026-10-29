@@ -10,7 +10,7 @@
 		"env:generate": "varlock codegen",
 		"auth:generate": "varlock run -- pnpm dlx auth@latest generate --config src/auth-schema.ts --output ../../packages/db/src/schema/auth.ts --yes",
 		"test": "node --import tsx --test tests/*.test.ts",
-		"test:integration": "node --import tsx --test tests/integration/*.test.ts"
+		"test:integration": "node --import tsx --test --test-concurrency=1 tests/integration/*.test.ts"
 	},
 	"dependencies": {
 		"@full-stack-example/api": "workspace:*",
