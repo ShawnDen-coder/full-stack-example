@@ -8,7 +8,7 @@ import {
 import { Link, useMatch, useMatches } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { useAccess } from "@/lib/access";
-import { breadcrumbTargets } from "@/lib/breadcrumbs";
+import { breadcrumbAncestors, breadcrumbTargets } from "@/lib/breadcrumbs";
 import { catalog } from "@/lib/catalog";
 
 export function Breadcrumbs() {
@@ -41,15 +41,18 @@ export function Breadcrumbs() {
 					? "Schedulers"
 					: catalog.find((entry) => entry.id === key)?.title;
 	if (!current) return null;
-	const showHome =
-		key === "todos" && access.data && canVisit(access.data, "/apps");
-	const showQueues =
-		queueKey && access.data && canVisit(access.data, "/queues");
+	const chain = breadcrumbAncestors(key, queueKey, {
+		toolHome: Boolean(access.data && canVisit(access.data, "/apps")),
+		queues: Boolean(access.data && canVisit(access.data, "/queues")),
+	});
+	const showHome = chain.includes("tool-home");
+	const showQueues = Boolean(queueKey && chain.includes("queues"));
+
 	const ancestors = (
 		<>
 			{showHome && <Link {...breadcrumbTargets.toolHome}>Tool home</Link>}
 			{showQueues && <Link {...breadcrumbTargets.queues}>Queues</Link>}
-			{showQueues && key === "queue-job" && (
+			{showQueues && queueKey && chain.includes("jobs") && (
 				<>
 					{" "}
 					<ChevronRight aria-hidden="true" className="size-4" />{" "}
@@ -58,10 +61,7 @@ export function Breadcrumbs() {
 			)}
 		</>
 	);
-	const count =
-		Number(Boolean(showHome)) +
-		Number(Boolean(showQueues)) +
-		Number(Boolean(showQueues && key === "queue-job"));
+	const count = chain.length;
 	return (
 		<nav
 			aria-label="Breadcrumb"
@@ -101,7 +101,7 @@ export function Breadcrumbs() {
 										<Link {...breadcrumbTargets.queues}>Queues</Link>
 									</DropdownMenuItem>
 								)}
-								{showQueues && key === "queue-job" && (
+								{showQueues && queueKey && chain.includes("jobs") && (
 									<DropdownMenuItem asChild>
 										<Link {...breadcrumbTargets.jobs(queueKey)}>Jobs</Link>
 									</DropdownMenuItem>

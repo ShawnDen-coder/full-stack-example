@@ -22,3 +22,15 @@ export const breadcrumbTargets = {
 	jobs: (queueKey: string) =>
 		linkOptions({ to: "/queues/$queueKey/jobs", params: { queueKey } }),
 };
+
+export function breadcrumbAncestors(
+	key: BreadcrumbKey | undefined,
+	queueKey: string | undefined,
+	access: { toolHome: boolean; queues: boolean },
+): ("tool-home" | "queues" | "jobs")[] {
+	if (key === "todos" && access.toolHome) return ["tool-home"];
+	if (!queueKey || !access.queues) return [];
+	if (key === "queue-job") return ["queues", "jobs"];
+	if (key === "queue-jobs" || key === "queue-schedulers") return ["queues"];
+	return [];
+}
