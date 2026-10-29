@@ -1,0 +1,67 @@
+{
+  "verifiedAt": "2026-10-29T09:38:47.463220+00:00",
+  "label": "当前代码渲染，fixture身份/数据；不是实际后端登录联调",
+  "reviewedImages": [
+    "home-1440x1000-dark.png",
+    "home-390x1000-dark.png",
+    "todos-1440x1000-dark.png",
+    "search-dialog-1440x1000-dark.png",
+    "home-1440x1000-light.png",
+    "home-390x1000-light.png",
+    "todos-1440x1000-light.png"
+  ],
+  "sourceChanges": [],
+  "resizeSourceChanges": [],
+  "temporaryServersClosed": true,
+  "port43111Listening": false,
+  "commands": [
+    "node /tmp/site-system-source-capture.mjs",
+    "node /tmp/site-system-resize-diagnostic.mjs"
+  ],
+  "files": {
+    "home-390x1000-light.png": {
+      "sha256": "da95d360b7c4f422f6ecb1abea38f700eec33dd2fd1fbe8353395f31400c001e",
+      "bytes": 12679
+    },
+    "home-390x1000-dark.png": {
+      "sha256": "247dd61a6b7d08447283379417d86497c164b8f6289ca5948db808fb75dcf2c7",
+      "bytes": 12795
+    },
+    "todos-1440x1000-light.png": {
+      "sha256": "b10c102c491b5c868ae1af2a3b6cd95c0b01bcb3eec1f3337fa9232cb5d4e6d8",
+      "bytes": 66864
+    },
+    "todos-1440x1000-dark.png": {
+      "sha256": "4aece25e1f6a4458df2157dc9ee80eba42f8dd018014382f2fdf49a3df63b867",
+      "bytes": 67050
+    },
+    "home-1440x1000-dark.png": {
+      "sha256": "c5ff45c8d30f2389840bbde2d7c2a4fb0a55c8b06ea50eeb0cd5020e4e399891",
+      "bytes": 49985
+    },
+    "search-dialog-1440x1000-dark.png": {
+      "sha256": "a42c11c778c9eb04b4ed941268bbe65615f1d350807af72a5a223d5b42b6a7b4",
+      "bytes": 81626
+    },
+    "home-1440x1000-light.png": {
+      "sha256": "eeec07de705e7bd80088fa72d55f42ac73eae1163997af3e7767888ba159b2d0",
+      "bytes": 49551
+    },
+    "resize-diagnostic/resize-settled-390x1000-dark.png": {
+      "sha256": "247dd61a6b7d08447283379417d86497c164b8f6289ca5948db808fb75dcf2c7",
+      "bytes": 12795
+    },
+    "resize-diagnostic/resize-immediate-768x1000-dark.png": {
+      "sha256": "af4cf36179ab50900df5febf3e99425c0a0218fa5c9264fa185cfe24513d8e91",
+      "bytes": 46564
+    },
+    "resize-diagnostic/resize-immediate-1440x1000-dark.png": {
+      "sha256": "c5ff45c8d30f2389840bbde2d7c2a4fb0a55c8b06ea50eeb0cd5020e4e399891",
+      "bytes": 49985
+    },
+    "resize-diagnostic/resize-immediate-390x1000-dark.png": {
+      "sha256": "ebbfa59fc24679e3af2b02ac6e35d85637f6f6241f8ca50e712a386d9053e628",
+      "bytes": 12747
+    }
+  }
+}

@@ -1,0 +1,112 @@
+const imgIconPanelLeft = "https://www.figma.com/api/mcp/asset/d0b869b2-dfcd-4b94-acbc-6478bc51dc1e.svg";
+const imgFrame = "https://www.figma.com/api/mcp/asset/d3380a95-6ca0-48f7-a2d2-4c3bd73e53d9.svg";
+const imgFrame1 = "https://www.figma.com/api/mcp/asset/890e77d5-2c53-49f8-9cc6-6505835cc249.svg";
+const imgFrame2 = "https://www.figma.com/api/mcp/asset/bfab96df-7986-441b-9f83-1da3fdfee862.svg";
+const imgFrame3 = "https://www.figma.com/api/mcp/asset/956bccc4-aaa4-47d7-a17a-84f967da5631.svg";
+
+export default function Component390Todos() {
+  return (
+    <div className="bg-[var(--background,#020618)] relative size-full" data-node-id="68:3566" data-name="主稿 / 390 / Todos 路径">
+      <div className="absolute bg-[var(--background,#020618)] h-[1000px] left-0 top-0 w-[390px]" data-node-id="68:3567" data-name="Layout / Shell / mobile">
+        <div className="absolute bg-[var(--background,#020618)] content-stretch flex h-[64px] items-center left-0 pl-[16px] pr-[28px] right-0 top-0" data-node-id="I68:3567;56:7563" data-name="Layout / Global header">
+          <div className="absolute bg-[var(--border,rgba(255,255,255,0.1))] bottom-0 h-px left-0 right-0" data-node-id="I68:3567;56:7563;56:7100" data-name="Header divider · border" />
+          <div className="content-stretch flex flex-[1_0_0] gap-[12px] h-[64px] items-center min-w-px overflow-clip relative" data-node-id="I68:3567;56:7563;77:1351" data-name="Header / leading · route slot">
+            <div className="bg-[var(--background,#020618)] border border-[var(--border,rgba(255,255,255,0.1))] border-solid relative rounded-[var(--radius-sm,6px)] shrink-0 size-[28px]" data-node-id="I68:3567;56:7563;59:2940" data-name="Sidebar toggle · 28">
+              <div className="absolute left-[5px] size-[16px] top-[5px]" data-node-id="I68:3567;56:7563;56:7076" data-name="Icon / PanelLeft">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgIconPanelLeft} />
+              </div>
+            </div>
+            <div className="bg-[var(--border,rgba(255,255,255,0.1))] h-[24px] relative shrink-0 w-px" data-node-id="I68:3567;56:7563;59:2941" data-name="Header separator · border" />
+            <div className="content-stretch flex flex-[1_0_0] gap-[8px] items-center min-w-px relative" data-node-id="I68:3567;56:7563;66:4270" data-name="Breadcrumb · route">
+              <p className="[word-break:break-word] font-['Inter:Regular'] font-normal leading-[20px] not-italic relative shrink-0 text-[14px] text-[color:var(--muted-foreground,#90a1b9)] whitespace-nowrap" data-node-id="I68:3567;56:7563;66:4270;66:4264">
+                Tool home
+              </p>
+              <div className="flex items-center justify-center relative shrink-0 size-[16px]" data-node-id="I68:3567;56:7563;66:4270;66:4265">
+                <div className="-rotate-90 flex-none">
+                  <div className="relative size-[16px]" data-name="Chevron right · Lucide">
+                    <div className="absolute left-0 size-[16px] top-0" data-node-id="I68:3567;56:7563;66:4270;66:4265;2:1392" data-name="Frame">
+                      <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p className="[word-break:break-word] flex-[1_0_0] font-['Inter:Medium'] font-medium h-[20px] leading-[20px] min-w-px not-italic overflow-hidden relative text-[14px] text-[color:var(--foreground,#f8fafc)] text-ellipsis whitespace-nowrap" data-node-id="I68:3567;56:7563;66:4270;66:4268">
+                Todos
+              </p>
+            </div>
+          </div>
+          <div className="content-stretch flex h-[64px] items-center relative shrink-0 w-[132px]" data-node-id="I68:3567;56:7563;77:1352" data-name="Header / tools · fixed">
+            <a className="block cursor-pointer relative rounded-[var(--radius-md,8px)] shrink-0 size-[44px]" data-node-id="I68:3567;56:7563;56:7080" data-name="Search · 44">
+              <div className="absolute left-[14px] size-[16px] top-[14px]" data-node-id="I68:3567;56:7563;56:7080;56:7053" data-name="Icon / Search">
+                <div className="absolute left-0 size-[16px] top-0" data-node-id="I68:3567;56:7563;56:7080;56:7053;2:137" data-name="Frame">
+                  <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame1} />
+                </div>
+              </div>
+            </a>
+            <div className="h-px relative shrink-0 w-[16px]" data-node-id="I68:3567;56:7563;77:1353" data-name="Tool spacing · 16" />
+            <div className="relative shrink-0 size-[18px]" data-node-id="I68:3567;56:7563;56:7085" data-name="Icon / Sun">
+              <div className="absolute left-0 size-[18px] top-0" data-node-id="I68:3567;56:7563;56:7085;18:810" data-name="Frame">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame2} />
+              </div>
+            </div>
+            <div className="h-px relative shrink-0 w-[38px]" data-node-id="I68:3567;56:7563;77:1354" data-name="Tool spacing · 38" />
+            <div className="relative shrink-0 size-[16px]" data-node-id="I68:3567;56:7563;56:7096" data-name="Icon / Settings">
+              <div className="absolute left-0 size-[16px] top-0" data-node-id="I68:3567;56:7563;56:7096;2:144" data-name="Frame">
+                <img alt="" className="absolute block inset-0 max-w-none size-full" src={imgFrame3} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="absolute content-stretch flex items-start justify-center left-0 overflow-clip right-0 top-[88px]" data-node-id="77:1150" data-name="Main · responsive centering region">
+        <div className="content-stretch flex flex-[1_0_0] flex-col h-[61px] items-start max-w-[1280px] min-w-px overflow-clip px-[16px] relative" data-node-id="77:1151" data-name="Main · max 1280 including padding">
+          <div className="content-stretch flex flex-col gap-[var(--calc(var(--spacing)*6),24px)] items-start relative shrink-0 w-full" data-node-id="68:3568" data-name="Main · standard / content slot">
+            <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full" data-node-id="68:3572" data-name="Narrow content · max 640">
+              <p className="[word-break:break-word] font-['Inter:Semi_Bold'] font-semibold leading-[normal] not-italic relative shrink-0 text-[14px] text-[color:var(--foreground,#f8fafc)] whitespace-nowrap" data-node-id="68:3573">
+                Field label
+              </p>
+              <div className="bg-[var(--input,rgba(255,255,255,0.05))] border border-[var(--input,rgba(255,255,255,0.15))] border-solid content-stretch drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)] flex h-[36px] items-center px-[12px] relative rounded-[var(--radius-md,8px)] shrink-0 w-[358px]" data-node-id="68:3574" data-name="Input">
+                <p className="[word-break:break-word] font-['Inter:Medium'] font-medium leading-[20px] not-italic relative shrink-0 text-[14px] text-[color:var(--muted-foreground,#90a1b9)] whitespace-nowrap" data-node-id="I68:3574;1:200">
+                  Enter value
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <a className="absolute bg-[rgba(0,0,0,0)] block cursor-pointer left-[8px] size-[44px] top-[10px]" data-node-id="68:3576" data-name="Prototype · Open mobile drawer · 44" />
+      <a className="absolute bg-[rgba(0,0,0,0)] block cursor-pointer h-[44px] left-[69px] top-[10px] w-[72px]" data-node-id="68:3790" data-name="Prototype · Breadcrumb ancestor / Tool home" />
+    </div>
+  );
+}
+
+SUPER CRITICAL: The generated React+Tailwind code MUST be converted to match the target project's technology stack and styling system.
+1. Analyze the target codebase to identify: technology stack, styling approach, component patterns, and design tokens
+2. Convert React syntax to the target framework/library
+3. Transform all Tailwind classes to the target styling system while preserving exact visual design
+4. Follow the project's existing patterns and conventions
+DO NOT install any Tailwind as a dependency unless the user instructs you to do so.
+
+
+Node ids have been added to the code as data attributes, e.g. `data-node-id="1:2"`.
+
+These styles are contained in the design: text-sm-medium: Font(family: "Inter", style: Medium, size: 14, weight: 500, lineHeight: 20, letterSpacing: 0), shadow-xs: Effect(type: DROP_SHADOW, color: #0000000D, offset: (0, 1), radius: 2, spread: 0).
+
+Component descriptions: The following components have usage descriptions or documentation links defined in Figma. These descriptions provide important context about the intended usage, best practices, and any constraints for each component. Follow these guidelines when implementing or using these components.
+
+## Layout / Shell / mobile
+**Node ID:** 56:7562
+
+Ordinary border-box shell; header 64px; sidebar 0px. Place a separate auto-layout page stack in the main region.
+
+## Layout / Breadcrumb
+**Node ID:** 66:4269
+
+Light/Dark semantic foreground; ancestor is a link, current page is text. Long labels truncate and retain full accessible name in implementation.
+
+## Input
+**Node ID:** 1:207
+
+input.tsx: dark input/30 fill, 36px high; mobile type 16px. Light fill must be transparent; see remaining mode fidelity.
+
+The generated code contains image and SVG URL constants, e.g. const image = 'https://www.figma.com/api/mcp/asset/550e8400-e29b-41d4-a716-446655440000.png'. These URLs are temporary download sources and expire after 7 days. Download each asset into the project with curl -L, then replace its URL in the generated code with a reference to the downloaded asset. Never use the temporary URLs as runtime image sources.

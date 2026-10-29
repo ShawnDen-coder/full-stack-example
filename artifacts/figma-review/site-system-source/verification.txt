@@ -1,0 +1,52 @@
+当前代码渲染，fixture 身份/数据 — Cindy 视觉系统迁移基准
+
+来源
+工作树：/Users/denghui/.lody/repos/github---shawnden-coder---full-stack-example/worktrees/b43457c2-fcb6-4301-923e-fc0d5b5eba9b
+采集时间：2026-10-29 17:35–17:39（Asia/Shanghai；原始 UTC 时间见 manifest）
+实际命令（均从工作树根目录执行）：
+  node /tmp/site-system-source-capture.mjs
+  node /tmp/site-system-resize-diagnostic.mjs
+临时站点：http://127.0.0.1:43111
+浏览器：Chromium 156.0.8078.4；DPR=1；viewport 截图；Inter 字体加载完成。
+Vite：当前 apps/web 源码和现有安装依赖；同现有配置的 Varlock/Tailwind/TanStack Router/React 插件链。
+一次性脚本内设置 configFile=false、production NODE_ENV/mode（不显示 DEV 工具）、缓存 /tmp、enableRouteGeneration=false（禁止生成源码）。这是 Vite 实时编译组件，不是生产构建产物。
+源文件逐项 SHA-256 与修改时间在 source-before.json/source-after.json；manifest 内亦记录运行参数和 fixture。
+
+Fixture
+按 apps/web/tests/feedback.spec.ts 的 mockSession、access/me、access/mine、todo/list 响应形状。
+身份 Feedback tester / feedback@example.test；user id feedback-user；空间 Application/application；role=user。
+页面权限 todos/dashboard/tasks/apps/chats；无管理和平台导航。所有截图身份/权限/空间相同。
+Todo 三项固定英文测试数据：Review the visual system（未完成）、Verify shared components（已完成）、Check mobile layout（未完成）。
+认证与 RPC 请求在 Playwright HTTP 层履行；其他 API/外部 HTTP 阻断，不连接真实账号、数据库、Redis、OA 后端。
+
+正式迁移基准（已逐张人工查看；均非登录/加载页）
+  home-1440x1000-dark.png
+  home-1440x1000-light.png
+  home-390x1000-dark.png
+  home-390x1000-light.png
+  todos-1440x1000-dark.png
+  todos-1440x1000-light.png
+  search-dialog-1440x1000-dark.png
+截图前等待真实路由、fixture 权限、页面内容、document.fonts.ready、Inter load、networkidle；正式截图 animations=disabled。
+
+390px 搜索差异结论
+稳定态（dark/light 相同）：boundingClientRect x=69 y=14 width=40 height=36。
+computed width=40px, min-width=auto, max-width=none, box-sizing=border-box, flex=0 0 auto, flex-basis=auto, flex-grow=0, flex-shrink=0。
+桌面稳定态：x=333 y=22 width=192 height=36。
+移动端左右 padding 实际12px：Button 的 has-[>svg]:px-3 比调用方 px-0 specificity 更高；它没有把外框撑成165px。
+旧测试 apps/web/tests/workspaces.spec.ts 的截图循环仅 resize -> card visible -> fonts.ready -> screenshot，未等宽度动画。
+Button transition-all + 默认 0.15s cubic-bezier(0.4,0,0.2,1) 使 sm:w-48 -> w-10 从192px过渡到40px。
+原流程复现逐帧宽度：192 -> 186.984375 -> 165.453125（约33.288ms）-> 122.25 -> 86.28125 -> 64.6875 -> 52.046875 -> 44.734375 -> 41.0625 -> 40。
+transitionrun/start/end 均捕获 width；终止 elapsedTime=0.15。
+resize-diagnostic/resize-immediate-390x1000-dark.png 复现了旧图的宽框；resize-settled-390x1000-dark.png 是收敛后的40px。
+因此无需推断另一套 Button min-width，也没有源码修复。本次解释纠正上一轮“可能截图/构建不一致”的未验证假设。
+原截图本身无性能追踪，不能证明其精确截图时间；但相同代码和原截图流程已复现相同异常及机制。
+manifest 中临时 width=40 important 实验未等待 transition，不能当作稳定宽度证据；最终结论取正式稳定态与独立逐帧记录。
+
+限制和收尾
+这是当前代码渲染、fixture 身份/数据；不是实际后端登录联调，也不覆盖真实权限数据、错误/加载全状态或全部浏览器。
+390px 为桌面 Chromium 窄 viewport，不是 iOS/Safari 设备验证。
+本次未改业务源码/测试/依赖/仓库配置/分支，未新建 agent；没有改3001或其他现有进程。
+所有临时服务在 finally 关闭；结束后 lsof 43111 无监听。两次成功运行 sourceChanges=[]（哈希和修改时间均比较）。
+早期失败尝试记录在 attempt-sandbox、attempt-runner-import；不作为视觉基准。
+Nowledge 检索 DNS 失败，未用于结论。
