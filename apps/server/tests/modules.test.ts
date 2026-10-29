@@ -65,6 +65,7 @@ async function fixture(
 		},
 		services: {
 			accessService: {
+				workspaces: createAccessService({} as Auth, db).workspaces,
 				canReadPage: async (_headers, page) =>
 					pages.includes(page as "todos" | "queues"),
 				getAccess: async () => ({
@@ -192,12 +193,28 @@ test("anonymous requests cannot access any Todo operation", async () => {
 	const f = await fixture(null);
 	try {
 		for (const request of [
-			() => f.client.todo.list({}),
-			() => f.client.todo.create({ text: "private" }),
-			() => f.client.todo.rename({ id: 1, text: "edited" }),
-			() => f.client.todo.toggle({ id: 1, completed: true }),
-			() => f.client.todo.setCompleted({ id: 1, completed: true }),
-			() => f.client.todo.delete({ id: 1 }),
+			() => f.client.todo.list({ workspaceId: "application" }),
+			() =>
+				f.client.todo.create({ workspaceId: "application", text: "private" }),
+			() =>
+				f.client.todo.rename({
+					workspaceId: "application",
+					id: 1,
+					text: "edited",
+				}),
+			() =>
+				f.client.todo.toggle({
+					workspaceId: "application",
+					id: 1,
+					completed: true,
+				}),
+			() =>
+				f.client.todo.setCompleted({
+					workspaceId: "application",
+					id: 1,
+					completed: true,
+				}),
+			() => f.client.todo.delete({ workspaceId: "application", id: 1 }),
 		]) {
 			await assert.rejects(request, { code: "UNAUTHORIZED" });
 		}
@@ -218,12 +235,21 @@ test("Todo SQL binds the session owner for reads, inserts and mutations", async 
 		},
 	);
 	try {
-		await f.client.todo.list({});
-		await f.client.todo.create({ text: "private", userId: "foreign" } as {
+		await f.client.todo.list({ workspaceId: "application" });
+		await f.client.todo.create({
+			workspaceId: "application",
+			text: "private",
+			userId: "foreign",
+		} as {
 			text: string;
+			workspaceId: string;
 		});
-		await f.client.todo.toggle({ id: 99, completed: true });
-		await f.client.todo.delete({ id: 99 });
+		await f.client.todo.toggle({
+			workspaceId: "application",
+			id: 99,
+			completed: true,
+		});
+		await f.client.todo.delete({ workspaceId: "application", id: 99 });
 		assert.equal(queries.length, 4);
 		for (const [index, args] of queries.entries()) {
 			const sql = (args[0] as { text: string }).text;
@@ -538,27 +564,41 @@ test("Todo rename validates input, uses session ownership and hides missing reso
 	try {
 		assert.deepEqual(
 			await f.client.todo.rename({
+				workspaceId: "application",
 				id: 7,
 				text: "  edited  ",
 				userId: "foreign",
-			} as { id: number; text: string }),
+			} as { id: number; text: string; workspaceId: string }),
 			{ id: 7, text: "edited", completed: true },
 		);
-		assert.deepEqual(calls, [{ id: 7, text: "edited", userId: "user-1" }]);
+		assert.deepEqual(calls, [
+			{ id: 7, text: "edited", userId: "user-1", workspaceId: "application" },
+		]);
 		for (const input of [
 			{ id: 7, text: " " },
 			{ id: 7, text: "x".repeat(501) },
 			{ id: 0, text: "valid" },
 			{ id: 1.5, text: "valid" },
 		]) {
-			await assert.rejects(() => f.client.todo.rename(input), {
-				code: "BAD_REQUEST",
-			});
+			await assert.rejects(
+				() => f.client.todo.rename({ ...input, workspaceId: "application" }),
+				{
+					code: "BAD_REQUEST",
+				},
+			);
 		}
 		assert.equal(calls.length, 1);
-		await assert.rejects(() => f.client.todo.rename({ id: 8, text: "valid" }), {
-			code: "NOT_FOUND",
-		});
+		await assert.rejects(
+			() =>
+				f.client.todo.rename({
+					workspaceId: "application",
+					id: 8,
+					text: "valid",
+				}),
+			{
+				code: "NOT_FOUND",
+			},
+		);
 	} finally {
 		rename.mock.restore();
 		await f.close();
@@ -582,7 +622,7 @@ test("page denial blocks Todo operations before reaching the repository", async 
 			}),
 		);
 		await assert.rejects(
-			() => client.todo.list({}),
+			() => client.todo.list({ workspaceId: "application" }),
 			(error: unknown) =>
 				typeof error === "object" &&
 				error !== null &&
@@ -610,19 +650,29 @@ test("Todo create validates and trims API input before calling the service", asy
 		}),
 	);
 	try {
-		assert.deepEqual(await f.client.todo.create({ text: "  task  " }), {
-			id: 7,
-			text: "task",
-			completed: false,
-		});
+		assert.deepEqual(
+			await f.client.todo.create({
+				workspaceId: "application",
+				text: "  task  ",
+			}),
+			{
+				id: 7,
+				text: "task",
+				completed: false,
+			},
+		);
 		assert.deepEqual(create.mock.calls[0]?.arguments[0], {
 			userId: "user-1",
+			workspaceId: "application",
 			text: "task",
 		});
 		for (const text of [" ", "x".repeat(501)]) {
-			await assert.rejects(() => f.client.todo.create({ text }), {
-				code: "BAD_REQUEST",
-			});
+			await assert.rejects(
+				() => f.client.todo.create({ workspaceId: "application", text }),
+				{
+					code: "BAD_REQUEST",
+				},
+			);
 		}
 		assert.equal(create.mock.callCount(), 1);
 	} finally {
@@ -638,6 +688,7 @@ test("page authorization checks only the requested native permission on every re
 	let failure: APIError | undefined;
 	const auth = {
 		api: {
+			getSession: async () => session,
 			getActiveMember: async () => {
 				throw new Error("unexpected snapshot lookup");
 			},
@@ -648,13 +699,17 @@ test("page authorization checks only the requested native permission on every re
 			},
 		},
 	} as unknown as Auth;
-	f.deps.services.accessService = createAccessService(auth);
+	f.deps.services.accessService = createAccessService(auth, {
+		select: () => ({
+			from: () => ({ where: async () => [{ enabled: true }] }),
+		}),
+	} as unknown as ReturnType<typeof createDb>);
 	const list = mock.method(f.deps.services.todosService, "list", async () => ({
 		items: [],
 		nextCursor: null,
 	}));
 	try {
-		assert.deepEqual(await f.client.todo.list({}), {
+		assert.deepEqual(await f.client.todo.list({ workspaceId: "application" }), {
 			items: [],
 			nextCursor: null,
 		});
@@ -664,7 +719,10 @@ test("page authorization checks only the requested native permission on every re
 			permissions: { todos: ["read"] },
 		});
 		allowed = false;
-		await assert.rejects(() => f.client.todo.list({}), { code: "FORBIDDEN" });
+		await assert.rejects(
+			() => f.client.todo.list({ workspaceId: "application" }),
+			{ code: "FORBIDDEN" },
+		);
 		assert.equal(checks.length, 2);
 		assert.equal(list.mock.callCount(), 1);
 		for (const [status, code] of [
@@ -673,7 +731,10 @@ test("page authorization checks only the requested native permission on every re
 			["INTERNAL_SERVER_ERROR", "INTERNAL_SERVER_ERROR"],
 		] as const) {
 			failure = new APIError(status);
-			await assert.rejects(() => f.client.todo.list({}), { code });
+			await assert.rejects(
+				() => f.client.todo.list({ workspaceId: "application" }),
+				{ code },
+			);
 		}
 		assert.equal(list.mock.callCount(), 1);
 	} finally {
@@ -682,7 +743,7 @@ test("page authorization checks only the requested native permission on every re
 	}
 });
 
-test("queue monitoring requires the queues page before reading Redis", async () => {
+test("queue monitoring requires platform superadmin before reading Redis", async () => {
 	const denied = await fixture();
 	try {
 		await assert.rejects(() => denied.client.queues.list(), {
@@ -692,7 +753,10 @@ test("queue monitoring requires the queues page before reading Redis", async () 
 	} finally {
 		await denied.close();
 	}
-	const allowed = await fixture(session, ["queues"]);
+	const allowed = await fixture(
+		{ ...session, user: { ...session.user, role: "superadmin" } },
+		[],
+	);
 	try {
 		assert.deepEqual(await allowed.client.queues.list(), []);
 		assert.ok(allowed.calls.includes("queues.list"));

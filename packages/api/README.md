@@ -15,7 +15,7 @@ oRPC input validation, session resolution and transport error mapping.
 | [src/routers/todo.ts](src/routers/todo.ts) | Reference for validated, owner-scoped CRUD |
 | [src/routers/index.ts](src/routers/index.ts) | Router registration and inferred client types |
 | [src/queue-monitor.ts](src/queue-monitor.ts) | Read-only BullMQ projection over `@bull-board/api` |
-| [src/routers/queues.ts](src/routers/queues.ts) | Page-protected queue, job, log and scheduler procedures |
+| [src/routers/queues.ts](src/routers/queues.ts) | Platform-protected queue, job, log and scheduler procedures |
 | [src/auth.ts](src/auth.ts) | Better Auth factory |
 
 ## Extend
@@ -48,12 +48,14 @@ Its validation and ownership boundary follow this pattern:
 ```ts
 rename: pageProcedure("todos")
   .input(z.object({
+    workspaceId: z.string().min(1).max(100),
     id: z.number().int().positive(),
     text: z.string().trim().min(1).max(500),
   }))
   .handler(async ({ input, context }) => {
     const updated = await context.services.todosService.rename({
       userId: context.session.user.id,
+      workspaceId: context.workspaceId,
       id: input.id,
       text: input.text,
     });
@@ -63,7 +65,7 @@ rename: pageProcedure("todos")
 ```
 
 The existing `appRouter.todo` registration and inferred client expose
-`client.todo.rename({ id: 7, text: "Book tickets" })`. There is no `userId`
+`client.todo.rename({ workspaceId, id: 7, text: "Book tickets" })`. There is no `userId`
 input, new service instance or hand-written client interface. See the
 [web example](../../docs/extension-examples.md#case-1-rename-a-todo) for callers.
 
@@ -92,3 +94,19 @@ raw database through the RPC context.
 ## Roles and page access
 
 [Implementation and extension rules](../../docs/access-control.md).
+
+## Workspace APIs
+
+`createAccessService(auth, db)` owns the authorization facade and workspace management
+adapter. `access.mine` lists only memberships; `access.workspaces` is the paginated
+platform metadata list. `access.createWorkspace` atomically creates the organization,
+owner, standard role and tool configuration; its creator is not implicitly a member.
+`access.setTool` is platform-only; `access.addMember` accepts an existing account email
+and requires a local owner/admin. Membership insertion is idempotent.
+
+Every Todo input requires `workspaceId`. `pageProcedure` verifies membership, tool
+configuration and native role authorization, then passes the same immutable scope into
+the service. Never use session `activeOrganizationId` as a business target. Raw
+Organization writes are allowlisted; role and member targets must belong to the explicit
+organization. Owner changes, removal, invitations and deletion remain unavailable.
+Queues use `platformProcedure`; account-level profile jobs retain their user scope.

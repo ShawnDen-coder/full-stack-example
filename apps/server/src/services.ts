@@ -84,7 +84,7 @@ export async function createServices(
 				todosService,
 				profileJobs,
 				queueMonitor,
-				accessService: factory.createAccessService(auth),
+				accessService: factory.createAccessService(auth, db),
 			},
 			async checkReady() {
 				await db.$client.query("SELECT 1");

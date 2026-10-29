@@ -24,7 +24,7 @@ test("native Better Auth roles enforce page access and administrator boundaries"
 		baseURL: "http://localhost:3000",
 		trustedOrigins: ["http://localhost:3001"],
 	});
-	const access = createAccessService(auth);
+	const access = createAccessService(auth, db);
 	const ids: string[] = [];
 	const roleName = `test-${randomUUID()}`;
 	async function post(path: string, body: unknown, cookie = "") {
@@ -53,6 +53,13 @@ test("native Better Auth roles enforce page access and administrator boundaries"
 			.getSetCookie()
 			.map((value) => value.split(";")[0])
 			.join("; ");
+		await db.insert(member).values({
+			id: randomUUID(),
+			userId: data.user.id,
+			organizationId: "application",
+			role: "member,standard",
+			createdAt: new Date(),
+		});
 		const [membership] = await db
 			.select()
 			.from(member)
@@ -193,7 +200,10 @@ test("native Better Auth roles enforce page access and administrator boundaries"
 		assert.deepEqual((await access.getAccess(ordinary.headers)).pages, [
 			"todos",
 		]);
-		assert.equal(await access.canReadPage(ordinary.headers, "todos"), true);
+		assert.equal(
+			await access.canReadPage(ordinary.headers, "todos", "application"),
+			true,
+		);
 		assert.equal(
 			(
 				await post(
@@ -209,7 +219,10 @@ test("native Better Auth roles enforce page access and administrator boundaries"
 			200,
 		);
 		assert.deepEqual((await access.getAccess(ordinary.headers)).pages, []);
-		assert.equal(await access.canReadPage(ordinary.headers, "todos"), false);
+		assert.equal(
+			await access.canReadPage(ordinary.headers, "todos", "application"),
+			false,
+		);
 		assert.equal(
 			(
 				await post(

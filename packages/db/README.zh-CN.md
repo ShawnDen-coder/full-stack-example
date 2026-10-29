@@ -67,3 +67,14 @@ pnpm test:integration
 ## 角色与页面授权
 
 [实现与扩展规则](../../docs/access-control.zh-CN.md)。
+
+## Workspace 迁移
+
+`20261029080802_material_black_cat` 增加 workspace_tool、成员与角色复合唯一约束，以及
+Todo 空间范围。旧 Todo 归入 application；没有 owner 的行继续不可访问。新写入没有默认空间。
+历史重复成员或角色名会使唯一约束迁移明确失败，应在部署前处理，不能静默丢弃授权。
+迁移后重新运行 runtime role provisioning，授予 app_server 新表权限；Worker 授权不变。
+新账号不再自动加入 application，bootstrap 仍可初始化第一个 owner。
+
+Bootstrap 默认只授予平台身份。如需同时明确授予已有空间的 owner，使用
+`pnpm admin:bootstrap <user-id> --workspace-owner <workspace-id>`。

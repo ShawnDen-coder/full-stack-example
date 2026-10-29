@@ -59,7 +59,7 @@ sequenceDiagram
   api->>auth: Resolve session from headers
   auth-->>api: session.user.id
   api->>service: setCompleted with session userId
-  service->>repo: forUser&#40;userId&#41;.setCompleted&#40;&#123; id, completed &#125;&#41;
+  service->>repo: forUser&#40;userId, workspaceId&#41;.setCompleted&#40;&#123; id, completed &#125;&#41;
   repo->>postgres: UPDATE todos WHERE id = ... AND user_id = ...
   postgres-->>repo: Updated row
   repo-->>service: Owned Todo
@@ -69,7 +69,7 @@ sequenceDiagram
 
 API context resolves the session through Better Auth, which uses the injected
 database. `protectedProcedure` rejects missing authentication with `UNAUTHORIZED`.
-The router takes `userId` from the session, and `forUser(userId)` binds ownership to
+The router takes `userId` from the session, and `forUser(userId, workspaceId)` binds ownership to
 SQL reads and writes. Missing or foreign Todos produce `NOT_FOUND`. New Todo operations
 follow these boundaries; see the [Todo extension case](extension-examples.md#case-1-rename-a-todo).
 
@@ -223,7 +223,7 @@ Use `packages/domain/src/todos` as the CRUD reference. Its factory receives a da
 `createServices` wires it into `context.services`. Routers validate inputs and
 map a missing or foreign resource to the same `NOT_FOUND` response. Never accept
 an owner ID from the browser. `repository.ts` owns SQL, field projections and the
-user scope: `createTodosRepository({ db }).forUser(session.user.id)` returns operations
+user scope: `createTodosRepository({ db }).forUser(session.user.id, workspaceId)` returns operations
 that always filter by that owner and assign it on insert. It returns resolved data,
 never a mutable query builder. Scopes are immutable closures, so a shared repository
 cannot switch another request's user. Keep pagination and business decisions in

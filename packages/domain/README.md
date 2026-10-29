@@ -12,7 +12,7 @@ This package groups modules by domain, including service orchestration, SQL repo
 | File | Responsibility |
 | --- | --- |
 | [src/todos/service.ts](src/todos/service.ts) | Operations, cursor pagination and operation telemetry |
-| [src/todos/repository.ts](src/todos/repository.ts) | SQL, projections and immutable `forUser(userId)` scopes |
+| [src/todos/repository.ts](src/todos/repository.ts) | SQL, projections and immutable `forUser(userId, workspaceId)` scopes |
 | [src/users/service.ts](src/users/service.ts) | A small query that does not need a separate repository |
 | [src/users/jobs/profile-read.contract.ts](src/users/jobs/profile-read.contract.ts) | Queue/task names, Zod payload, result type and retry/retention defaults |
 | [src/users/jobs/profile-read.producer.ts](src/users/jobs/profile-read.producer.ts) | Enqueue, status access, queue observation, cleanup, and an assembly-only monitoring handle |
@@ -24,10 +24,10 @@ This package groups modules by domain, including service orchestration, SQL repo
 1. Add a feature directory with a `create...Service` factory and infer its type
    with `ReturnType`. Service, Repository and job factories take one named
    dependency object, e.g. `createTodosRepository({ db: tx })`. Use named objects
-   for multiple business fields (`service.setCompleted({ userId, id, completed })`);
-   single IDs can stay primitive (`forUser(userId)`). Inject clients; importing the module must not open resources.
+   for multiple business fields (`service.setCompleted({ userId, workspaceId, id, completed })`);
+   single IDs can stay primitive (`forUser(userId, workspaceId)`). Inject clients; importing the module must not open resources.
 2. Add a scoped `repository.ts` when ownership filters repeat. Bind the trusted
-   owner once with `forUser(userId)`, enforce it on reads and writes, and assign
+   owner once with `forUser(userId, workspaceId)`, enforce it on reads and writes, and assign
    it explicitly on insert. Return data rather than a mutable query builder.
 3. Keep simple queries in the service. For multi-statement use cases, open a
    transaction at the service boundary and pass the same `tx` to repositories.
@@ -59,7 +59,7 @@ sum against database pool and memory capacity. See the
 
 This operation is implemented using the existing `todo.text` column, with no
 migration or new package export. In [repository.ts](src/todos/repository.ts),
-`rename` belongs to the immutable `forUser(userId)` scope alongside `setCompleted`:
+`rename` belongs to the immutable `forUser(userId, workspaceId)` scope alongside `setCompleted`:
 
 ```ts
 async rename({ id, text }: { id: number; text: string }) {
@@ -76,14 +76,15 @@ The corresponding method is part of the returned service object in
 [service.ts](src/todos/service.ts):
 
 ```ts
-async rename({ userId, id, text }: {
+async rename({ userId, workspaceId, id, text }: {
   userId: string;
+  workspaceId: string;
   id: number;
   text: string;
 }) {
   const normalized = normalizeText(text);
   return observeOperation("todos.rename", async () =>
-    repository.forUser(userId).rename({ id, text: normalized }),
+    repository.forUser(userId, workspaceId).rename({ id, text: normalized }),
   );
 },
 ```
@@ -164,3 +165,12 @@ failure recovery. Worker code must not import API or browser/session modules.
 ## Roles and page access
 
 [Implementation and extension rules](../../docs/access-control.md).
+
+## Workspace isolation
+
+All Todo service methods require `workspaceId` alongside the authenticated `userId`.
+Bind both in `repository.forUser(userId, workspaceId)`. Every SQL read and mutation
+filters both; inserts write both explicitly. The API verifies membership and tool access
+before invoking domain. A workspace ID in a payload is a locator, not authorization.
+The account-level profile-read job remains user-scoped; this change does not introduce
+a workspace task scheduler or a new worker dependency.

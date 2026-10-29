@@ -14,15 +14,19 @@ export function createTodosService({ db }: { db: Database }) {
 	return {
 		async list({
 			userId,
+			workspaceId,
 			cursor,
 			limit,
 		}: {
 			userId: string;
+			workspaceId: string;
 			cursor?: number;
 			limit: number;
 		}) {
 			const rows = await observeOperation("todos.list", async () =>
-				repository.forUser(userId).list({ cursor, limit: limit + 1 }),
+				repository
+					.forUser(userId, workspaceId)
+					.list({ cursor, limit: limit + 1 }),
 			);
 			const items = rows.slice(0, limit);
 			return {
@@ -30,42 +34,64 @@ export function createTodosService({ db }: { db: Database }) {
 				nextCursor: rows.length > limit ? (items.at(-1)?.id ?? null) : null,
 			};
 		},
-		async create({ userId, text }: { userId: string; text: string }) {
+		async create({
+			userId,
+			workspaceId,
+			text,
+		}: {
+			userId: string;
+			workspaceId: string;
+			text: string;
+		}) {
 			const normalized = normalizeText(text);
 			return observeOperation("todos.create", async () =>
-				repository.forUser(userId).create({ text: normalized }),
+				repository.forUser(userId, workspaceId).create({ text: normalized }),
 			);
 		},
 		async setCompleted({
 			userId,
+			workspaceId,
 			id,
 			completed,
 		}: {
 			userId: string;
+			workspaceId: string;
 			id: number;
 			completed: boolean;
 		}) {
 			return observeOperation("todos.setCompleted", async () =>
-				repository.forUser(userId).setCompleted({ id, completed }),
+				repository.forUser(userId, workspaceId).setCompleted({ id, completed }),
 			);
 		},
 		async rename({
 			userId,
+			workspaceId,
 			id,
 			text,
 		}: {
 			userId: string;
+			workspaceId: string;
 			id: number;
 			text: string;
 		}) {
 			const normalized = normalizeText(text);
 			return observeOperation("todos.rename", async () =>
-				repository.forUser(userId).rename({ id, text: normalized }),
+				repository
+					.forUser(userId, workspaceId)
+					.rename({ id, text: normalized }),
 			);
 		},
-		async delete({ userId, id }: { userId: string; id: number }) {
+		async delete({
+			userId,
+			workspaceId,
+			id,
+		}: {
+			userId: string;
+			workspaceId: string;
+			id: number;
+		}) {
 			return observeOperation("todos.delete", async () =>
-				repository.forUser(userId).delete(id),
+				repository.forUser(userId, workspaceId).delete(id),
 			);
 		},
 	};

@@ -11,7 +11,7 @@
 | 文件 | 职责 |
 | --- | --- |
 | [src/todos/service.ts](src/todos/service.ts) | 业务操作、游标分页和操作级 telemetry |
-| [src/todos/repository.ts](src/todos/repository.ts) | SQL、字段投影和独立的 `forUser(userId)` scope |
+| [src/todos/repository.ts](src/todos/repository.ts) | SQL、字段投影和独立的 `forUser(userId, workspaceId)` scope |
 | [src/users/service.ts](src/users/service.ts) | 无需额外 Repository 的简单查询示例 |
 | [src/users/jobs/profile-read.contract.ts](src/users/jobs/profile-read.contract.ts) | 队列／任务名、Zod payload、结果类型及重试／保留配置 |
 | [src/users/jobs/profile-read.producer.ts](src/users/jobs/profile-read.producer.ts) | 入队、状态查询、队列观测、关闭，以及仅供组装层使用的监控句柄 |
@@ -20,8 +20,8 @@
 
 ## 扩展步骤
 
-1. 新建业务目录，导出 `create...Service` 工厂，用 `ReturnType` 推导类型。Service、Repository 和任务工厂均接收一个具名依赖对象，例如 `createTodosRepository({ db: tx })`。多个业务字段使用对象，如 `service.setCompleted({ userId, id, completed })`；单个 ID 可保留原始参数，如 `forUser(userId)`。客户端通过参数注入，导入模块时不创建运行资源。
-2. 归属过滤反复出现时，再增加 `repository.ts`。通过 `forUser(userId)` 绑定可信用户，读写均约束归属，创建时显式填入用户 ID。返回执行结果，不暴露可修改的查询构造器。
+1. 新建业务目录，导出 `create...Service` 工厂，用 `ReturnType` 推导类型。Service、Repository 和任务工厂均接收一个具名依赖对象，例如 `createTodosRepository({ db: tx })`。多个业务字段使用对象，如 `service.setCompleted({ userId, workspaceId, id, completed })`；单个 ID 可保留原始参数，如 `forUser(userId, workspaceId)`。客户端通过参数注入，导入模块时不创建运行资源。
+2. 归属过滤反复出现时，再增加 `repository.ts`。通过 `forUser(userId, workspaceId)` 绑定可信用户，读写均约束归属，创建时显式填入用户 ID。返回执行结果，不暴露可修改的查询构造器。
 3. 简单查询可以留在服务里。多语句用例由服务开启事务，各 Repository 使用同一个 `tx`；网络调用和队列发布放在数据库事务之外。确有数据库写入与任务投递原子性要求时，再设计 outbox。
 4. 使用 `observeOperation` 包裹有稳定名称的业务操作。RPC 错误和 session 留在 API，仅向 [exports](package.json) 增加调用方需要的子路径。
 5. HTTP 服务通过 [API](../api/README.zh-CN.md) 和 [server services](../../apps/server/src/services.ts) 接线。
@@ -32,7 +32,7 @@ Worker 工厂返回原生 Worker，内部固定 `autorun: false`。增加一个 
 
 ## 示例：重命名自己的 Todo
 
-此操作已实现，复用现有 `todo.text` 字段，无需 migration 或新增 package export。[repository.ts](src/todos/repository.ts) 的 `rename` 位于 `forUser(userId)` 返回的作用域对象内：
+此操作已实现，复用现有 `todo.text` 字段，无需 migration 或新增 package export。[repository.ts](src/todos/repository.ts) 的 `rename` 位于 `forUser(userId, workspaceId)` 返回的作用域对象内：
 
 ```ts
 async rename({ id, text }: { id: number; text: string }) {
@@ -48,14 +48,15 @@ async rename({ id, text }: { id: number; text: string }) {
 [service.ts](src/todos/service.ts) 的返回对象提供以下业务方法：
 
 ```ts
-async rename({ userId, id, text }: {
+async rename({ userId, workspaceId, id, text }: {
   userId: string;
+  workspaceId: string;
   id: number;
   text: string;
 }) {
   const normalized = normalizeText(text);
   return observeOperation("todos.rename", async () =>
-    repository.forUser(userId).rename({ id, text: normalized }),
+    repository.forUser(userId, workspaceId).rename({ id, text: normalized }),
   );
 },
 ```
@@ -114,3 +115,10 @@ SQL、事务、任务重试或 trace 传播变更，需要使用专用 PostgreSQ
 ## 角色与页面授权
 
 [实现与扩展规则](../../docs/access-control.zh-CN.md)。
+
+## Workspace 隔离
+
+所有 Todo service 方法都要求 `workspaceId` 和登录用户 `userId`。通过
+`repository.forUser(userId, workspaceId)` 一次绑定；每个 SQL 读写同时过滤两者，新增记录显式
+填入两者。API 在调用 domain 前验证成员和工具权限；客户端提供的空间 ID 只是定位信息。
+账号级 profile-read 任务仍按用户隔离，本轮没有新增空间任务调度器或 Worker 依赖。

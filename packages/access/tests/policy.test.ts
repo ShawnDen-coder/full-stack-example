@@ -15,7 +15,10 @@ test("navigation checks exact path boundaries and keeps basic account access", (
 	assert.equal(canVisit(access, "/settings/account"), true);
 	assert.equal(canVisit(access, "/queues"), false);
 	assert.equal(
-		canVisit({ role: "user", pages: ["queues"] }, "/queues/user-profile/jobs"),
+		canVisit(
+			{ role: "user", platformRole: "superadmin", pages: [] },
+			"/queues/user-profile/jobs",
+		),
 		true,
 	);
 	assert.equal(canVisit({ role: "admin", pages: [] }, "/queues"), false);
@@ -51,11 +54,11 @@ test("native roles reserve administration for admins and owners", () => {
 	);
 	assert.equal(
 		organizationRoles.owner.authorize({ queues: ["read"] }).success,
-		true,
+		false,
 	);
 	assert.equal(
 		organizationRoles.admin.authorize({ queues: ["read"] }).success,
-		true,
+		false,
 	);
 	assert.equal(
 		organizationRoles.member.authorize({ queues: ["read"] }).success,

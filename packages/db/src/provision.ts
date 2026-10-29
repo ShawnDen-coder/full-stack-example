@@ -67,7 +67,7 @@ REVOKE ALL ON SCHEMA public FROM app_server, app_worker;
 GRANT USAGE ON SCHEMA public TO app_server, app_worker;
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM app_server, app_worker;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM app_server, app_worker;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public."user", public.session, public.account, public.verification, public.todo, public.organization, public.member, public.organization_role, public.invitation TO app_server;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public."user", public.session, public.account, public.verification, public.todo, public.organization, public.member, public.organization_role, public.invitation, public.workspace_tool TO app_server;
 GRANT USAGE, SELECT ON SEQUENCE public.todo_id_seq TO app_server;
 GRANT SELECT ON TABLE public."user" TO app_worker;
 `);

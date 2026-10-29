@@ -116,6 +116,10 @@ export const organizationRole = pgTable(
 	(table) => [
 		index("organizationRole_organizationId_idx").on(table.organizationId),
 		index("organizationRole_role_idx").on(table.role),
+		uniqueIndex("organization_role_workspace_role_uidx").on(
+			table.organizationId,
+			table.role,
+		),
 	],
 );
 
@@ -135,6 +139,10 @@ export const member = pgTable(
 	(table) => [
 		index("member_organizationId_idx").on(table.organizationId),
 		index("member_userId_idx").on(table.userId),
+		uniqueIndex("member_workspace_user_uidx").on(
+			table.organizationId,
+			table.userId,
+		),
 	],
 );
 

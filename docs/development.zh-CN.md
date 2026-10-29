@@ -49,7 +49,7 @@ sequenceDiagram
   api->>auth: 从请求头解析会话
   auth-->>api: session.user.id
   api->>service: setCompleted，使用会话 userId
-  service->>repo: forUser&#40;userId&#41;.setCompleted&#40;&#123; id, completed &#125;&#41;
+  service->>repo: forUser&#40;userId, workspaceId&#41;.setCompleted&#40;&#123; id, completed &#125;&#41;
   repo->>postgres: UPDATE todos WHERE id = ... AND user_id = ...
   postgres-->>repo: 更新后的行
   repo-->>service: 当前用户的 Todo
@@ -57,7 +57,7 @@ sequenceDiagram
   api-->>web: &#123; id, text, completed &#125;
 ```
 
-API context 通过 Better Auth 解析 session，Better Auth 使用注入的数据库。`protectedProcedure` 对未认证请求返回 `UNAUTHORIZED`。路由从 session 获取 `userId`，`forUser(userId)` 将用户归属绑定到 SQL 读写。不存在和属于其他用户的 Todo 均返回 `NOT_FOUND`。新增 Todo 操作也遵循这些边界，见 [Todo 扩展示例](extension-examples.zh-CN.md#案例一重命名-todo)。
+API context 通过 Better Auth 解析 session，Better Auth 使用注入的数据库。`protectedProcedure` 对未认证请求返回 `UNAUTHORIZED`。路由从 session 获取 `userId`，`forUser(userId, workspaceId)` 将用户归属绑定到 SQL 读写。不存在和属于其他用户的 Todo 均返回 `NOT_FOUND`。新增 Todo 操作也遵循这些边界，见 [Todo 扩展示例](extension-examples.zh-CN.md#案例一重命名-todo)。
 
 ### 读取用户资料的后台任务
 
@@ -197,7 +197,7 @@ const status = await client.users.getProfileReadJob({ id: job.id });
 
 以 `packages/domain/src/todos` 作为增删改查模块的参考。其工厂接收数据库，`createServices` 将服务注入 `context.services`。路由负责校验输入，对不存在和属于其他用户的资源统一返回 `NOT_FOUND`。不要接受浏览器传入的资源所属用户 ID。
 
-`repository.ts` 负责 SQL、字段投影和用户范围：`createTodosRepository({ db }).forUser(session.user.id)` 返回的操作始终按该用户过滤，创建时也固定填入该用户 ID。方法返回执行结果，不暴露可修改的查询构造器。每个 scope 使用独立闭包，共享 repository 不存储可变的当前用户。`service.ts` 保留分页、业务判断和原有操作级 span、指标。Repository 工厂可接收数据库或事务，不负责创建和关闭连接。归属规则重复时再引入 scoped repository，简单模块无需额外层次，也不引入通用基类。这是应用层约束，直接使用原始数据库仍然可以绕过。
+`repository.ts` 负责 SQL、字段投影和用户范围：`createTodosRepository({ db }).forUser(session.user.id, workspaceId)` 返回的操作始终按该用户过滤，创建时也固定填入该用户 ID。方法返回执行结果，不暴露可修改的查询构造器。每个 scope 使用独立闭包，共享 repository 不存储可变的当前用户。`service.ts` 保留分页、业务判断和原有操作级 span、指标。Repository 工厂可接收数据库或事务，不负责创建和关闭连接。归属规则重复时再引入 scoped repository，简单模块无需额外层次，也不引入通用基类。这是应用层约束，直接使用原始数据库仍然可以绕过。
 
 `todo.list({ cursor?, limit? })` 返回 `{ items, nextCursor }`，按 ID 降序排列。每页默认 20 条，最多 100 条；游标为上一页最后一条记录的 ID。文本会去除首尾空白，长度限制为 1–500 个字符。创建和切换完成状态操作返回 `{ id, text, completed }`，删除操作返回 `{ id }`。旧的 `todo.getAll` 接口已移除。引入新的查询方式时，应同时增加相应索引和经过审查的迁移，并使用 PostgreSQL 验证。
 

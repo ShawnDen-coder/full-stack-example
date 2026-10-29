@@ -1,69 +1,50 @@
-# 角色与页面授权
+# Workspace 权限
 
-[English](access-control.md) · [简体中文](access-control.zh-CN.md)
+[English](access-control.md)
 
-权限模型使用 Better Auth 官方 Organization 插件及 Dynamic Access Control。
-应用只使用一个固定内部组织 `application`，不展示组织创建或切换入口。
-成员身份存储在插件的 `member` 表，动态权限存储在 `organization_role`；
-没有自建权限表或第二套权限计算引擎。
+复用 Better Auth Organization。全站 `user.role=superadmin` 管理平台；本地
+owner/admin/member 只作用于所属 workspace。owner 不再映射为平台 superadmin，
+平台管理员也必须有成员身份和相应授权才能读取空间业务数据。
 
-## 角色
+## 页面与请求
 
-| 角色 | 职责 |
-| --- | --- |
-| `owner` | 工作区超级管理员，可以任命或降级管理员 |
-| `admin` | 编辑页面角色模板，为普通成员分配角色 |
-| `member` | 普通用户身份，本身不授予页面访问权限 |
-| 动态角色，初始为 `standard` | 一组页面 `read` 权限 |
+侧栏切换器只列本人加入的空间。`/apps?workspace=<id>` 是工具首页，链接保留
+URL 中的空间；每次 Todo RPC 在 input 中固定 `workspaceId`。不使用共享 session
+的 activeOrganizationId 决定业务目标，因此不同标签页可以操作不同空间。
+切换时清理查询状态、拒收迟到的 oRPC 响应；Todo 缓存键和编辑器生命周期包含空间。
 
-用户可以拥有多个角色，权限按 Better Auth 原生规则合并。没有个人拒绝覆盖或独立授权范围。
-要缩小权限，先移除较宽的角色，再分配较窄的角色。编辑模板会影响持有该角色的所有成员。
-管理员和超级管理员可访问所有已登记页面，但仍遵守 Todo 数据所有权限制。
+沿用现有 Sidebar、Card 和主题。首页宽屏三列、中屏两列、手机一列；简单 Hammer
+作为默认 logo，无页脚按钮。桌面双击、键盘操作、触屏单击进入完整工具页。
+首页只展示真实可用工具；模板示例单独分组，Tasks demo 不冒充任务中心。
 
-新注册用户自动加入 `member,standard`。迁移为 standard 开放原有五个页面，并为已有用户
-和 session 补齐组织关系，保留升级前的访问能力。新增页面需在后台明确授权给动态角色。
-`queues` 就是这样的后续页面：owner 和 admin 从静态角色定义获得它，`standard` 在管理员授予前不包含它。
-standard 不能删除；动态角色的标识不能重命名。
+## 管理边界
 
-Admin 插件独立负责全站账号管理：`user.role` 不等于工作区身份。初始化授予全站
-superadmin 原生账号查询、封禁和会话查询、撤销能力。普通工作区管理员不拥有这些全站权限。
-不再统一拦截 `/admin/*` 接口。
+- `/workspaces`：平台管理员分页查看空间元数据、新建空间并指定已有账号 owner、启停工具。
+  组织、owner、standard 角色和工具配置在一个事务内创建，创建者不会自动成为成员。
+- `/admin/users?workspace=<id>`：owner/admin 用精确邮箱添加已有账号，管理本空间角色。
+  重复添加不产生重复成员；只有 owner 能管理 admin。
+- `/queues`：独立的平台运维入口，不接受 workspace 的页面授权。
+- Todo：成员身份 ∩ 工具启用 ∩ 原生角色授权；SQL 再同时约束 workspace 和登录用户。
+- 工具配置缺失时拒绝，owner/admin 也不例外。停用保留数据与角色，重新启用后按当前权限访问。
+- 新账号不再自动加入 application；保留等待加入状态和账户设置。
 
-## 初始化
+原生 Organization 写接口采用允许列表，未实现的新建、更新组织、邀请、移除等接口
+拒绝请求。改成员/角色必须显式指定组织并核对目标归属；动态角色不能授予平台或成员
+管理能力。standard 角色不可删除；仍拥有空间的 owner 账号不可通过 Admin 接口封禁或删除。
 
-1. 使用部署凭证执行 `pnpm db:migrate`。
-2. 正常注册首位超级管理员账号，获取用户 ID。
-3. 使用部署 `DATABASE_URL` 执行 `pnpm admin:bootstrap <user-id>`。
-4. 重新登录并访问 `/admin/users`。
+## 部署
 
-初始化在同一事务中设置工作区 owner 和全站 superadmin，并撤销其旧 session。
-已有全站超级管理员时拒绝重复初始化。HTTP 接口不允许修改 owner 身份，计划内的 owner
-调整通过部署维护完成，避免并发删除最后一个 owner，也不自建角色写入事务引擎。
+1. 使用部署凭据应用新增迁移。旧 Todo 归入 application，未知 owner 的记录仍不可访问。
+2. 重新运行 runtime role provisioning，授予 app_server 新表 workspace_tool 的权限。
+3. 新环境注册账号后执行 `pnpm admin:bootstrap <user-id>`，重新登录。
+4. 在 `/workspaces` 创建空间并填写负责人邮箱。
 
-## 实现与扩展
+成员与角色的复合唯一约束遇到历史重复数据会明确失败；部署前先处理重复记录，不自动丢弃
+授权。后续 Todo 写入没有默认 workspace。Worker 权限和注册方式保持现有约定。
 
-- `packages/access`：页面目录、导航映射与插件原生角色声明。
-- `packages/api/src/auth.ts`：配置插件和少量业务约束 hook。仅 owner 可管理管理员；
-  动态模板只能包含页面读取权限；保护 owner、注册默认角色。验证与持久化由原生插件完成。
-- `packages/api/src/access.ts`：调用原生 `getActiveMember`、`hasPermission`，转换为导航快照，
-  不计算继承或覆盖规则。
-- oRPC `access.me` 读取快照；管理操作调用 `/api/auth/organization/*` 原生接口。
-  `pageProcedure(key)` 每次请求检查权限，Todo repository 继续校验数据所有权。
-- 界面复用 Better Auth UI 的角色编辑器、成员角色对话框和数据 hooks，并适配现有 Radix
-  组件。[来源与适配说明](../third-party/better-auth-ui.md)。
-- Worker 不获得组织表权限，也不导入 API 模块。
+新增工具需同时补 key、目录元数据、启用配置、角色授权、显式 RPC 空间与不可变 domain 范围。
+完整验证包括 install、unit tests、types、build、Biome，以及专用 PostgreSQL/Redis 的集成和
+浏览器测试。邮件邀请、负责人转移、空间删除、任务公平调度和 outbox 不在本轮实现范围。
 
-新增页面时，在 packages/access 登记 key/path，使用 pageProcedure 保护相关接口，
-再通过后台授予对应动态角色。菜单、搜索与路由使用同一个服务端权限快照。
-设置、帮助始终可达。导航、窗口聚焦或 API 403 会刷新权限；变更后清理业务缓存。
-闲置浏览器没有实时推送清屏。Dashboard/Apps/Tasks/Chats 仍是演示页面。
-
-## 验证
-
-执行 `pnpm install --frozen-lockfile`、`pnpm test`、`pnpm check-types`、`pnpm build`、
-`pnpm exec biome check .`，再使用独立 TEST_DATABASE_URL / TEST_REDIS_URL 执行集成与浏览器测试。
-浏览器测试需要没有既存 superadmin 的一次性测试库。覆盖原生 API 提权拦截、注册字段注入、
-权限撤销、真实界面角色分配和 Todo API 拒绝。
-
-
-已登录用户无需页面授权即可访问 `/apps` 工具中心。原 `apps` 权限控制 `/apps/integrations-demo`，未知子路径默认拒绝。新增工具须同步 web 目录与路由、access 策略、API 页面授权及 domain owner 范围；新增 Worker 消费者须显式注册。
+Bootstrap 默认只授予平台身份。如需同时明确授予已有空间的 owner，使用
+`pnpm admin:bootstrap <user-id> --workspace-owner <workspace-id>`。

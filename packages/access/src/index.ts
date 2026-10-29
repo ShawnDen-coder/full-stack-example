@@ -21,16 +21,25 @@ export const pageKeys = [
 	"queues",
 ] as const;
 export type PageKey = (typeof pageKeys)[number];
-export const workspaceId = "application";
 export const defaultMemberRole = "standard";
+export const workspaceToolKeys = ["todos"] as const;
+export type WorkspaceToolKey = (typeof workspaceToolKeys)[number];
 export type Access = {
 	role: Role;
+	platformRole?: "user" | "superadmin";
+	workspaceRole?: string;
 	pages: PageKey[];
 	organizationId?: string;
 };
 export function canVisit(access: Access, pathname: string): boolean {
 	const path = pathname.replace(/\/+$/, "") || "/";
 	if (path === "/apps") return true;
+	if (
+		path === "/workspaces" ||
+		path === "/queues" ||
+		path.startsWith("/queues/")
+	)
+		return access.platformRole === "superadmin";
 	if (path === "/admin" || path.startsWith("/admin/") || path === "/users")
 		return access.role !== "user";
 	const page = pages.find(
