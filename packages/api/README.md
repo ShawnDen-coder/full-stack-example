@@ -110,3 +110,9 @@ the service. Never use session `activeOrganizationId` as a business target. Raw
 Organization writes are allowlisted; role and member targets must belong to the explicit
 organization. Owner changes, removal, invitations and deletion remain unavailable.
 Queues use `platformProcedure`; account-level profile jobs retain their user scope.
+
+Ordinary business rules and reusable use cases belong in domain. The access/workspaces adapter is a specific exception for Better Auth organization management: it may resolve sessions, enforce native permissions, transact organization membership and role configuration, and map transport errors. This exception does not cover ordinary Todo business logic. Extract a concrete use case when a real non-HTTP reuse need arises; domain must not accept `Headers`, sessions, or `ORPCError`.
+
+Queue monitoring registrations choose either a native BullMQ `Queue` or a complete `QueueReadAdapter`, including logs. Both are assembly-only; procedures receive the monitor capability, and the producer remains responsible for closing the queue.
+
+Workspace creation and account bans share the [user-row lock protocol](../../docs/access-control.md): check and write under the same transaction, alongside authorization. See the [concurrency test](../../apps/server/tests/integration/workspaces.test.ts).

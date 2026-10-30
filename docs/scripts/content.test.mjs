@@ -24,6 +24,27 @@ test("maps both languages to actual site routes and retains anchors", () => {
 	);
 	assert.equal(siteRoute("/operations/", "en"), "/en/operations/");
 	assert.equal(pages("en").length, pages("zh").length);
+	for (const [source, route] of [
+		["packages/access/README", "/modules/access/"],
+		["docs/access-control", "/guide/access-control/"],
+		["container/README", "/operations/container/"],
+	]) {
+		for (const [suffix, lang] of [
+			["", "en"],
+			[".zh-CN", "zh"],
+		]) {
+			const file = `${source}${suffix}.md`;
+			assert.ok(
+				pages(lang).some(
+					(page) => page.source === file && page.route === route,
+				),
+			);
+			assert.equal(
+				rewriteLink(`${file}#example`, `README${suffix}.md`, process.cwd()),
+				`${siteRoute(route, lang)}#example`,
+			);
+		}
+	}
 });
 
 test("keeps examples and diagrams intact while replacing reading links", () => {

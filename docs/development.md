@@ -55,12 +55,12 @@ sequenceDiagram
   participant service as TodosService
   participant repo as Scoped Repository
   participant postgres as PostgreSQL
-  web->>api: todo.setCompleted&#40;&#123; id, completed &#125;&#41;
+  web->>api: todo.setCompleted&#40;&#123; workspaceId, id, completed &#125;&#41;
   api->>auth: Resolve session from headers
   auth-->>api: session.user.id
-  api->>service: setCompleted with session userId
+  api->>service: setCompleted with session userId and workspaceId
   service->>repo: forUser&#40;userId, workspaceId&#41;.setCompleted&#40;&#123; id, completed &#125;&#41;
-  repo->>postgres: UPDATE todos WHERE id = ... AND user_id = ...
+  repo->>postgres: UPDATE todos WHERE id = ... AND user_id = ... AND workspace_id = ...
   postgres-->>repo: Updated row
   repo-->>service: Owned Todo
   service-->>api: Operation result
@@ -115,6 +115,7 @@ Choose the package that owns the change, then read its entry points, extension s
 
 | Package | Responsibility |
 | --- | --- |
+| [Access](../packages/access/README.md) | Shared page and role contracts |
 | [API](../packages/api/README.md) | HTTP, authentication, and oRPC procedures |
 | [Domain](../packages/domain/README.md) | Services, scoped repositories, and business-owned jobs |
 | [DB](../packages/db/README.md) | Database factory, schema, migrations, and runtime grants |
@@ -233,7 +234,7 @@ Use a scoped repository where ownership rules repeat; simple modules do not need
 an extra repository layer or a generic base class. This is an application-level
 boundary; using the raw database directly can bypass it.
 
-`todo.list({ cursor?, limit? })` returns `{ items, nextCursor }`, ordered by
+`todo.list({ workspaceId, cursor?, limit? })` returns `{ items, nextCursor }`, ordered by
 ID descending. Limit defaults to 20 and cannot exceed 100; the cursor is the
 last ID from the preceding page. Text is trimmed and limited to 1–500 characters.
 Create/toggle return `{ id, text, completed }`; delete returns `{ id }`.
@@ -250,3 +251,18 @@ which a page-specific `onError` may override. Never retry writes automatically.
 [Frontend routes and Shadcn Admin integration](frontend.md)
 
 [Roles and page access](access-control.md)
+
+Register each Worker consumer explicitly in `apps/worker/src/runtime.ts`; separately wire its queue into the Server monitoring registry if it should appear in queue monitoring.
+
+## Dependency and validation boundaries
+
+Web uses HTTP at runtime; its type-only API router import is a compile-time dependency, so a server type error can fail the Web build without starting Server or bundling database code into the browser. Server and Worker vendor manifests cooperate with `tsdown` external dependencies and isolated `pnpm deploy`; review those together before removing a dependency, even if it is not directly imported.
+
+| Check | Processes and data | What it establishes |
+| --- | --- | --- |
+| Fixture E2E | Playwright starts Web and Server; fixtures seed `application` and `standard` in the dedicated database | UI and authorization scenarios, not first-use onboarding |
+| Empty-database onboarding | Playwright starts Web and Server; UI registration and bootstrap CLI use the same dedicated empty database | First administrator and workspace flow without membership fixtures |
+| Real job integration | Tests start a real Worker against dedicated PostgreSQL and Redis | Enqueue, execution and drain across real services |
+| Runtime-role grants | Integration tests provision and exercise runtime roles | Database privileges; migrations run as owner do not establish these permissions |
+
+Playwright does not start Worker. `scripts/check-boundaries.mjs` inspects internal-package literal imports, exports, dynamic imports, require and type imports under production `src`, resolves aliases and public exports, and checks allowed edges and cycles. It excludes fixtures and does not prove the whole repository is decoupled.

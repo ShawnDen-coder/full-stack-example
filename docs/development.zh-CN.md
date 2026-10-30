@@ -45,12 +45,12 @@ sequenceDiagram
   participant service as TodosService
   participant repo as Scoped Repository
   participant postgres as PostgreSQL
-  web->>api: todo.setCompleted&#40;&#123; id, completed &#125;&#41;
+  web->>api: todo.setCompleted&#40;&#123; workspaceId, id, completed &#125;&#41;
   api->>auth: 从请求头解析会话
   auth-->>api: session.user.id
   api->>service: setCompleted，使用会话 userId
   service->>repo: forUser&#40;userId, workspaceId&#41;.setCompleted&#40;&#123; id, completed &#125;&#41;
-  repo->>postgres: UPDATE todos WHERE id = ... AND user_id = ...
+  repo->>postgres: UPDATE todos WHERE id = ... AND user_id = ... AND workspace_id = ...
   postgres-->>repo: 更新后的行
   repo-->>service: 当前用户的 Todo
   service-->>api: 操作结果
@@ -94,6 +94,7 @@ Worker 校验任务载荷，并使用自己的 `UsersService` 实例。队列名
 
 | 包 | 职责 |
 | --- | --- |
+| [Access](../packages/access/README.zh-CN.md) | 共享页面和角色契约 |
 | [API](../packages/api/README.zh-CN.md) | HTTP、认证和 oRPC 过程 |
 | [Domain](../packages/domain/README.zh-CN.md) | 业务服务、Scoped Repository 和业务任务 |
 | [DB](../packages/db/README.zh-CN.md) | 数据库工厂、schema、迁移和运行角色授权 |
@@ -199,10 +200,25 @@ const status = await client.users.getProfileReadJob({ id: job.id });
 
 `repository.ts` 负责 SQL、字段投影和用户范围：`createTodosRepository({ db }).forUser(session.user.id, workspaceId)` 返回的操作始终按该用户过滤，创建时也固定填入该用户 ID。方法返回执行结果，不暴露可修改的查询构造器。每个 scope 使用独立闭包，共享 repository 不存储可变的当前用户。`service.ts` 保留分页、业务判断和原有操作级 span、指标。Repository 工厂可接收数据库或事务，不负责创建和关闭连接。归属规则重复时再引入 scoped repository，简单模块无需额外层次，也不引入通用基类。这是应用层约束，直接使用原始数据库仍然可以绕过。
 
-`todo.list({ cursor?, limit? })` 返回 `{ items, nextCursor }`，按 ID 降序排列。每页默认 20 条，最多 100 条；游标为上一页最后一条记录的 ID。文本会去除首尾空白，长度限制为 1–500 个字符。创建和切换完成状态操作返回 `{ id, text, completed }`，删除操作返回 `{ id }`。旧的 `todo.getAll` 接口已移除。引入新的查询方式时，应同时增加相应索引和经过审查的迁移，并使用 PostgreSQL 验证。
+`todo.list({ workspaceId, cursor?, limit? })` 返回 `{ items, nextCursor }`，按 ID 降序排列。每页默认 20 条，最多 100 条；游标为上一页最后一条记录的 ID。文本会去除首尾空白，长度限制为 1–500 个字符。创建和切换完成状态操作返回 `{ id, text, completed }`，删除操作返回 `{ id }`。旧的 `todo.getAll` 接口已移除。引入新的查询方式时，应同时增加相应索引和经过审查的迁移，并使用 PostgreSQL 验证。
 
 需要登录的页面放在 `_auth` 布局下，查询键包含当前用户 ID。身份发生变化时，会话边界组件会取消并清除查询缓存，使路由上下文失效；来自旧身份的延迟 RPC 响应会被拒绝。收到 `UNAUTHORIZED` 响应后，清除私有状态并跳转到登录页，返回地址仅接受经过校验的相对路径。写操作统一显示错误通知，页面可通过自己的 `onError` 覆盖。不要自动重试写操作。
 
 [前端路由与 Shadcn Admin 集成](frontend.zh-CN.md)
 
 [角色与页面授权](access-control.zh-CN.md)
+
+每个 Worker 消费者须在 `apps/worker/src/runtime.ts` 显式注册；若队列需要出现在监控页面，还须另行接入 Server 的队列监控注册表。
+
+## 依赖与验证边界
+
+Web 运行时通过 HTTP 通信；仅类型导入的 API router 是编译期依赖，因此服务端类型错误可能导致 Web 构建失败，但不表示启动 Server 或把数据库代码打入浏览器。Server 和 Worker 的 vendor manifest 与 `tsdown` external 配置、隔离的 `pnpm deploy` 配合；即使没有直接 import，也应一起审查后再删除依赖。
+
+| 检查 | 进程与数据 | 证明范围 |
+| --- | --- | --- |
+| fixture E2E | Playwright 启动 Web 和 Server；fixture 在专用数据库写入 `application`、`standard` | 界面和授权场景，不证明首次使用 |
+| 空库 onboarding | Playwright 启动 Web 和 Server；UI 注册与 bootstrap CLI 指向同一专用空库 | 不依赖成员 fixture 的首位管理员及空间流程 |
+| 真实任务集成 | 测试针对专用 PostgreSQL 和 Redis 启动真实 Worker | 真实服务间入队、执行和 drain |
+| 运行角色 grants | 集成测试配置并使用运行角色 | 数据库权限；迁移 owner 凭据不能证明运行角色权限 |
+
+Playwright 不启动 Worker。`scripts/check-boundaries.mjs` 检查生产 `src` 中内部包的字面量 import、export、动态 import、require 和类型引用，解析别名及公开入口并检查允许边与循环；它排除 fixture，不能证明全仓库已经解耦。

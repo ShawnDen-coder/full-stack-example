@@ -122,3 +122,5 @@ SQL、事务、任务重试或 trace 传播变更，需要使用专用 PostgreSQ
 `repository.forUser(userId, workspaceId)` 一次绑定；每个 SQL 读写同时过滤两者，新增记录显式
 填入两者。API 在调用 domain 前验证成员和工具权限；客户端提供的空间 ID 只是定位信息。
 账号级 profile-read 任务仍按用户隔离，本轮没有新增空间任务调度器或 Worker 依赖。
+
+资料 producer 仅为 Server 监控组装暴露具体原生 Queue，生命周期仍由 producer 管理。业务调用方使用入队／状态方法，不使用队列句柄。领域查询结果新增字段时，应审查直接返回该对象的所有公共响应。

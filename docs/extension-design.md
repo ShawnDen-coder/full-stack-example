@@ -13,7 +13,7 @@ Extend regular features through business implementation, application injection
 and API routing. Extend background work through business-owned task implementation
 and explicit consumer registration. Lifecycle algorithms are shared across consumers.
 
-Keep the six shared packages. Standardize comparable factories and business calls
+Keep the existing shared packages. Standardize comparable factories and business calls
 while retaining database, UI and infrastructure-specific interfaces. Changes to public
 HTTP payloads/results, compatibility aliases, queue/task names, retry/retention policies,
 or database schema require a separate compatibility and migration assessment.
@@ -35,9 +35,13 @@ application types. Queue remains generic connection/telemetry infrastructure. Re
 is assembled in the server: the profile producer exposes its existing Queue,
 and the server registry maps a stable key plus summary projectors onto that
 instance. API wraps `@bull-board/api` `BullMQAdapter` behind `queues` oRPC
-procedures protected by `pageProcedure("queues")`. Bull Board's HTTP app and UI
+procedures protected by `platformProcedure`. Bull Board's HTTP app and UI
 are not mounted. A new queue appears in the UI only after that server registry
 lists it.
+
+The concrete composition follows that direction: web imports shared access contracts and API types; server imports API factories and domain services, then injects their instances into the API; worker imports domain factories and owns its own resources. The API access adapter uses Better Auth and the database, while Todo rules remain in domain. These edges are necessary for authorization and resource ownership; the allowlist below is broader than the imports currently used.
+
+For a new job, extend the domain contract/producer/worker and exports, wire the producer and its cleanup in `apps/server/src/services.ts`, and register the consumer in `apps/worker/src/runtime.ts`. If the queue should appear in monitoring, also add its existing Queue and safe summaries to the server's `createQueueMonitor` registry (summaries live in `apps/server/src/queue-summaries.ts`). Consumer registration and monitoring registration serve different processes and neither implies the other.
 
 ## Factories and business operations
 
@@ -50,12 +54,12 @@ Usage:
 ```ts
 const service = createTodosService({ db });
 const repository = createTodosRepository({ db: tx });
-const owned = repository.forUser(userId);
+const owned = repository.forUser(userId, workspaceId);
 
-await service.list({ userId, cursor, limit });
-await service.create({ userId, text });
-await service.setCompleted({ userId, id, completed });
-await service.delete({ userId, id });
+await service.list({ userId, workspaceId, cursor, limit });
+await service.create({ userId, workspaceId, text });
+await service.setCompleted({ userId, workspaceId, id, completed });
+await service.delete({ userId, workspaceId, id });
 
 await owned.list({ cursor, limit });
 await owned.setCompleted({ id, completed });
@@ -66,7 +70,7 @@ await profileJobs.getProfileReadJob({ userId, jobId });
 ```
 
 - Multiple business fields use an object. Single identifiers can stay primitive:
-  `forUser(userId)`, `getProfile(userId)` and scoped `delete(id)`.
+  `forUser(userId, workspaceId)`, `getProfile(userId)` and scoped `delete(id)`.
 - Repositories accept the query-method shape of a database or transaction,
   without requiring a pool or `close()`. Use cases own transaction boundaries.
 - Owners come from authenticated sessions or validated task contexts. Inserts
@@ -243,11 +247,13 @@ flowchart TB
   server["apps/server"]
   worker["apps/worker"]
   api["packages/api"]
+  access["packages/access"]
   business["packages/domain"]
   db["packages/db"]
   queue["packages/queue"]
   observability["packages/observability"]
   ui["packages/ui"]
+  web --> access
   web --> ui
   web -.->|Types only| api
   server --> api
@@ -259,6 +265,7 @@ flowchart TB
   worker --> db
   worker --> queue
   worker --> observability
+  api --> access
   api --> business
   api --> db
   api --> queue
@@ -271,10 +278,10 @@ flowchart TB
 
 | Source | Allowed internal dependencies |
 | --- | --- |
-| apps/web | ui and type-only API client contracts |
+| apps/web | ui, access and type-only API client contracts |
 | apps/server | api, domain, db, queue, observability |
 | apps/worker | domain, db, queue, observability |
-| api | domain, db, queue, observability |
+| api | access, domain, db, queue, observability |
 | domain | db, queue, observability |
 | db | observability |
 | queue/observability/ui | No other internal packages |
@@ -329,3 +336,14 @@ real-service and production validation run in CI, not in the offline test suite.
 
 
 A new tool also needs a stable access page key/path, a route and display metadata in the web catalog. Authorize its API with `pageProcedure`, derive ownership from the session, and keep domain ownership checks independent of the UI. Register any worker consumer explicitly; the catalog does not wire runtime resources.
+
+## Adding a workspace page tool
+
+This checklist applies to workspace page tools, not background jobs. Missing tool configuration or permission denies access by default.
+
+1. Define the page key/path and native permission in [`packages/access/src/index.ts`](../packages/access/src/index.ts) and [`auth.ts`](../packages/access/src/auth.ts). Decide explicitly whether the new tool belongs in the `standard` role; add that grant to workspace creation in [`packages/api/src/workspaces.ts`](../packages/api/src/workspaces.ts) only if intended.
+2. Add tool configuration during workspace creation and expose management in [`apps/web/src/features/workspaces/index.tsx`](../apps/web/src/features/workspaces/index.tsx); add the protected route and [`catalog.ts`](../apps/web/src/lib/catalog.ts). Enable the tool and assign an appropriate role for each new workspace.
+3. Implement domain operations, API authorization/router and Server dependency wiring as needed. Review schema, migrations and runtime-role grants when data or worker access changes. Review direct public responses when a domain query gains fields.
+4. Plan a migration or administrator-controlled rollout for existing workspaces: enable the tool and grant its permission separately. New defaults do not automatically upgrade existing workspaces.
+
+A background job instead needs its domain contract, producer, Worker factory, producer lifecycle and explicit consumer registration. Queue monitoring registration is optional; shared resource wiring changes only when the job introduces a new resource.

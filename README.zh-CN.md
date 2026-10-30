@@ -25,7 +25,13 @@ pnpm dev
 
 `env:init` 会创建不纳入 Git 的本地配置，生成随机认证密钥，并保留已有文件。上述流程面向新数据库；如果已有通过 `db:push` 创建的数据库，请先阅读[迁移说明](docs/operations.zh-CN.md#数据库迁移)。
 
-打开 [localhost:3001](http://localhost:3001)，注册或登录，进入 `/todos` 创建、完成和删除任务。各账号的待办列表相互独立。
+新数据库首次使用时，保持 `pnpm dev` 运行并完成以下设置：
+
+1. 打开 [localhost:3001](http://localhost:3001)，在界面注册。用同一浏览器访问 [localhost:3000/api/auth/get-session](http://localhost:3000/api/auth/get-session)，复制 `user.id`。
+2. 在另一个终端运行 `pnpm admin:bootstrap <user-id>`。CLI 会撤销会话，请重新登录。
+3. 打开 `/workspaces`，填写 Name、Slug 和本人注册邮箱作为 Owner email，启用 Todos 并创建空间。选择空间后进入 Todos，即可创建、编辑、完成和删除任务。
+
+bootstrap 只能执行一次；已有管理员的环境请由管理员分配空间成员。
 
 API 地址为 [localhost:3000](http://localhost:3000)，提供[接口文档](http://localhost:3000/api-reference)。类型安全的用户资料和后台任务调用方式见[开发指南](docs/development.zh-CN.md#应用组装)。
 

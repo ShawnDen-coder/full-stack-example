@@ -17,17 +17,29 @@ export async function startHeartbeat(
 	};
 	signal?.addEventListener("abort", stop, { once: true });
 	let probing: Promise<void> | undefined;
+	let inFlight: Promise<void> | undefined;
 	const probe = () => {
-		if (probing) return probing;
+		if (probing || inFlight || !running) return probing;
+		const raw = Promise.resolve().then(checkReady);
+		inFlight = raw;
+		void raw.then(
+			() => {
+				inFlight = undefined;
+			},
+			() => {
+				inFlight = undefined;
+			},
+		);
 		probing = (async () => {
 			try {
-				await withDeadline(checkReady(), 2000, "Worker readiness timed out");
+				await withDeadline(raw, 2000, "Worker readiness timed out");
 				if (!running) return;
 				await writeFile(
 					`${file}.tmp`,
 					JSON.stringify({ timestamp: Date.now() }),
 				);
-				await rename(`${file}.tmp`, file);
+				if (running) await rename(`${file}.tmp`, file);
+				else await rm(`${file}.tmp`, { force: true });
 			} catch {
 				await rm(file, { force: true });
 			} finally {

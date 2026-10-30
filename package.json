@@ -31,7 +31,7 @@
 		"check": "biome check --write .",
 		"prepare": "husky",
 		"test": "node --test scripts/*.test.mjs && pnpm -r --if-present test",
-		"infra:up": "podman compose -f container/compose.yml up -d postgres redis",
+		"infra:up": "podman compose -f container/compose.yml up -d --wait --wait-timeout 120 postgres redis",
 		"infra:down": "podman compose -f container/compose.yml stop postgres redis",
 		"dev:worker": "pnpm --filter worker dev",
 		"start:worker": "pnpm --filter worker start",

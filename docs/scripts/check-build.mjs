@@ -66,6 +66,38 @@ for (const route of [
 		`Missing required page: ${route}`,
 	);
 }
+// New bilingual pages must have matching routes, searchable content and real anchors.
+for (const [lang, prefix, anchors] of [
+	["zh", "", ["扩展", "workspace-权限", "本地开发"]],
+	["en", "en/", ["extend", "workspace-access", "local-development"]],
+]) {
+	const searchFile = readdirSync(path.join(output, "static")).find((file) =>
+		file.startsWith(`search_index.${lang}.`),
+	);
+	assert.ok(searchFile, `Missing ${lang} search index`);
+	const index = JSON.parse(
+		readFileSync(path.join(output, "static", searchFile), "utf8"),
+	);
+	for (const [i, route] of [
+		"modules/access/",
+		"guide/access-control/",
+		"operations/container/",
+	].entries()) {
+		const routePath = `/${prefix}${route}`;
+		const page = readFileSync(
+			path.join(output, prefix, route, "index.html"),
+			"utf8",
+		);
+		assert.ok(
+			page.includes(`id="${anchors[i]}"`),
+			`${routePath}: missing anchor`,
+		);
+		assert.ok(
+			index.some((item) => item.routePath === routePath),
+			`${routePath}: missing search entry`,
+		);
+	}
+}
 const spec = JSON.parse(
 	readFileSync(path.join(output, "generated/openapi.json"), "utf8"),
 );

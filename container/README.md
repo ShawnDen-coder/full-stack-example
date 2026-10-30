@@ -85,3 +85,5 @@ pnpm exec varlock run --path ./deploy/ -- podman compose -f container/compose.pr
 ```
 
 The production check needs the required deployment values. Configuration validation does not replace building images and running the production smoke check described in [CI](../.github/workflows/ci.yml).
+
+`pnpm infra:up` requires a Compose v2.24+ compatible provider supporting `up --wait`; it waits up to 120 seconds for health after startup, not for the entire image pull and startup process. If it fails, inspect `podman compose -f container/compose.yml logs postgres redis` and verify the selected provider and Podman machine.

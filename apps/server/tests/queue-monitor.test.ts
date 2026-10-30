@@ -25,33 +25,22 @@ type Job = {
 	getState: () => Promise<string>;
 };
 
-function monitor(
-	adapter: QueueReadAdapter,
-	queue: {
-		getJobLogs: (
-			jobId: string,
-			start?: number,
-			end?: number,
-		) => Promise<{ logs: string[]; count: number }>;
-	},
-) {
-	return createQueueMonitor(
-		[
-			{
-				key: "user-profile",
-				name: "User profile",
-				queue,
-				summarizeData: summarizeProfileJobData,
-				summarizeResult: summarizeProfileJobResult,
-			},
-		],
-		{ createAdapter: () => adapter },
-	);
+function monitor(adapter: QueueReadAdapter) {
+	return createQueueMonitor([
+		{
+			key: "user-profile",
+			name: "User profile",
+			adapter,
+			summarizeData: summarizeProfileJobData,
+			summarizeResult: summarizeProfileJobResult,
+		},
+	]);
 }
 
 test("unknown queues do not call the adapter", async () => {
 	let calls = 0;
 	const adapter: QueueReadAdapter = {
+		getJobLogs: async () => ({ logs: [], count: 0 }),
 		getJobCounts: async () => {
 			calls += 1;
 			return {};
@@ -68,9 +57,7 @@ test("unknown queues do not call the adapter", async () => {
 			return [];
 		},
 	};
-	const subject = monitor(adapter, {
-		getJobLogs: async () => ({ logs: [], count: 0 }),
-	});
+	const subject = monitor(adapter);
 	assert.equal(
 		await subject.jobs({
 			queueKey: "other",
@@ -100,17 +87,15 @@ test("job detail keeps the whitelist summary and redacts failure text", async ()
 		returnvalue: { id: "user-1", name: "Ada", emailVerified: true },
 		getState: async () => "failed",
 	};
-	const subject = monitor(
-		{
-			getJobCounts: async () => ({ failed: 1 }),
-			isPaused: async () => false,
-			getJobs: async () => [],
-			getJob: async () => job,
-			getJobSchedulersCount: async () => 102,
-			getJobSchedulers: async () => [],
-		},
-		{ getJobLogs: async () => ({ logs: [], count: 0 }) },
-	);
+	const subject = monitor({
+		getJobCounts: async () => ({ failed: 1 }),
+		isPaused: async () => false,
+		getJobs: async () => [],
+		getJob: async () => job,
+		getJobSchedulersCount: async () => 102,
+		getJobSchedulers: async () => [],
+		getJobLogs: async () => ({ logs: [], count: 0 }),
+	});
 	const detail = await subject.job({
 		queueKey: "user-profile",
 		jobId: "job-1",
@@ -127,36 +112,32 @@ test("job detail keeps the whitelist summary and redacts failure text", async ()
 test("logs stay bounded and a missing job does not read logs", async () => {
 	const ranges: Array<[number, number]> = [];
 	let reads = 0;
-	const subject = monitor(
-		{
-			getJobCounts: async () => ({}),
-			isPaused: async () => false,
-			getJobs: async () => [],
-			getJob: async (id) =>
-				id === "job-1"
-					? {
-							id,
-							name: "profile",
-							timestamp: 1,
-							data: { userId: "user-1" },
-							returnvalue: null,
-							getState: async () => "completed",
-						}
-					: undefined,
-			getJobSchedulersCount: async () => 102,
-			getJobSchedulers: async () => [],
+	const subject = monitor({
+		getJobCounts: async () => ({}),
+		isPaused: async () => false,
+		getJobs: async () => [],
+		getJob: async (id) =>
+			id === "job-1"
+				? {
+						id,
+						name: "profile",
+						timestamp: 1,
+						data: { userId: "user-1" },
+						returnvalue: null,
+						getState: async () => "completed",
+					}
+				: undefined,
+		getJobSchedulersCount: async () => 102,
+		getJobSchedulers: async () => [],
+		getJobLogs: async (_id, start = 0, end = 0) => {
+			reads += 1;
+			ranges.push([start, end]);
+			return {
+				logs: [`user@example.com ${"x".repeat(2001)}`],
+				count: 80,
+			};
 		},
-		{
-			getJobLogs: async (_id, start = 0, end = 0) => {
-				reads += 1;
-				ranges.push([start, end]);
-				return {
-					logs: [`user@example.com ${"x".repeat(2001)}`],
-					count: 80,
-				};
-			},
-		},
-	);
+	});
 	const page = await subject.logs({
 		queueKey: "user-profile",
 		jobId: "job-1",
@@ -180,33 +161,31 @@ test("logs stay bounded and a missing job does not read logs", async () => {
 });
 
 test("redis failures become unavailable and schedulers mark inferred runs", async () => {
-	const subject = monitor(
-		{
-			getJobCounts: async () => {
-				throw new Error("redis down");
-			},
-			isPaused: async () => false,
-			getJobs: async () => [],
-			getJob: async () => undefined,
-			getJobSchedulersCount: async () => 102,
-			getJobSchedulers: async (start, end) =>
-				[
-					{
-						id: "nightly",
-						name: "profile",
-						pattern: "0 0 * * *",
-						next: 20,
-						lastRun: 10,
-					},
-					{ id: "idle", name: "profile", every: 1000 },
-					...Array.from({ length: 100 }, (_, index) => ({
-						id: `extra-${index}`,
-						name: "profile",
-					})),
-				].slice(start, end + 1),
+	const subject = monitor({
+		getJobCounts: async () => {
+			throw new Error("redis down");
 		},
-		{ getJobLogs: async () => ({ logs: [], count: 0 }) },
-	);
+		isPaused: async () => false,
+		getJobs: async () => [],
+		getJob: async () => undefined,
+		getJobSchedulersCount: async () => 102,
+		getJobSchedulers: async (start, end) =>
+			[
+				{
+					id: "nightly",
+					name: "profile",
+					pattern: "0 0 * * *",
+					next: 20,
+					lastRun: 10,
+				},
+				{ id: "idle", name: "profile", every: 1000 },
+				...Array.from({ length: 100 }, (_, index) => ({
+					id: `extra-${index}`,
+					name: "profile",
+				})),
+			].slice(start, end + 1),
+		getJobLogs: async () => ({ logs: [], count: 0 }),
+	});
 	await assert.rejects(
 		() => subject.list(),
 		(error: unknown) => error instanceof QueueMonitorUnavailableError,
@@ -242,23 +221,21 @@ test("ID lookup does one direct read and never scans names", async () => {
 			return "failed";
 		},
 	};
-	const subject = monitor(
-		{
-			getJobCounts: async () => ({}),
-			isPaused: async () => false,
-			getJob: async () => {
-				reads++;
-				return job;
-			},
-			getJobs: async () => {
-				scans++;
-				return [];
-			},
-			getJobSchedulers: async () => [],
-			getJobSchedulersCount: async () => 0,
+	const subject = monitor({
+		getJobCounts: async () => ({}),
+		isPaused: async () => false,
+		getJob: async () => {
+			reads++;
+			return job;
 		},
-		{ getJobLogs: async () => ({ logs: [], count: 0 }) },
-	);
+		getJobs: async () => {
+			scans++;
+			return [];
+		},
+		getJobSchedulers: async () => [],
+		getJobSchedulersCount: async () => 0,
+		getJobLogs: async () => ({ logs: [], count: 0 }),
+	});
 	const result = await subject.jobs({
 		queueKey: "user-profile",
 		status: "waiting",
@@ -275,34 +252,32 @@ test("ID lookup does one direct read and never scans names", async () => {
 
 test("name search bounds each state, deduplicates IDs and reports truncation", async () => {
 	const ranges: Array<[string, number, number]> = [];
-	const subject = monitor(
-		{
-			getJobCounts: async () => ({}),
-			isPaused: async () => false,
-			getJob: async () => {
-				throw new Error("unexpected direct read");
-			},
-			getJobs: async (states, start = 0, end = 0) => {
-				ranges.push([states[0] ?? "", start, end]);
-				return Array.from(
-					{ length: 101 },
-					(_, index): Job => ({
-						id: String(index),
-						name: index < 60 ? "target" : "other",
-						timestamp: 1,
-						data: {},
-						returnvalue: null,
-						getState: async () => {
-							throw new Error("unexpected state read");
-						},
-					}),
-				);
-			},
-			getJobSchedulers: async () => [],
-			getJobSchedulersCount: async () => 0,
+	const subject = monitor({
+		getJobCounts: async () => ({}),
+		isPaused: async () => false,
+		getJob: async () => {
+			throw new Error("unexpected direct read");
 		},
-		{ getJobLogs: async () => ({ logs: [], count: 0 }) },
-	);
+		getJobs: async (states, start = 0, end = 0) => {
+			ranges.push([states[0] ?? "", start, end]);
+			return Array.from(
+				{ length: 101 },
+				(_, index): Job => ({
+					id: String(index),
+					name: index < 60 ? "target" : "other",
+					timestamp: 1,
+					data: {},
+					returnvalue: null,
+					getState: async () => {
+						throw new Error("unexpected state read");
+					},
+				}),
+			);
+		},
+		getJobSchedulers: async () => [],
+		getJobSchedulersCount: async () => 0,
+		getJobLogs: async () => ({ logs: [], count: 0 }),
+	});
 	const result = await subject.jobs({
 		queueKey: "user-profile",
 		status: "waiting",
