@@ -5,6 +5,11 @@ export function formatTime(value: number | null | undefined) {
 	return format(value, "yyyy-MM-dd HH:mm:ss");
 }
 
+export function formatCompactTime(value: number | null | undefined) {
+	if (!value) return "—";
+	return format(value, "MMM d, HH:mm");
+}
+
 export function shortId(value: string) {
 	return value.length > 16 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
 }

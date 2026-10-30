@@ -1,4 +1,5 @@
 import { Badge } from "@full-stack-example/ui/components/badge";
+import { Button } from "@full-stack-example/ui/components/button";
 import {
 	Empty,
 	EmptyDescription,
@@ -22,7 +23,19 @@ export function QueuesOverview() {
 	const data = hidden ? undefined : queues.data;
 	return (
 		<div className="flex min-h-0 flex-1 flex-col gap-6">
-			<h1 className="font-bold text-2xl tracking-tight">Queues</h1>
+			<h1 className="sr-only">Queues</h1>
+			<div className="flex flex-wrap items-center gap-3">
+				<Button
+					variant="outline"
+					className="min-h-11 sm:min-h-9"
+					onClick={() => void queues.refetch()}
+				>
+					Refresh
+				</Button>
+				<span className="text-muted-foreground text-xs">
+					Read only · refreshes every 5 seconds
+				</span>
+			</div>
 			<QueueQueryState
 				isPending={queues.isPending}
 				error={queues.error}
@@ -31,11 +44,11 @@ export function QueuesOverview() {
 			/>
 
 			{data && (
-				<ul className="min-h-0 flex-1 divide-y overflow-auto">
+				<ul className="divide-y overflow-auto rounded-md border">
 					{data.map((queue) => (
 						<li
 							key={queue.key}
-							className="relative flex flex-wrap items-center gap-x-6 gap-y-2 py-4 hover:bg-muted/30"
+							className="relative flex flex-wrap items-center gap-x-6 gap-y-2 p-4 hover:bg-muted/30"
 						>
 							<div className="flex min-w-0 max-w-full items-center gap-3">
 								<Link
@@ -47,7 +60,7 @@ export function QueuesOverview() {
 									{queue.name}
 								</Link>
 								<Badge variant="secondary" className="shrink-0">
-									{queue.paused ? "Paused" : "Running"}
+									{queue.paused ? "Paused" : "Not paused"}
 								</Badge>
 							</div>
 							<div className="flex flex-wrap gap-x-4 gap-y-1">

@@ -83,22 +83,22 @@ function QueueJobDetailContent() {
 	}, [hidden, logs.isSuccess, logs.isFetching, logData, page, logPageCount]);
 	return (
 		<div className="space-y-6">
-			<div className="flex flex-wrap items-end justify-between gap-3">
-				<div className="min-w-0">
-					<h1 className="font-bold text-2xl tracking-tight">Queues</h1>
-					<p className="break-all text-muted-foreground">
-						{queueKey} · {jobId}
-						<Button
-							variant="outline"
-							size="sm"
-							className="ml-2"
-							onClick={() => void navigator.clipboard.writeText(jobId)}
-						>
-							Copy Job ID
-						</Button>
-					</p>
-				</div>
+			<div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b pb-2">
+				<h1 className="sr-only">{jobId}</h1>
 				<QueueNav queueKey={queueKey} search={search} />
+				<Button
+					variant="outline"
+					size="sm"
+					className="min-h-11 sm:min-h-9"
+					onClick={() => void navigator.clipboard.writeText(jobId)}
+				>
+					Copy Job ID
+				</Button>
+				<p className="text-muted-foreground text-sm">
+					Read only
+					{detail &&
+						` · ${detail.name} · Updated ${formatTime(Date.parse(detail.refreshedAt))}`}
+				</p>
 			</div>
 			<QueueQueryState
 				isPending={hidden ? false : job.isPending}
@@ -110,6 +110,27 @@ function QueueJobDetailContent() {
 			/>
 			{detail && (
 				<>
+					{(detail.failedReason || detail.stacktrace) && (
+						<div className="rounded-md border p-4">
+							<h2 className="mb-2 font-medium">Failure</h2>
+							{detail.failedReason ? (
+								<pre className="whitespace-pre-wrap break-words font-mono text-xs">
+									{detail.failedReason}
+								</pre>
+							) : (
+								<p className="text-muted-foreground text-sm">
+									No failure reason.
+								</p>
+							)}
+							{detail.stacktrace && (
+								<div className="mt-3 rounded-md border p-3">
+									<pre className="whitespace-pre-wrap break-all text-xs">
+										{detail.stacktrace}
+									</pre>
+								</div>
+							)}
+						</div>
+					)}
 					<dl className="grid gap-3 text-sm sm:grid-cols-2">
 						<div>
 							<dt className="text-muted-foreground">State</dt>
@@ -132,7 +153,7 @@ function QueueJobDetailContent() {
 						</div>
 					</dl>
 					<section>
-						<h2 className="mb-3 font-medium">Timing</h2>
+						<h2 className="mb-3 font-medium">Timeline</h2>
 						<dl className="grid gap-3 text-sm sm:grid-cols-3">
 							<div>
 								<dt className="text-muted-foreground">Created</dt>
@@ -150,8 +171,8 @@ function QueueJobDetailContent() {
 					</section>
 					{(
 						[
-							["Payload", detail.summary],
-							["Result", detail.result],
+							["Data summary", detail.summary],
+							["Result summary", detail.result],
 						] as const
 					).map(([title, fields]) => (
 						<section key={title}>
@@ -174,31 +195,17 @@ function QueueJobDetailContent() {
 					))}
 
 					<div>
-						<h2 className="mb-2 font-medium">Failure</h2>
-						{detail.failedReason ? (
-							<pre className="whitespace-pre-wrap break-all font-mono text-xs">
-								{detail.failedReason}
-							</pre>
-						) : (
-							<p className="text-muted-foreground text-sm">
-								No failure reason.
-							</p>
-						)}
-						{detail.stacktrace && (
-							<div className="mt-3 rounded-md border p-3">
-								<pre className="whitespace-pre-wrap break-all text-xs">
-									{detail.stacktrace}
-								</pre>
-							</div>
-						)}
-					</div>
-					<div>
-						<h2 className="mb-2 font-medium">Additional logs</h2>
+						<h2 className="mb-2 font-medium">Logs</h2>
+						<p className="mb-2 text-muted-foreground text-xs">
+							Redacted and truncated where necessary
+							{logData && ` · Updated ${formatTime(logs.dataUpdatedAt)}`}
+						</p>
 						<QueueQueryState
 							isPending={logs.isPending}
 							error={logs.error}
 							hasData={!!logData}
 							onRetry={() => void logs.refetch()}
+							retryLabel="Retry loading"
 						/>
 						{logData?.total === 0 && (
 							<p className="text-muted-foreground text-sm">
@@ -207,7 +214,7 @@ function QueueJobDetailContent() {
 						)}
 						{logData && logData.lines.length > 0 && (
 							<div className="rounded-md border p-3">
-								<pre className="whitespace-pre-wrap break-all font-mono text-xs">
+								<pre className="whitespace-pre-wrap break-words font-mono text-xs">
 									{logData.lines.join("\n")}
 								</pre>
 							</div>

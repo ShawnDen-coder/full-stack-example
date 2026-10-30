@@ -13,9 +13,20 @@ test("breadcrumb ancestry is logical, permission filtered and uses real typed ta
 			"queue-job",
 			"sample",
 			{ toolHome: true, queues: true },
-			["queues", "jobs"],
+			["queues", "queue", "jobs"],
 		],
-		["queue-jobs", "sample", { toolHome: true, queues: true }, ["queues"]],
+		[
+			"queue-jobs",
+			"sample",
+			{ toolHome: true, queues: true },
+			["queues", "queue"],
+		],
+		[
+			"queue-schedulers",
+			"sample",
+			{ toolHome: true, queues: true },
+			["queues", "queue"],
+		],
 		["queue-job", "sample", { toolHome: true, queues: false }, []],
 		["queue-job", undefined, { toolHome: true, queues: true }, []],
 	];

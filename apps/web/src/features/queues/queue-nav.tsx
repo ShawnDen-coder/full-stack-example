@@ -15,35 +15,35 @@ export function QueueNav({
 	return (
 		<nav
 			aria-label="Queue navigation"
-			className="flex flex-wrap items-center gap-3 text-sm"
+			className="flex min-h-10 items-center gap-6 text-sm"
 		>
-			<Link
-				to="/queues"
-				className="text-muted-foreground hover:text-foreground"
-			>
-				All queues
-			</Link>
-			<span aria-hidden="true" className="text-muted-foreground">
-				/
-			</span>
-			{(schedulers || detail) && (
+			{detail ? (
 				<Link
 					to="/queues/$queueKey/jobs"
 					params={{ queueKey }}
 					search={search}
-					className="inline-flex min-h-11 items-center hover:underline sm:min-h-8"
+					className="inline-flex min-h-11 items-center font-medium hover:underline"
 				>
-					{schedulers ? "Jobs" : "Back to jobs"}
+					← Back to jobs
 				</Link>
-			)}
-			{!schedulers && (
-				<Link
-					to="/queues/$queueKey/schedulers"
-					params={{ queueKey }}
-					className="inline-flex min-h-11 items-center text-muted-foreground hover:text-foreground sm:min-h-8"
-				>
-					Schedulers
-				</Link>
+			) : (
+				<>
+					<Link
+						to="/queues/$queueKey/jobs"
+						params={{ queueKey }}
+						search={search}
+						className={`inline-flex min-h-11 items-center sm:min-h-10 ${schedulers ? "text-muted-foreground hover:text-foreground" : "font-semibold"}`}
+					>
+						Jobs
+					</Link>
+					<Link
+						to="/queues/$queueKey/schedulers"
+						params={{ queueKey }}
+						className={`inline-flex min-h-11 items-center sm:min-h-10 ${schedulers ? "font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+					>
+						Schedulers
+					</Link>
+				</>
 			)}
 		</nav>
 	);

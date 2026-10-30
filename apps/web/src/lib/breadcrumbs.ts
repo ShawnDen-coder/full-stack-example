@@ -27,10 +27,11 @@ export function breadcrumbAncestors(
 	key: BreadcrumbKey | undefined,
 	queueKey: string | undefined,
 	access: { toolHome: boolean; queues: boolean },
-): ("tool-home" | "queues" | "jobs")[] {
+): ("tool-home" | "queues" | "queue" | "jobs")[] {
 	if (key === "todos" && access.toolHome) return ["tool-home"];
 	if (!queueKey || !access.queues) return [];
-	if (key === "queue-job") return ["queues", "jobs"];
-	if (key === "queue-jobs" || key === "queue-schedulers") return ["queues"];
+	if (key === "queue-job") return ["queues", "queue", "jobs"];
+	if (key === "queue-jobs" || key === "queue-schedulers")
+		return ["queues", "queue"];
 	return [];
 }

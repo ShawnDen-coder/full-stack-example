@@ -24,7 +24,12 @@ import {
 	ToggleGroup,
 	ToggleGroupItem,
 } from "@full-stack-example/ui/components/toggle-group";
-import { hashKey, type Query, useQueries } from "@tanstack/react-query";
+import {
+	hashKey,
+	type Query,
+	useQueries,
+	useQuery,
+} from "@tanstack/react-query";
 import {
 	getRouteApi,
 	Link,
@@ -39,10 +44,17 @@ import {
 	queryClient,
 	searchInvalidations,
 } from "@/utils/orpc";
-import { failureSummary, formatTime, shortId } from "./format";
+import {
+	failureSummary,
+	formatCompactTime,
+	formatTime,
+	shortId,
+} from "./format";
 import { isRpcCode, QueueQueryState } from "./query-state";
 import { QueueNav } from "./queue-nav";
 import { type JobStatus, jobStatuses, jobStatusLabels } from "./statuses";
+
+const browseScroll = new Map<string, number>();
 
 const route = getRouteApi("/_auth/queues/$queueKey/jobs/");
 export function QueueJobsScreen() {
@@ -57,10 +69,32 @@ export function QueueJobsScreen() {
 		generation: identityTicket(),
 	}).current;
 	const mode = search.mode ?? "browse";
+	const queues = useQuery({
+		...orpc.queues.list.queryOptions(),
+		refetchInterval: 5000,
+		refetchIntervalInBackground: false,
+		meta: { errorHandledLocally: true },
+	});
+	const listDenied = ["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].some((code) =>
+		isRpcCode(queues.error, code),
+	);
+	const queue = listDenied
+		? undefined
+		: queues.data?.find((item) => item.key === queueKey);
+	const counts = queues.error ? undefined : queue?.counts;
 	const status = search.status ?? "waiting";
 	const page = search.page ?? 1;
 	const pageSize = search.pageSize ?? 20;
 	const statusBar = useRef<HTMLDivElement>(null);
+	const scrollArea = useRef<HTMLDivElement>(null);
+	const scrollKey = JSON.stringify([
+		owner.userId,
+		owner.generation,
+		queueKey,
+		status,
+		page,
+		pageSize,
+	]);
 	useEffect(() => {
 		if (mode !== "browse") return;
 		const bar = statusBar.current;
@@ -238,11 +272,18 @@ export function QueueJobsScreen() {
 	const runSearch = async (kind: "search" | "refresh" | "retry") => {
 		const term = kind === "search" ? draft.trim() : search.query;
 		if (!term || lock.current || jobs?.isFetching || !ready()) return;
-		const target = JSON.stringify([queueKey, mode, term, status, 1, pageSize]);
+		const target = JSON.stringify([
+			queueKey,
+			mode,
+			term,
+			status,
+			page,
+			pageSize,
+		]);
 		const location = router.buildLocation({
 			to: ".",
 			from: "/queues/$queueKey/jobs/",
-			search: (prev) => ({ ...prev, query: term, page: undefined }),
+			search: (prev) => ({ ...prev, query: term }),
 		});
 		const token = {
 			target,
@@ -261,7 +302,7 @@ export function QueueJobsScreen() {
 		if (target !== scope) {
 			try {
 				await navigate({
-					search: (prev) => ({ ...prev, query: term, page: undefined }),
+					search: (prev) => ({ ...prev, query: term }),
 				});
 			} catch {
 				if (lock.current === token) {
@@ -323,17 +364,29 @@ export function QueueJobsScreen() {
 	else if (jobs?.isSuccess && !jobs.isFetching) lastError.current.error = null;
 	const displayedError =
 		jobs?.error ?? (busy === "refresh" ? lastError.current.error : null);
-	const denied = ["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].some((code) =>
-		isRpcCode(jobs?.error, code),
+	const denied = ["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].some(
+		(code) => isRpcCode(jobs?.error, code) || isRpcCode(queues.error, code),
 	);
 	const data = denied ? undefined : jobs?.data;
 	const total = data && "total" in data ? (data.total ?? 0) : 0;
 	const pages = Math.min(10000, Math.max(1, Math.ceil(total / pageSize)));
+	const hasData = !!data;
+	useEffect(() => {
+		if (mode === "browse" && hasData && scrollArea.current) {
+			const frame = requestAnimationFrame(() => {
+				if (scrollArea.current)
+					scrollArea.current.scrollTop = browseScroll.get(scrollKey) ?? 0;
+			});
+			return () => cancelAnimationFrame(frame);
+		}
+	}, [mode, scrollKey, hasData]);
 	const invalidDraft = draft.length > 0 && !draft.trim();
+	const hasDescription = mode === "name" || !!search.query;
 	const showFailure = mode !== "browse" || status === "failed";
 	useEffect(() => {
 		if (
 			mode === "browse" &&
+			!denied &&
 			jobs?.isSuccess &&
 			!jobs.isFetching &&
 			page > pages
@@ -342,59 +395,64 @@ export function QueueJobsScreen() {
 				replace: true,
 				search: (prev) => ({ ...prev, page: pages }),
 			});
-	}, [mode, jobs?.isSuccess, jobs?.isFetching, page, pages, navigate]);
+	}, [mode, denied, jobs?.isSuccess, jobs?.isFetching, page, pages, navigate]);
 	return (
-		<div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto">
-			<div className="flex flex-wrap items-end justify-between gap-3">
-				<div className="min-w-0">
-					<h1 className="font-bold text-2xl tracking-tight">Queues</h1>
-					<p className="break-all text-muted-foreground">{queueKey} · Jobs</p>
-				</div>
+		<div
+			ref={scrollArea}
+			className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto"
+		>
+			<h1 className="sr-only">{queueKey} jobs</h1>
+			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b">
 				<QueueNav queueKey={queueKey} search={search} />
+				<p className="text-muted-foreground text-xs">
+					Read only
+					{!denied && queue && (queue.paused ? " · Paused" : " · Not paused")}
+				</p>
 			</div>
-			<ToggleGroup
-				type="single"
-				value={mode}
-				aria-label="Job lookup mode"
-				className="w-full"
-				onValueChange={(value) => {
-					if (
-						!value ||
-						value === mode ||
-						!["browse", "id", "name"].includes(value)
-					)
-						return;
-					lock.current = null;
-					setBusy(null);
-					setDraft("");
-					setAnnouncement("");
-					void navigate({
-						search: () => ({
-							mode: value === "browse" ? undefined : (value as "id" | "name"),
-						}),
-					});
-				}}
-			>
-				<ToggleGroupItem value="browse" className="min-w-0 flex-1 sm:flex-none">
-					Browse
-				</ToggleGroupItem>
-				<ToggleGroupItem
-					value="id"
-					aria-label="Exact job ID"
-					className="min-w-0 flex-1 sm:flex-none"
+			{mode !== "browse" && (
+				<ToggleGroup
+					type="single"
+					value={mode}
+					aria-label="Job lookup mode"
+					className="w-full"
+					onValueChange={(value) => {
+						if (
+							!value ||
+							value === mode ||
+							!["browse", "id", "name"].includes(value)
+						)
+							return;
+						lock.current = null;
+						setBusy(null);
+						setDraft("");
+						setAnnouncement("");
+						void navigate({
+							search: (prev) => ({
+								...prev,
+								mode: value === "browse" ? undefined : (value as "id" | "name"),
+								query: undefined,
+							}),
+						});
+					}}
 				>
-					Exact ID
-				</ToggleGroupItem>
-				<ToggleGroupItem
-					value="name"
-					aria-label="Full job name"
-					className="min-w-0 flex-1 sm:flex-none"
-				>
-					Full name
-				</ToggleGroupItem>
-			</ToggleGroup>
+					<ToggleGroupItem
+						value="id"
+						aria-label="Exact job ID"
+						className="min-w-0 flex-1 sm:flex-none"
+					>
+						Exact ID
+					</ToggleGroupItem>
+					<ToggleGroupItem
+						value="name"
+						aria-label="Full job name"
+						className="min-w-0 flex-1 sm:flex-none"
+					>
+						Exact name
+					</ToggleGroupItem>
+				</ToggleGroup>
+			)}
 			{mode === "browse" ? (
-				<div ref={statusBar} className="min-w-0 overflow-x-auto border-b">
+				<div ref={statusBar} className="min-w-0 shrink-0 overflow-x-auto">
 					<ToggleGroup
 						type="single"
 						value={status}
@@ -422,9 +480,13 @@ export function QueueJobsScreen() {
 								key={item}
 								value={item}
 								data-status={item}
-								className="rounded-none border-transparent border-b-2 data-[state=on]:border-foreground data-[state=on]:bg-transparent"
+								aria-label={jobStatusLabels[item]}
+								className="min-h-11 rounded-md border px-2 text-xs data-[state=on]:bg-muted sm:min-h-10 sm:text-sm"
 							>
-								{jobStatusLabels[item]}
+								{jobStatusLabels[item]}{" "}
+								<span className="ml-1 text-muted-foreground tabular-nums">
+									{!denied ? (counts?.[item]?.toLocaleString() ?? "—") : "—"}
+								</span>
 							</ToggleGroupItem>
 						))}
 					</ToggleGroup>
@@ -459,8 +521,12 @@ export function QueueJobsScreen() {
 									aria-invalid={invalidDraft}
 									aria-describedby={
 										invalidDraft
-											? "queue-query-description queue-query-error"
-											: "queue-query-description"
+											? hasDescription
+												? "queue-query-description queue-query-error"
+												: "queue-query-error"
+											: hasDescription
+												? "queue-query-description"
+												: undefined
 									}
 									className="w-full min-w-0 max-w-full sm:w-96"
 								/>
@@ -487,56 +553,122 @@ export function QueueJobsScreen() {
 									)}
 								</div>
 							</div>
-							<FieldDescription
-								id="queue-query-description"
-								className="[overflow-wrap:anywhere]"
-							>
-								{mode === "name"
-									? "All states, limited search: up to 100 jobs per state. Results are not a snapshot."
-									: "Find a job by its exact ID."}
-								{search.query && ` Current search: ${search.query}.`}
-							</FieldDescription>
+							{hasDescription && (
+								<FieldDescription
+									id="queue-query-description"
+									className="[overflow-wrap:anywhere]"
+								>
+									{mode === "name"
+										? "Exact name scans up to 100 jobs in each of 7 supported states and returns up to 50 matches. Search is manual; Refresh uses the submitted criteria. Results are not a snapshot."
+										: ""}
+									{search.query && ` Submitted: ${search.query}.`}
+								</FieldDescription>
+							)}
 							<FieldError id="queue-query-error">
 								{invalidDraft ? "Enter a non-empty search." : null}
 							</FieldError>
 						</Field>
 					</FieldGroup>
+					<Button
+						type="button"
+						variant="ghost"
+						className="min-h-11 self-start px-0"
+						onClick={() =>
+							void navigate({
+								search: (prev) => ({
+									...prev,
+									mode: undefined,
+									query: undefined,
+								}),
+							})
+						}
+					>
+						← Back to browsing
+					</Button>
 				</form>
+			)}
+			{mode === "browse" && (
+				<div className="flex flex-wrap items-center gap-2 text-sm">
+					<Button
+						variant="outline"
+						className="min-h-11 sm:min-h-10"
+						onClick={() => {
+							browseScroll.set(scrollKey, scrollArea.current?.scrollTop ?? 0);
+							void navigate({
+								search: (prev) => ({ ...prev, mode: "id", query: undefined }),
+							});
+						}}
+					>
+						Find job
+					</Button>
+					<Button
+						variant="outline"
+						className="min-h-11 sm:min-h-10"
+						onClick={() => {
+							void jobs?.refetch();
+							void queues.refetch();
+						}}
+					>
+						Refresh
+					</Button>
+					{data && (
+						<span className="text-muted-foreground text-xs">
+							Updated {formatTime(Date.parse(data.refreshedAt))} · refreshes
+							every 5 seconds
+						</span>
+					)}
+				</div>
 			)}
 			<div className="sr-only" aria-live="polite">
 				{announcement}
 			</div>
-			{(mode === "browse" || search.query) && (
+			{(mode === "browse" || search.query || denied) && (
 				<QueueQueryState
-					isPending={(!jobs || jobs.isPending) && !displayedError}
-					error={displayedError}
-					hasData={!!data}
-					onRetry={() =>
-						mode === "browse" ? void jobs?.refetch() : void runSearch("retry")
+					isPending={!denied && (!jobs || jobs.isPending) && !displayedError}
+					error={
+						denied ? (listDenied ? queues.error : jobs?.error) : displayedError
 					}
+					hasData={!!data}
+					onRetry={() => {
+						if (queues.error) void queues.refetch();
+						if (mode === "browse") void jobs?.refetch();
+						else void runSearch("retry");
+					}}
 					retryBusy={mode !== "browse" && (busy !== null || jobs?.isFetching)}
 				/>
 			)}
 			{data && (
 				<>
-					<div className="flex flex-wrap justify-between gap-2 text-muted-foreground text-sm">
-						<span>
-							{data.mode === "name"
-								? `${data.scannedCount} jobs checked · ${data.items.length} matches returned${data.scanTruncated ? " · More jobs were not scanned" : ""}${data.resultsTruncated ? " · More matches were omitted" : ""}`
-								: `${total} ${mode === "browse" ? "jobs" : "matches"}`}
-						</span>
-						<span>Updated {formatTime(Date.parse(data.refreshedAt))}</span>
-					</div>
-					<div className="min-h-48 flex-1 overflow-auto rounded-md border">
-						<Table className="queue-table queue-jobs-table">
+					{mode !== "browse" && (
+						<div className="flex flex-wrap justify-between gap-2 text-muted-foreground text-sm">
+							<span>
+								{data.mode === "name"
+									? `${data.scannedCount} jobs checked · ${data.items.length} matches returned${data.scanTruncated ? " · More jobs were not scanned" : ""}${data.resultsTruncated ? " · More matches were omitted" : ""}`
+									: `${total} matches`}
+							</span>
+							<span>
+								Updated {formatTime(Date.parse(data.refreshedAt))} · manual
+								refresh
+							</span>
+						</div>
+					)}
+					<div className="shrink-0 overflow-x-auto rounded-md border">
+						<Table
+							className={`queue-table queue-jobs-table ${showFailure ? "has-failure" : ""}`}
+						>
 							<TableHeader>
 								<TableRow>
 									<TableHead>Job</TableHead>
-									<TableHead>User ID</TableHead>
+									{showFailure && <TableHead>Failure</TableHead>}
 									<TableHead className="text-right">Attempts</TableHead>
 									<TableHead className="text-right">Created</TableHead>
-									<TableHead className="text-right">Finished</TableHead>
-									{showFailure && <TableHead>Failure</TableHead>}
+									<TableHead className="text-right">
+										{mode === "browse"
+											? status === "active"
+												? "Processed"
+												: "Finished"
+											: "Latest time"}
+									</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -547,54 +679,94 @@ export function QueueJobsScreen() {
 												<Link
 													to="/queues/$queueKey/jobs/$jobId"
 													params={{ queueKey, jobId: job.id }}
+													onClick={() => {
+														if (mode === "browse")
+															browseScroll.set(
+																scrollKey,
+																scrollArea.current?.scrollTop ?? 0,
+															);
+													}}
 													search={search}
+													title={job.id}
 													className="font-medium hover:underline"
 												>
-													{job.name}
+													{shortId(job.id)}
 												</Link>
-												<div className="text-muted-foreground text-xs">
-													<span className="font-mono" title={job.id}>
-														{shortId(job.id)}
-													</span>{" "}
+												<div
+													className="text-muted-foreground text-xs"
+													title={job.summary.userId}
+												>
+													{job.name} · User ID{" "}
+													{job.summary.userId
+														? shortId(job.summary.userId)
+														: "—"}{" "}
 													· {job.state}
 												</div>
 											</TableCell>
-											<TableCell>
-												<span className="queue-field-label">User ID</span>
-												<span title={job.summary.userId}>
-													{job.summary.userId
-														? shortId(job.summary.userId)
-														: "—"}
-												</span>
-											</TableCell>
+											{showFailure && (
+												<TableCell
+													className={
+														job.failedReason ? undefined : "queue-empty-failure"
+													}
+												>
+													<span className="queue-field-label">Failure</span>
+													<span
+														className="queue-failure-summary"
+														title={failureSummary(job.failedReason)}
+													>
+														{failureSummary(job.failedReason)}
+													</span>
+												</TableCell>
+											)}
 											<TableCell className="text-right tabular-nums">
 												<span className="queue-field-label">Attempts</span>
 												<span>
 													{job.attemptsMade} / {job.attemptsConfigured ?? "—"}
 												</span>
 											</TableCell>
-											<TableCell className="text-right">
+											<TableCell className="queue-created-time text-right">
 												<span className="queue-field-label">Created</span>
 												<span>{formatTime(job.timestamp)}</span>
 											</TableCell>
-											<TableCell className="text-right">
-												<span className="queue-field-label">Finished</span>
-												<span>{formatTime(job.finishedOn)}</span>
-											</TableCell>
-											{showFailure && (
-												<TableCell>
-													<span className="queue-field-label">Failure</span>
-													<span title={failureSummary(job.failedReason)}>
-														{failureSummary(job.failedReason)}
+											<TableCell className="queue-latest-time text-right">
+												<div className="queue-desktop-time">
+													<span className="queue-field-label">
+														{job.state === "active" ? "Processed" : "Finished"}
 													</span>
-												</TableCell>
-											)}
+													<span>
+														{formatTime(
+															job.state === "active"
+																? job.processedOn
+																: job.finishedOn,
+														)}
+													</span>
+												</div>
+												<div className="queue-mobile-time">
+													<span className="queue-field-label">
+														{job.state === "failed" || job.state === "completed"
+															? "Finished"
+															: job.state === "active"
+																? "Processed"
+																: "Created"}
+													</span>{" "}
+													<span>
+														{formatCompactTime(
+															job.state === "failed" ||
+																job.state === "completed"
+																? job.finishedOn
+																: job.state === "active"
+																	? job.processedOn
+																	: job.timestamp,
+														)}
+													</span>
+												</div>
+											</TableCell>
 										</TableRow>
 									))
 								) : (
 									<TableRow>
 										<TableCell
-											colSpan={showFailure ? 6 : 5}
+											colSpan={showFailure ? 5 : 4}
 											className="h-24 text-center"
 										>
 											<Empty className="border-0">
@@ -611,14 +783,15 @@ export function QueueJobsScreen() {
 						</Table>
 					</div>
 					{mode === "browse" && (
-						<div className="flex items-center gap-2 text-sm">
-							<span>
-								Page {page} of {pages}
+						<div className="flex flex-wrap items-center gap-2 text-sm">
+							<span className="w-full sm:mr-auto sm:w-auto">
+								{total} jobs · Page {page} of {pages} · {pageSize} / page
 								{total > 10000 * pageSize &&
 									" · Browsing limited to 10,000 pages"}
 							</span>
 							<Button
 								variant="outline"
+								className="min-h-11 sm:min-h-9"
 								disabled={page <= 1}
 								onClick={() =>
 									void navigate({
@@ -630,6 +803,7 @@ export function QueueJobsScreen() {
 							</Button>
 							<Button
 								variant="outline"
+								className="min-h-11 sm:min-h-9"
 								disabled={page >= pages}
 								onClick={() =>
 									void navigate({
