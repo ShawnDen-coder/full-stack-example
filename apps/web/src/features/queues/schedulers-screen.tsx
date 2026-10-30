@@ -24,16 +24,30 @@ export function QueueSchedulersScreen() {
 	const [pagination, setPagination] = useState({ queueKey, page: 1 });
 	const page = pagination.queueKey === queueKey ? pagination.page : 1;
 	const setPage = (page: number) => setPagination({ queueKey, page });
+	const queues = useQuery({
+		...orpc.queues.list.queryOptions(),
+		refetchInterval: 5000,
+		refetchIntervalInBackground: false,
+		meta: { errorHandledLocally: true },
+	});
 	const schedulers = useQuery({
 		...orpc.queues.schedulers.queryOptions({ input: { queueKey, page } }),
 		refetchInterval: 5000,
 		refetchIntervalInBackground: false,
 		meta: { errorHandledLocally: true },
 	});
-	const denied = ["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].some((code) =>
-		isRpcCode(schedulers.error, code),
+	const listDenied = ["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].some((code) =>
+		isRpcCode(queues.error, code),
 	);
+	const denied =
+		listDenied ||
+		["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].some((code) =>
+			isRpcCode(schedulers.error, code),
+		);
 	const displayedData = denied ? undefined : schedulers.data;
+	const queue = denied
+		? undefined
+		: queues.data?.find((item) => item.key === queueKey);
 	const pageCount = Math.min(
 		10000,
 		Math.max(1, Math.ceil((displayedData?.total ?? 0) / 50)),
@@ -56,23 +70,39 @@ export function QueueSchedulersScreen() {
 	]);
 	return (
 		<div className="flex min-h-0 flex-1 flex-col gap-6">
-			<div className="flex flex-wrap items-end justify-between gap-3">
-				<div className="min-w-0">
-					<h1 className="font-bold text-2xl tracking-tight">Queues</h1>
-					<p className="break-all text-muted-foreground">
-						{queueKey} · Schedulers
-					</p>
-				</div>
+			<h1 className="sr-only">{queueKey} schedulers</h1>
+			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b">
 				<QueueNav queueKey={queueKey} />
+				<p className="text-muted-foreground text-xs">
+					Read only{queue && (queue.paused ? " · Paused" : " · Not paused")}
+				</p>
+			</div>
+			<div className="flex flex-wrap items-center gap-3 text-sm">
+				<Button
+					variant="outline"
+					className="min-h-11 sm:min-h-10"
+					onClick={() => void schedulers.refetch()}
+				>
+					Refresh
+				</Button>
+				{displayedData && (
+					<span className="text-muted-foreground text-xs">
+						Updated {formatTime(Date.parse(displayedData.refreshedAt))} ·
+						refreshes every 5 seconds
+					</span>
+				)}
 			</div>
 			<QueueQueryState
-				isPending={schedulers.isPending}
-				error={schedulers.error}
+				isPending={!denied && schedulers.isPending}
+				error={listDenied ? queues.error : schedulers.error}
 				hasData={!!displayedData}
-				onRetry={() => void schedulers.refetch()}
+				onRetry={() => {
+					void schedulers.refetch();
+					if (queues.error) void queues.refetch();
+				}}
 			/>
 			{displayedData && (
-				<div className="min-h-0 flex-1 overflow-auto rounded-md border">
+				<div className="overflow-auto rounded-md border">
 					<Table className="queue-table">
 						<TableHeader>
 							<TableRow>
@@ -130,11 +160,11 @@ export function QueueSchedulersScreen() {
 				<div className="flex flex-wrap items-center gap-2">
 					<span className="text-sm">
 						{displayedData.total.toLocaleString()} schedulers · Page {page} of{" "}
-						{pageCount} · Updated{" "}
-						{formatTime(Date.parse(displayedData.refreshedAt))}
+						{pageCount}
 					</span>
 					<Button
 						variant="outline"
+						className="min-h-11 sm:min-h-9"
 						disabled={page <= 1}
 						onClick={() => setPage(page - 1)}
 					>
@@ -142,6 +172,7 @@ export function QueueSchedulersScreen() {
 					</Button>
 					<Button
 						variant="outline"
+						className="min-h-11 sm:min-h-9"
 						disabled={page >= pageCount}
 						onClick={() => setPage(page + 1)}
 					>

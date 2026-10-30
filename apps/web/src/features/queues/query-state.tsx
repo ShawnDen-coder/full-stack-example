@@ -21,17 +21,18 @@ export function QueueQueryState({
 	onRetry,
 	hasData = false,
 	retryBusy = false,
+	retryLabel = "Retry",
 }: {
 	isPending: boolean;
 	error: unknown;
 	onRetry: () => void;
 	hasData?: boolean;
 	retryBusy?: boolean;
+	retryLabel?: string;
 }) {
 	if (isPending) {
 		return (
-			<div className="space-y-3" role="status">
-				<Skeleton className="h-8 w-48" />
+			<div role="status">
 				<Skeleton className="h-32 w-full" />
 				<span className="sr-only">Loading queue data</span>
 			</div>
@@ -64,12 +65,12 @@ export function QueueQueryState({
 				{hasData && " The results below are from the last successful request."}
 				<Button
 					variant="outline"
-					className="mt-3"
+					className="mt-3 min-h-11 sm:min-h-9"
 					onClick={onRetry}
 					disabled={retryBusy}
 					aria-busy={retryBusy}
 				>
-					Retry
+					{retryLabel}
 				</Button>
 			</AlertDescription>
 		</Alert>

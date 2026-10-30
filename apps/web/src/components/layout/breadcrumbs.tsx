@@ -32,7 +32,9 @@ export function Breadcrumbs() {
 		job?.params.queueKey ??
 		jobs?.params.queueKey ??
 		schedulers?.params.queueKey;
-	const current =
+	const queuePage =
+		key === "queue-job" || key === "queue-jobs" || key === "queue-schedulers";
+	const leaf =
 		key === "queue-job"
 			? job?.params.jobId
 			: key === "queue-jobs"
@@ -40,6 +42,8 @@ export function Breadcrumbs() {
 				: key === "queue-schedulers"
 					? "Schedulers"
 					: catalog.find((entry) => entry.id === key)?.title;
+	const current =
+		queuePage && queueKey && leaf ? `${queueKey} / ${leaf}` : leaf;
 	if (!current) return null;
 	const chain = breadcrumbAncestors(key, queueKey, {
 		toolHome: Boolean(access.data && canVisit(access.data, "/apps")),
@@ -50,18 +54,32 @@ export function Breadcrumbs() {
 
 	const ancestors = (
 		<>
-			{showHome && <Link {...breadcrumbTargets.toolHome}>Tool home</Link>}
-			{showQueues && <Link {...breadcrumbTargets.queues}>Queues</Link>}
+			{showHome && (
+				<Link {...breadcrumbTargets.toolHome} activeOptions={{ exact: true }}>
+					Tool home
+				</Link>
+			)}
+			{showQueues && (
+				<Link {...breadcrumbTargets.queues} activeOptions={{ exact: true }}>
+					Queues
+				</Link>
+			)}
 			{showQueues && queueKey && chain.includes("jobs") && (
 				<>
 					{" "}
 					<ChevronRight aria-hidden="true" className="size-4" />{" "}
-					<Link {...breadcrumbTargets.jobs(queueKey)}>Jobs</Link>
+					<Link
+						{...breadcrumbTargets.jobs(queueKey)}
+						activeOptions={{ exact: true }}
+					>
+						Jobs
+					</Link>
 				</>
 			)}
 		</>
 	);
-	const count = chain.length;
+	// The queue is rendered beside the current page, not as a separate link.
+	const count = chain.filter((item) => item !== "queue").length;
 	return (
 		<nav
 			aria-label="Breadcrumb"
@@ -73,7 +91,9 @@ export function Breadcrumbs() {
 						className={
 							count > 1
 								? "hidden items-center gap-2 text-muted-foreground lg:flex [&>a]:hover:text-foreground"
-								: "flex shrink-0 items-center gap-2 text-muted-foreground max-[350px]:hidden [&>a]:hover:text-foreground"
+								: showQueues
+									? "hidden shrink-0 items-center gap-2 text-muted-foreground sm:flex [&>a]:hover:text-foreground"
+									: "flex shrink-0 items-center gap-2 text-muted-foreground max-[350px]:hidden [&>a]:hover:text-foreground"
 						}
 					>
 						{ancestors}
@@ -83,8 +103,12 @@ export function Breadcrumbs() {
 							<DropdownMenuTrigger
 								className={
 									count > 1
-										? "flex size-11 shrink-0 items-center text-muted-foreground lg:hidden"
-										: "hidden size-11 shrink-0 items-center text-muted-foreground max-[350px]:flex"
+										? queuePage
+											? "hidden"
+											: "flex size-11 shrink-0 items-center text-muted-foreground lg:hidden"
+										: showQueues
+											? "hidden"
+											: "hidden size-11 shrink-0 items-center text-muted-foreground max-[350px]:flex"
 								}
 								aria-label="Breadcrumb ancestors"
 							>
@@ -93,17 +117,32 @@ export function Breadcrumbs() {
 							<DropdownMenuContent align="start" className="max-w-[280px]">
 								{showHome && (
 									<DropdownMenuItem asChild>
-										<Link {...breadcrumbTargets.toolHome}>Tool home</Link>
+										<Link
+											{...breadcrumbTargets.toolHome}
+											activeOptions={{ exact: true }}
+										>
+											Tool home
+										</Link>
 									</DropdownMenuItem>
 								)}
 								{showQueues && (
 									<DropdownMenuItem asChild>
-										<Link {...breadcrumbTargets.queues}>Queues</Link>
+										<Link
+											{...breadcrumbTargets.queues}
+											activeOptions={{ exact: true }}
+										>
+											Queues
+										</Link>
 									</DropdownMenuItem>
 								)}
 								{showQueues && queueKey && chain.includes("jobs") && (
 									<DropdownMenuItem asChild>
-										<Link {...breadcrumbTargets.jobs(queueKey)}>Jobs</Link>
+										<Link
+											{...breadcrumbTargets.jobs(queueKey)}
+											activeOptions={{ exact: true }}
+										>
+											Jobs
+										</Link>
 									</DropdownMenuItem>
 								)}
 								<DropdownMenuItem
@@ -117,22 +156,76 @@ export function Breadcrumbs() {
 					)}
 					<ChevronRight
 						aria-hidden="true"
-						className="size-4 shrink-0 text-muted-foreground max-[350px]:hidden"
+						className={
+							showQueues
+								? count === 1
+									? "hidden size-4 shrink-0 text-muted-foreground sm:block"
+									: "hidden size-4 shrink-0 text-muted-foreground lg:block"
+								: "size-4 shrink-0 text-muted-foreground max-[350px]:hidden"
+						}
 					/>
 				</>
 			)}
 			<DropdownMenu>
 				<DropdownMenuTrigger
-					className="min-w-0 truncate text-start font-medium"
+					className={
+						queuePage
+							? "flex min-w-0 items-center gap-0.5 text-start font-medium text-xs sm:text-sm"
+							: "min-w-0 truncate text-start font-medium"
+					}
 					aria-current="page"
 				>
-					{current}
+					{queuePage ? (
+						<>
+							{queueKey && (
+								<>
+									<span className="min-w-0 truncate" title={queueKey}>
+										{queueKey}
+									</span>
+									<span aria-hidden="true">/</span>
+								</>
+							)}
+							<span
+								className={
+									key === "queue-job" ? "min-w-0 truncate" : "shrink-0"
+								}
+								title={leaf}
+							>
+								{leaf}
+							</span>
+						</>
+					) : (
+						leaf
+					)}
 				</DropdownMenuTrigger>
 				<DropdownMenuContent
 					align="start"
 					className="max-w-[280px] whitespace-normal break-all p-2"
 				>
-					{current}
+					{showQueues && (
+						<DropdownMenuItem
+							asChild
+							className={count === 1 ? "sm:hidden" : "lg:hidden"}
+						>
+							<Link
+								{...breadcrumbTargets.queues}
+								activeOptions={{ exact: true }}
+							>
+								Queues
+							</Link>
+						</DropdownMenuItem>
+					)}
+					{showQueues && queueKey && chain.includes("jobs") && (
+						<DropdownMenuItem asChild className="lg:hidden">
+							<Link
+								{...breadcrumbTargets.jobs(queueKey)}
+								activeOptions={{ exact: true }}
+							>
+								Jobs
+							</Link>
+						</DropdownMenuItem>
+					)}
+					<div>{current}</div>
 				</DropdownMenuContent>
 			</DropdownMenu>
 		</nav>

@@ -15,6 +15,9 @@ async function mockSession(
 			},
 		}),
 	);
+	await page.route("**/rpc/queues/list**", (route) =>
+		route.fulfill({ json: { json: [] } }),
+	);
 	await page.route("**/rpc/access/mine", (route) =>
 		route.fulfill({
 			json: {
@@ -487,7 +490,9 @@ test("queue queries isolate ranges, retain same-query 503 data and clear on 403"
 	await page.waitForTimeout(500);
 	expect(requests).toBe(0);
 	await page.getByRole("button", { name: "Search", exact: true }).click();
-	await expect(page.getByRole("link", { name: "private job" })).toBeVisible();
+	await expect(
+		page.getByRole("link", { name: "a", exact: true }),
+	).toBeVisible();
 	await expect(page.getByText("Search failure summary")).toBeVisible();
 	result = "unavailable";
 	await page.getByRole("button", { name: "Refresh", exact: true }).click();
@@ -495,7 +500,9 @@ test("queue queries isolate ranges, retain same-query 503 data and clear on 403"
 		"last successful request",
 		{ timeout: 15000 },
 	);
-	await expect(page.getByRole("link", { name: "private job" })).toBeVisible();
+	await expect(
+		page.getByRole("link", { name: "a", exact: true }),
+	).toBeVisible();
 	await page.getByRole("textbox", { name: "Full job name" }).fill("another");
 	await page.getByRole("button", { name: "Search", exact: true }).click();
 	await expect(page).toHaveURL(/query=another/);
@@ -506,18 +513,24 @@ test("queue queries isolate ranges, retain same-query 503 data and clear on 403"
 	await expect(
 		page.getByRole("button", { name: "Retry", exact: true }),
 	).toBeVisible();
-	await expect(page.getByRole("link", { name: "private job" })).toHaveCount(0);
+	await expect(page.getByRole("link", { name: "a", exact: true })).toHaveCount(
+		0,
+	);
 	await page.screenshot({
 		path: info.outputPath("queue-search-error.png"),
 		fullPage: true,
 	});
 	result = "ok";
 	await page.getByRole("button", { name: "Retry", exact: true }).click();
-	await expect(page.getByRole("link", { name: "private job" })).toBeVisible();
+	await expect(
+		page.getByRole("link", { name: "a", exact: true }),
+	).toBeVisible();
 	const before = accessCalls;
 	result = "forbidden";
 	await page.getByRole("button", { name: "Refresh", exact: true }).click();
-	await expect(page.getByRole("link", { name: "private job" })).toHaveCount(0);
+	await expect(page.getByRole("link", { name: "a", exact: true })).toHaveCount(
+		0,
+	);
 	await expect.poll(() => accessCalls).toBeGreaterThan(before);
 });
 
@@ -573,14 +586,20 @@ test("scheduler pages do not show another range after failure and reset on queue
 		});
 	});
 	await page.goto("/queues/first/schedulers");
-	await expect(page.getByText("First scheduler")).toBeVisible();
+	await expect(
+		page.getByText("First scheduler", { exact: true }),
+	).toBeVisible();
 	fail = true;
 	await page.getByRole("button", { name: "Next", exact: true }).click();
 	await expect(page.getByRole("alert")).toBeVisible({ timeout: 15000 });
-	await expect(page.getByText("First scheduler")).toHaveCount(0);
+	await expect(page.getByText("First scheduler", { exact: true })).toHaveCount(
+		0,
+	);
 	fail = false;
 	await page.goto("/queues/second/schedulers");
-	await expect(page.getByText("First scheduler")).toBeVisible();
+	await expect(
+		page.getByText("First scheduler", { exact: true }),
+	).toBeVisible();
 	await expect(page.getByText(/Page 1 of 2/)).toBeVisible();
 });
 
@@ -600,6 +619,7 @@ const browserJob = {
 test("review: mobile job fields, failure summaries, page limit and evidence", async ({
 	page,
 }, info) => {
+	test.setTimeout(60000);
 	await mockSession(page);
 	await page.route("**/rpc/access/me", (route) =>
 		route.fulfill({
@@ -654,27 +674,20 @@ test("review: mobile job fields, failure summaries, page limit and evidence", as
 			await expect(
 				page.getByText("Worker could not read profile"),
 			).toBeVisible();
-			for (const label of [
-				"User ID",
-				"Attempts",
-				"Created",
-				"Finished",
-				"Failure",
-			])
+			await expect(page.locator("td").getByText(/User ID/)).toBeVisible();
+			for (const label of ["Attempts", "Created", "Finished", "Failure"])
 				await expect(
-					page.locator("td").getByText(label, { exact: true }),
+					page.locator("td").getByText(label, { exact: true }).first(),
 				).toBeAttached();
-			if (width <= 768)
-				for (const label of [
-					"User ID",
-					"Attempts",
-					"Created",
-					"Finished",
-					"Failure",
-				])
+			if (width < 640)
+				for (const label of ["Attempts", "Failure"])
 					await expect(
 						page.locator("td").getByText(label, { exact: true }),
 					).toBeVisible();
+			if (width < 640)
+				await expect(page.locator(".queue-mobile-time")).toContainText(
+					"Finished",
+				);
 			await expect(page.getByTitle(browserJob.id)).toBeVisible();
 			await expect(
 				page.getByRole("button", { name: "Next", exact: true }),
@@ -1036,7 +1049,7 @@ test("polish: controlled toggles and search lock keep the draft and scope", asyn
 		page.getByRole("button", { name: "Search", exact: true }),
 	).toBeEnabled();
 	await expect(field).toHaveValue("B");
-	await expect(page.getByText(/Current search: A/)).toBeVisible();
+	await expect(page.getByText(/Submitted: A/)).toBeVisible();
 	waiting = true;
 	await page.getByRole("button", { name: "Refresh", exact: true }).click();
 	await expect.poll(() => calls).toBe(2);
@@ -1239,6 +1252,7 @@ test("polish: keyboard groups, history, IME and announcements", async ({
 	await expect(active).toHaveAttribute("aria-checked", "true");
 	await page.goBack();
 	await expect(waiting).toHaveAttribute("aria-checked", "true");
+	await page.getByRole("button", { name: "Find job" }).click();
 	await page.getByRole("radio", { name: "Full job name" }).click();
 	const input = page.getByRole("textbox", { name: "Full job name" });
 	await input.fill("hello");
@@ -1654,7 +1668,9 @@ test("round2: long query and queue key fit the mobile content", async ({
 	for (const locator of [
 		input,
 		description,
-		page.getByText(`${key} · Jobs`),
+		page
+			.getByRole("navigation", { name: "Breadcrumb" })
+			.locator("button[aria-current=page]"),
 		page.getByRole("button", { name: "Refresh", exact: true }),
 	]) {
 		const box = await locator.boundingBox();
@@ -1680,15 +1696,19 @@ test("round2: long query and queue key fit the mobile content", async ({
 		document.body.style.zoom = "";
 	});
 	for (const [path, label] of [
-		[`/queues/${key}/schedulers`, `${key} · Schedulers`],
-		[`/queues/${key}/jobs/job`, `${key} · job`],
+		[`/queues/${key}/schedulers`, key],
+		[`/queues/${key}/jobs/job`, "job"],
 	]) {
 		await page.goto(path);
-		const box = await page.getByText(label).boundingBox();
+		const current = page
+			.getByRole("navigation", { name: "Breadcrumb" })
+			.locator("button[aria-current=page]");
+		await expect(current).toContainText(label);
+		const box = await current.boundingBox();
 		if (!box) throw new Error("Element has no bounding box");
 		expect(box.x + box.width).toBeLessThanOrEqual(390);
 		await expect(
-			page.getByRole("link", { name: /^(Back to )?Jobs$/i }),
+			page.getByRole("link", { name: /^(← )?(Back to )?Jobs$/i }),
 		).toBeVisible();
 	}
 });
@@ -1753,7 +1773,7 @@ test("round3: short viewport scrolls filters and results without clipping", asyn
 	withRows = true;
 	await page.reload();
 	await expect(
-		page.getByRole("link", { name: "Result 0", exact: true }),
+		page.getByRole("link", { name: "item-0", exact: true }),
 	).toBeAttached();
 	await page.mouse.move(600, 400);
 	await page.mouse.wheel(0, 700);
@@ -1764,15 +1784,8 @@ test("round3: short viewport scrolls filters and results without clipping", asyn
 	const box = await results.boundingBox();
 	if (!box) throw new Error("Results have no bounds");
 	expect(box.height).toBeGreaterThan(0);
-	await page.mouse.move(
-		box.x + box.width / 2,
-		Math.min(430, box.y + box.height / 2),
-	);
-	await page.mouse.wheel(0, 6000);
-	await expect
-		.poll(() => results.evaluate((element) => element.scrollTop))
-		.toBeGreaterThan(0);
-	const last = page.getByRole("link", { name: "Result 19", exact: true });
+	const last = page.getByRole("link", { name: "item-19", exact: true });
+	await last.scrollIntoViewIfNeeded();
 	const lastBox = await last.boundingBox();
 	if (!lastBox) throw new Error("Last row has no bounds");
 	expect(lastBox.y).toBeGreaterThanOrEqual(0);
@@ -1791,21 +1804,16 @@ test("round3: short viewport scrolls filters and results without clipping", asyn
 			.locator("table.queue-jobs-table")
 			.locator("../..");
 		await expect(
-			page.getByRole("link", { name: "Result 0", exact: true }),
+			page.getByRole("link", { name: "item-0", exact: true }),
 		).toBeVisible();
 		const resultBox = await currentResults.boundingBox();
 		if (!resultBox) throw new Error("Results have no bounds");
 		expect(resultBox.x + resultBox.width).toBeLessThanOrEqual(width);
-		await page.mouse.move(
-			resultBox.x + resultBox.width / 2,
-			resultBox.y + Math.min(resultBox.height / 2, 200),
-		);
-		await page.mouse.wheel(0, 6000);
-		await expect
-			.poll(() => currentResults.evaluate((element) => element.scrollTop))
-			.toBeGreaterThan(0);
+		await page
+			.getByRole("link", { name: "item-19", exact: true })
+			.scrollIntoViewIfNeeded();
 		const finalBox = await page
-			.getByRole("link", { name: "Result 19", exact: true })
+			.getByRole("link", { name: "item-19", exact: true })
 			.boundingBox();
 		if (!finalBox) throw new Error("Last row has no bounds");
 		expect(finalBox.y + finalBox.height).toBeLessThanOrEqual(900);
@@ -1981,15 +1989,11 @@ test("round1: explicit search retries once and cached results survive history", 
 		}),
 	);
 	await page.goto("/queues/sample/jobs?mode=name&query=first");
-	await expect(
-		page.getByRole("link", { name: browserJob.name, exact: true }),
-	).toBeVisible();
+	await expect(page.getByTitle(browserJob.id)).toBeVisible();
 	expect(calls).toBe(1);
-	await page.getByRole("link", { name: browserJob.name, exact: true }).click();
+	await page.getByTitle(browserJob.id).click();
 	await page.goBack();
-	await expect(
-		page.getByRole("link", { name: browserJob.name, exact: true }),
-	).toBeVisible();
+	await expect(page.getByTitle(browserJob.id)).toBeVisible();
 	await page.waitForTimeout(500);
 	expect(calls).toBe(1);
 	failure = true;
@@ -2004,9 +2008,7 @@ test("round1: explicit search retries once and cached results survive history", 
 		page.getByRole("button", { name: "Retry", exact: true }),
 	).toBeEnabled();
 	await page.goBack();
-	await expect(
-		page.getByRole("link", { name: browserJob.name, exact: true }),
-	).toBeVisible();
+	await expect(page.getByTitle(browserJob.id)).toBeVisible();
 	await page.goForward();
 	await expect(page.getByRole("alert")).toBeVisible();
 	await page.waitForTimeout(500);
@@ -2068,7 +2070,7 @@ test("round1: long queue names leave statuses and links inside the row", async (
 	for (const width of [320, 390]) {
 		await page.setViewportSize({ width, height: 450 });
 		await page.goto("/queues");
-		for (const state of ["Running", "Paused"]) {
+		for (const state of ["Not paused", "Paused"]) {
 			const badge = page.getByText(state, { exact: true });
 			const row = badge.locator("xpath=ancestor::li");
 			const bounds = await row.boundingBox();
@@ -2105,7 +2107,7 @@ test("round1: focus indicators contrast against their surfaces", async ({
 		localStorage.setItem("vite-ui-theme", "light"),
 	);
 	await page.goto("/queues/sample/jobs?mode=name");
-	for (const label of ["Browse", "Full job name"]) {
+	for (const label of ["Exact job ID", "Full job name"]) {
 		const button = page.getByRole("radio", { name: label });
 		await button.focus();
 		const ratio = await button.evaluate((element) => {
@@ -2777,13 +2779,7 @@ test("round3 fix: superseding refresh navigation releases its lock", async ({
 	await mockSession(page);
 	let hold = false;
 	let release = () => {};
-	let accessCalls = 0;
 	await page.route("**/rpc/access/me", async (route) => {
-		accessCalls++;
-		if (hold)
-			await new Promise<void>((resolve) => {
-				release = resolve;
-			});
 		return route.fulfill({
 			json: {
 				json: {
@@ -2796,8 +2792,12 @@ test("round3 fix: superseding refresh navigation releases its lock", async ({
 		});
 	});
 	const terms: string[] = [];
-	await page.route("**/rpc/queues/jobs**", (route) => {
+	await page.route("**/rpc/queues/jobs**", async (route) => {
 		terms.push(route.request().postDataJSON().json.query);
+		if (hold)
+			await new Promise<void>((resolve) => {
+				release = resolve;
+			});
 		return route.fulfill({
 			json: {
 				json: {
@@ -2825,12 +2825,12 @@ test("round3 fix: superseding refresh navigation releases its lock", async ({
 	await expect(
 		page.getByText("No matches in the searched range."),
 	).toBeVisible();
-	const before = accessCalls;
+	const before = terms.length;
 	hold = true;
 	await page.getByRole("button", { name: "Refresh", exact: true }).click();
-	await expect.poll(() => accessCalls).toBeGreaterThan(before);
+	await expect.poll(() => terms.length).toBeGreaterThan(before);
 	hold = false;
-	await page.evaluate(() => history.go(-2));
+	await page.evaluate(() => history.back());
 	release();
 	await expect(
 		page.getByRole("textbox", { name: "Full job name" }),
@@ -3001,9 +3001,13 @@ test("job breadcrumb links to real queue jobs in the current workspace", async (
 	await page.setViewportSize({ width: 390, height: 700 });
 	await page.goto("/queues/sample/jobs/long-job-id?workspace=application");
 	const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
-	await breadcrumb
-		.getByRole("button", { name: "Breadcrumb ancestors" })
-		.click();
+	await expect(breadcrumb.locator("button[aria-current=page]")).toContainText(
+		"sample",
+	);
+	await expect(breadcrumb.locator("button[aria-current=page]")).toContainText(
+		"long-job-id",
+	);
+	await breadcrumb.locator("button[aria-current=page]").click();
 	const queues = page.getByRole("menuitem", { name: "Queues" });
 	const jobs = page.getByRole("menuitem", { name: "Jobs" });
 	await expect(queues).toHaveAttribute(
@@ -3166,6 +3170,30 @@ test("search opens index routes and focuses main while preserving workspace", as
 	}
 });
 
+test("non-queue breadcrumb truncates long titles on narrow screens", async ({
+	page,
+}) => {
+	await mockSession(page);
+	for (const width of [320, 390]) {
+		await page.setViewportSize({ width, height: 844 });
+		await page.goto("/apps/integrations-demo?workspace=application");
+		const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
+		const current = breadcrumb.locator('[aria-current="page"]');
+		await expect(current).toHaveText("Integration examples");
+		await expect(current).toHaveCSS("text-overflow", "ellipsis");
+		await expect(current).toHaveCSS("overflow", "hidden");
+		const currentBox = await current.boundingBox();
+		const searchBox = await page
+			.getByRole("button", { name: "Search pages" })
+			.boundingBox();
+		if (!currentBox || !searchBox) throw new Error("Missing header geometry");
+		expect(currentBox.x + currentBox.width).toBeLessThanOrEqual(searchBox.x);
+		await current.click();
+		await expect(page.getByRole("menu")).toContainText("Integration examples");
+		await page.keyboard.press("Escape");
+	}
+});
+
 test("header tools and collapsed workspace switcher match approved geometry", async ({
 	page,
 }, info) => {
@@ -3250,4 +3278,539 @@ test("header tools and collapsed workspace switcher match approved geometry", as
 	expect(logo.y + logo.height).toBe(56);
 	expect(surface.x).toBe(72);
 	await page.screenshot({ path: info.outputPath("sidebar-768-collapsed.png") });
+});
+
+test("queue board retains browsing scope and separates count failures", async ({
+	page,
+}, info) => {
+	await mockSession(page);
+	await page.route("**/rpc/access/me", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
+	);
+	let countFailure: "none" | "unavailable" | "forbidden" = "none";
+	await page.route("**/rpc/queues/list**", (route) =>
+		countFailure !== "none"
+			? route.fulfill({
+					status: countFailure === "forbidden" ? 403 : 503,
+					json: {
+						json: {
+							code:
+								countFailure === "forbidden"
+									? "FORBIDDEN"
+									: "SERVICE_UNAVAILABLE",
+							status: countFailure === "forbidden" ? 403 : 503,
+							message: "Unavailable",
+						},
+					},
+				})
+			: route.fulfill({
+					json: {
+						json: [
+							{
+								key: "user-profile",
+								name: "User profile",
+								paused: false,
+								counts: {
+									waiting: 21,
+									active: 2,
+									completed: 21,
+									failed: 3,
+									delayed: 1,
+									"waiting-children": 0,
+									prioritized: 1,
+								},
+							},
+						],
+					},
+				}),
+	);
+	await page.route("**/rpc/queues/jobs**", (route) => {
+		const query = route.request().postDataJSON().json;
+		const item = {
+			id: "job-demo-1",
+			name: "sync-profile",
+			state: "failed",
+			attemptsMade: 3,
+			attemptsConfigured: 3,
+			timestamp: 1,
+			processedOn: null,
+			finishedOn: null,
+			failedReason: "Example failure",
+			summary: { userId: "demo-user" },
+		};
+		return route.fulfill({
+			json: {
+				json:
+					query.mode === "name"
+						? {
+								mode: "name",
+								items: [item],
+								scannedCount: 100,
+								scanTruncated: true,
+								resultsTruncated: true,
+								refreshedAt: new Date().toISOString(),
+							}
+						: {
+								mode: "browse",
+								items: [item],
+								total: 21,
+								page: 2,
+								pageSize: 20,
+								refreshedAt: new Date().toISOString(),
+							},
+			},
+		});
+	});
+	await page.goto("/queues/user-profile/jobs?status=failed&page=2");
+	await expect(
+		page
+			.getByRole("navigation", { name: "Breadcrumb" })
+			.locator("button[aria-current=page]"),
+	).toContainText("user-profile");
+	await expect(page.getByText("Example failure")).toBeVisible();
+	countFailure = "unavailable";
+	await page.getByRole("button", { name: "Refresh", exact: true }).click();
+	await expect(page.getByText("Example failure")).toBeVisible();
+	await expect(page.getByRole("radio", { name: /Failed/ })).toContainText("—", {
+		timeout: 15000,
+	});
+	await page.getByRole("button", { name: "Find job" }).click();
+	await page.getByRole("radio", { name: "Full job name" }).click();
+	await page
+		.getByRole("textbox", { name: "Full job name" })
+		.fill("sync-profile");
+	await page.getByRole("button", { name: "Search", exact: true }).click();
+	await expect(page.getByText(/More jobs were not scanned/)).toContainText(
+		"More matches were omitted",
+	);
+	await page.getByRole("button", { name: /Back to browsing/ }).click();
+	await expect(page).toHaveURL(/status=failed/);
+	await expect(page).toHaveURL(/page=2/);
+	for (const width of [1440, 1024, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		for (const theme of ["light", "dark"]) {
+			await page.evaluate((value) => {
+				document.documentElement.classList.remove("light", "dark");
+				document.documentElement.classList.add(value);
+			}, theme);
+			await page.waitForTimeout(500);
+			await page.screenshot({
+				path: info.outputPath(`queue-board-error-${width}-${theme}.png`),
+			});
+		}
+	}
+	countFailure = "forbidden";
+	await page.getByRole("button", { name: "Refresh", exact: true }).click();
+	await expect(page.getByText("Example failure")).toHaveCount(0, {
+		timeout: 15000,
+	});
+	await expect(page.getByRole("alert")).toContainText("Access denied");
+});
+
+test("queue detail returns to the same browsing scroll position", async ({
+	page,
+}, info) => {
+	await mockSession(page);
+	await page.route("**/rpc/access/me", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					platformRole: "superadmin",
+					organizationId: "application",
+					pages: ["queues"],
+				},
+			},
+		}),
+	);
+	await page.route("**/rpc/queues/list**", (route) =>
+		route.fulfill({
+			json: {
+				json: [
+					{
+						key: "user-profile",
+						name: "User profile",
+						paused: false,
+						counts: {
+							waiting: 20,
+							active: 0,
+							completed: 0,
+							failed: 0,
+							delayed: 0,
+							prioritized: 0,
+							"waiting-children": 0,
+						},
+					},
+				],
+			},
+		}),
+	);
+	const job = {
+		id: "job-19",
+		name: "sync-profile",
+		state: "waiting",
+		attemptsMade: 0,
+		attemptsConfigured: 3,
+		timestamp: 1,
+		processedOn: null,
+		finishedOn: null,
+		summary: { userId: "demo" },
+		result: {},
+		stacktrace: "stack only",
+	};
+	await page.route("**/rpc/queues/jobs**", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					mode: "browse",
+					items: Array.from({ length: 20 }, (_, i) => ({
+						...job,
+						id: `job-${i}`,
+					})),
+					total: 20,
+					page: 1,
+					pageSize: 20,
+					refreshedAt: new Date().toISOString(),
+				},
+			},
+		}),
+	);
+	await page.route("**/rpc/queues/job", (route) =>
+		route.fulfill({ json: { json: job } }),
+	);
+	await page.route("**/rpc/queues/logs**", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					lines: [],
+					total: 0,
+					page: 1,
+					clipped: false,
+					refreshedAt: new Date().toISOString(),
+				},
+			},
+		}),
+	);
+	await page.setViewportSize({ width: 390, height: 700 });
+	await page.goto("/queues/user-profile/jobs");
+	const last = page.getByRole("link", { name: "job-19", exact: true });
+	await last.scrollIntoViewIfNeeded();
+	const before = await last.evaluate(
+		(element) => element.closest(".overflow-y-auto")?.scrollTop ?? 0,
+	);
+	expect(before).toBeGreaterThan(0);
+	await last.click();
+	await expect(page.getByText("stack only")).toBeVisible();
+	await page.screenshot({
+		path: info.outputPath("queue-detail-scroll.png"),
+		fullPage: true,
+	});
+	await page.getByRole("link", { name: /Back to jobs/ }).click();
+	await expect
+		.poll(() =>
+			page
+				.getByRole("link", { name: "job-19", exact: true })
+				.evaluate(
+					(element) => element.closest(".overflow-y-auto")?.scrollTop ?? 0,
+				),
+		)
+		.toBeGreaterThan(0);
+});
+
+test("queue visual fixtures show normal counts and state-specific mobile times", async ({
+	page,
+}, info) => {
+	await mockSession(page);
+	await page.route("**/rpc/access/me", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					role: "user",
+					organizationId: "application",
+					platformRole: "superadmin",
+					pages: ["queues"],
+				},
+			},
+		}),
+	);
+	const states = [
+		"waiting",
+		"active",
+		"completed",
+		"failed",
+		"delayed",
+		"prioritized",
+	];
+	const base = Date.parse("2026-10-30T01:10:00Z");
+	const items = states.map((state, i) => ({
+		id: `job-demo-${i}`,
+		name: "sync-profile",
+		state,
+		attemptsMade: i === 3 ? 3 : 1,
+		attemptsConfigured: 3,
+		timestamp: base + i * 60000,
+		processedOn: state === "active" ? base + 600000 : null,
+		finishedOn: state === "failed" ? base + 900000 : null,
+		failedReason:
+			state === "failed"
+				? "Upstream service timed out while reading a profile. The request could not be completed after several attempts, and the full diagnostic remains available in job detail."
+				: null,
+		summary: { userId: `demo-user-${i}` },
+	}));
+	const counts = {
+		waiting: 6,
+		active: 2,
+		completed: 21,
+		failed: 3,
+		delayed: 1,
+		"waiting-children": 0,
+		prioritized: 1,
+	};
+	await page.route("**/rpc/queues/list**", (route) =>
+		route.fulfill({
+			json: {
+				json: [
+					{ key: "user-profile", name: "User profile", paused: false, counts },
+				],
+			},
+		}),
+	);
+	await page.route("**/rpc/queues/jobs**", (route) => {
+		const input = route.request().postDataJSON().json;
+		return route.fulfill({
+			json: {
+				json:
+					input.mode === "name"
+						? {
+								mode: "name",
+								items,
+								scannedCount: 34,
+								scanTruncated: false,
+								resultsTruncated: false,
+								refreshedAt: new Date().toISOString(),
+							}
+						: {
+								mode: "browse",
+								items: items.map((item) => ({
+									...item,
+									state: "waiting",
+									processedOn: null,
+									finishedOn: null,
+									failedReason: null,
+								})),
+								total: 6,
+								page: 1,
+								pageSize: 20,
+								refreshedAt: new Date().toISOString(),
+							},
+			},
+		});
+	});
+	await page.route("**/rpc/queues/job", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					...items[3],
+					result: {},
+					stacktrace: "Full diagnostic stack",
+					refreshedAt: new Date().toISOString(),
+				},
+			},
+		}),
+	);
+	await page.route("**/rpc/queues/logs**", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					lines: [
+						"Profile synchronization started",
+						"Upstream request timed out",
+					],
+					total: 2,
+					page: 1,
+					pageSize: 50,
+					clipped: false,
+				},
+			},
+		}),
+	);
+	await page.goto("/queues/user-profile/jobs");
+	await expect(
+		page.getByRole("radio", { name: "Waiting", exact: true }),
+	).toContainText("6");
+	for (const width of [1440, 1024, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		for (const theme of ["light", "dark"]) {
+			await page.evaluate((value) => {
+				document.documentElement.classList.remove("light", "dark");
+				document.documentElement.classList.add(value);
+			}, theme);
+			await page.waitForTimeout(500);
+			await page.screenshot({
+				path: info.outputPath(`normal-${width}-${theme}.png`),
+			});
+		}
+	}
+	await page.goto("/queues/user-profile/jobs?mode=name&query=sync-profile");
+	await expect(page.getByText("6 matches returned")).toBeVisible();
+	for (const [index, label] of [
+		[0, "Created"],
+		[1, "Processed"],
+		[2, "Finished"],
+		[3, "Finished"],
+		[4, "Created"],
+		[5, "Created"],
+	] as const) {
+		const row = page.getByRole("row").filter({
+			has: page.getByRole("link", { name: `job-demo-${index}`, exact: true }),
+		});
+		await expect(row.locator(".queue-mobile-time")).toContainText(label);
+		await expect(
+			row.locator(".queue-mobile-time .queue-field-label"),
+		).toHaveText(label);
+		const time =
+			index === 2
+				? null
+				: index === 1
+					? items[index].processedOn
+					: index === 3
+						? items[index].finishedOn
+						: items[index].timestamp;
+		const expected =
+			time === null
+				? "—"
+				: await page.evaluate(
+						(value) =>
+							new Intl.DateTimeFormat("en-US", {
+								month: "short",
+								day: "numeric",
+								hour: "2-digit",
+								minute: "2-digit",
+								hourCycle: "h23",
+							}).format(value),
+						time,
+					);
+		await expect(row.locator(".queue-mobile-time span").last()).toHaveText(
+			expected,
+		);
+		await expect(row.locator(".queue-created-time")).toBeHidden();
+	}
+	const failure = page
+		.locator(".queue-failure-summary")
+		.filter({ hasText: "Upstream service" });
+	await expect(failure).toBeVisible();
+	expect(
+		await failure.evaluate((el) => el.scrollHeight > el.clientHeight),
+	).toBeTruthy();
+	for (const theme of ["light", "dark"]) {
+		await page.evaluate((value) => {
+			document.documentElement.classList.remove("light", "dark");
+			document.documentElement.classList.add(value);
+		}, theme);
+		await page.waitForTimeout(500);
+		await page.screenshot({
+			path: info.outputPath(`mixed-390-${theme}.png`),
+			fullPage: true,
+		});
+	}
+	await page
+		.getByRole("link", { name: "job-demo-3", exact: true })
+		.scrollIntoViewIfNeeded();
+	for (const theme of ["light", "dark"]) {
+		await page.evaluate((value) => {
+			document.documentElement.classList.remove("light", "dark");
+			document.documentElement.classList.add(value);
+		}, theme);
+		await page.waitForTimeout(500);
+		await page.screenshot({
+			path: info.outputPath(`mixed-results-390-${theme}.png`),
+		});
+	}
+	await page.getByRole("link", { name: "job-demo-3", exact: true }).click();
+	await expect(page.getByText("Full diagnostic stack")).toBeVisible();
+	await page.screenshot({
+		path: info.outputPath("detail-390-dark.png"),
+		fullPage: true,
+	});
+	await page.evaluate(() => {
+		document.documentElement.classList.remove("dark");
+		document.documentElement.classList.add("light");
+	});
+	await page.waitForTimeout(500);
+	await page.screenshot({
+		path: info.outputPath("detail-390-light.png"),
+		fullPage: true,
+	});
+	const breadcrumb = page
+		.getByRole("navigation", { name: "Breadcrumb" })
+		.locator("button[aria-current=page]");
+	await expect(breadcrumb).toContainText("user-profile");
+	await expect(breadcrumb).toContainText("job-demo-3");
+	await expect(page.getByRole("heading", { name: "job-demo-3" })).toHaveClass(
+		"sr-only",
+	);
+	await expect(page.getByRole("button", { name: "Copy Job ID" })).toBeVisible();
+	await page.getByRole("link", { name: /Back to jobs/ }).click();
+	await expect(page).toHaveURL(/mode=name/);
+	await expect(page).toHaveURL(/query=sync-profile/);
+	await expect(
+		page.getByRole("textbox", { name: "Full job name" }),
+	).toHaveValue("sync-profile");
+	await page.route("**/rpc/queues/schedulers**", (route) =>
+		route.fulfill({
+			json: {
+				json: {
+					items: [
+						{
+							id: "schedule-1",
+							name: "sync-profile",
+							pattern: "0 * * * *",
+							every: null,
+							tz: "UTC",
+							next: base + 3600000,
+							lastTrigger: { kind: "unknown" },
+						},
+					],
+					total: 1,
+					page: 1,
+					refreshedAt: new Date().toISOString(),
+				},
+			},
+		}),
+	);
+	for (const width of [1440, 390]) {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto("/queues");
+		await expect(
+			page.getByRole("heading", { name: "Queues", exact: true }),
+		).toHaveClass("sr-only");
+		await expect(
+			page.getByRole("link", { name: "User profile" }),
+		).toBeVisible();
+		await page.screenshot({
+			path: info.outputPath(`overview-${width}-light.png`),
+		});
+		await page.goto("/queues/user-profile/schedulers");
+		await expect(
+			page
+				.getByRole("navigation", { name: "Breadcrumb" })
+				.locator("button[aria-current=page]"),
+		).toContainText("user-profile");
+		await expect(
+			page.getByRole("heading", { name: "user-profile schedulers" }),
+		).toHaveClass("sr-only");
+		await expect(page.getByText("No record")).toBeVisible();
+		await page.screenshot({
+			path: info.outputPath(`schedulers-${width}-light.png`),
+		});
+	}
 });

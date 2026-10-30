@@ -1,11 +1,11 @@
 export const jobStatuses = [
 	"waiting",
 	"active",
-	"delayed",
 	"completed",
 	"failed",
-	"prioritized",
+	"delayed",
 	"waiting-children",
+	"prioritized",
 ] as const;
 export type JobStatus = (typeof jobStatuses)[number];
 

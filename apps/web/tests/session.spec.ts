@@ -350,6 +350,9 @@ test("round2: real sign-out cancels an authorized search transition", async ({
 			})
 			.catch(() => {});
 	});
+	await page.route("**/rpc/queues/list**", (route) =>
+		route.fulfill({ json: { json: [] } }),
+	);
 	const terms: string[] = [];
 	await page.route("**/rpc/queues/jobs**", (route) => {
 		terms.push(route.request().postDataJSON().json.query);
@@ -422,6 +425,9 @@ test("round2: late queue response from a signed-out owner cannot repopulate cach
 				},
 			},
 		}),
+	);
+	await page.route("**/rpc/queues/list**", (route) =>
+		route.fulfill({ json: { json: [] } }),
 	);
 	let release = () => {};
 	let captured = () => {};
