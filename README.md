@@ -25,7 +25,13 @@ If you already have Node.js/npm, install pnpm with `npm install -g pnpm@12.15.0`
 
 `env:init` creates ignored local configuration with a random auth secret and preserves existing files. This setup targets a new database; for an existing database created with `db:push`, review the [migration guidance](docs/operations.md#database-migrations) first.
 
-Open [localhost:3001](http://localhost:3001), register or sign in, and visit `/todos` to create, complete, and delete tasks. Each account has its own list.
+For a fresh database, keep `pnpm dev` running and complete the first-time setup:
+
+1. Open [localhost:3001](http://localhost:3001) and register in the UI. In the same browser, open [localhost:3000/api/auth/get-session](http://localhost:3000/api/auth/get-session) and copy `user.id`.
+2. In another terminal, run `pnpm admin:bootstrap <user-id>`. The CLI revokes sessions; sign in again.
+3. Open `/workspaces`, create a workspace with a Name and Slug, enter your registered email as Owner email, and enable Todos. Select the workspace, then open Todos to create, edit, complete and delete tasks.
+
+Bootstrap is a one-time operation. If an administrator already exists, ask them to assign your account to a workspace instead.
 
 The API runs at [localhost:3000](http://localhost:3000), with an [API reference](http://localhost:3000/api-reference). The [development guide](docs/development.md#application-composition) shows typed profile and background-job calls.
 

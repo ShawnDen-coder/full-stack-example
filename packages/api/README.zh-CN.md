@@ -14,7 +14,7 @@
 | [src/routers/todo.ts](src/routers/todo.ts) | 输入校验和用户范围 CRUD 的参考实现 |
 | [src/routers/index.ts](src/routers/index.ts) | 注册路由并推导客户端类型 |
 | [src/queue-monitor.ts](src/queue-monitor.ts) | 基于 `@bull-board/api` 的只读 BullMQ 投影 |
-| [src/routers/queues.ts](src/routers/queues.ts) | 受页面权限保护的队列、任务、日志和定时过程 |
+| [src/routers/queues.ts](src/routers/queues.ts) | 受平台权限保护的队列、任务、日志和定时过程 |
 | [src/auth.ts](src/auth.ts) | Better Auth 工厂 |
 
 ## 扩展步骤
@@ -82,3 +82,9 @@ pnpm --filter server test
 将同一个不可变 scope 传给 service。不能依靠 session 的 activeOrganizationId 选择业务对象。
 原生 Organization 写接口使用允许列表，成员与角色必须属于显式指定的组织；owner 变更、移除、
 邀请和删除仍未开放。Queues 使用 `platformProcedure`；账号资料任务继续按用户隔离。
+
+普通业务规则和可复用用例属于 domain。access/workspaces 是 Better Auth 组织管理的特定适配层：可以解析会话、执行原生权限检查、在事务中配置组织成员和角色，并映射传输错误。此例外不适用于 Todo 普通业务。出现真实的非 HTTP 复用需求时再提取具体用例；domain 不接收 `Headers`、session 或 `ORPCError`。
+
+队列监控注册项二选一：原生 BullMQ `Queue` 或包含日志读取的完整 `QueueReadAdapter`。两者只用于应用组装；procedure 接收监控能力，队列仍由 producer 负责关闭。
+
+空间创建和账号封禁共享[用户行锁协议](../../docs/access-control.zh-CN.md)：在同一事务内检查和写入，并另行执行授权。参见[并发测试](../../apps/server/tests/integration/workspaces.test.ts)。

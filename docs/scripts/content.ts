@@ -4,6 +4,7 @@ import path from "node:path";
 export const repository =
 	"https://github.com/ShawnDen-coder/full-stack-example";
 export const packageNames = [
+	"access",
 	"api",
 	"domain",
 	"db",
@@ -29,6 +30,11 @@ export function pages(language: Language) {
 		},
 		{ source: `CONTRIBUTING${suffix}.md`, route: "/guide/contributing/" },
 		{ source: `docs/operations${suffix}.md`, route: "/operations/" },
+		{
+			source: `docs/access-control${suffix}.md`,
+			route: "/guide/access-control/",
+		},
+		{ source: `container/README${suffix}.md`, route: "/operations/container/" },
 		{
 			source: `docs/observability${suffix}.md`,
 			route: "/operations/observability/",
@@ -125,6 +131,7 @@ export function sidebar(language: Language) {
 					zh ? "扩展约定" : "Extension contract",
 					"/guide/extension-design/",
 				),
+				item(zh ? "权限控制" : "Access control", "/guide/access-control/"),
 				item(zh ? "贡献与发布" : "Contributing", "/guide/contributing/"),
 			],
 		},
@@ -132,6 +139,7 @@ export function sidebar(language: Language) {
 			text: zh ? "运维" : "Operations",
 			items: [
 				item(zh ? "部署与恢复" : "Deployment and recovery", "/operations/"),
+				item(zh ? "容器" : "Containers", "/operations/container/"),
 				item(zh ? "可观测性" : "Observability", "/operations/observability/"),
 			],
 		},

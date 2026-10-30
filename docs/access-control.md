@@ -67,3 +67,5 @@ real creation, switching, double-click/keyboard entry, sidebar selection and lay
 
 Bootstrap only assigns the platform role by default. To explicitly grant ownership of
 an existing workspace as well, use `pnpm admin:bootstrap <user-id> --workspace-owner <workspace-id>`.
+
+Workspace creation and account bans share a row-lock protocol: [`workspaces.ts`](../packages/api/src/workspaces.ts) and [`auth.ts`](../packages/api/src/auth.ts) lock the same target user row and recheck and write inside the transaction. An owner cannot be banned, and a banned user cannot become an owner. New paths must follow this protocol; an outside-transaction check is insufficient, and the lock does not replace authorization. See the [concurrency integration test](../apps/server/tests/integration/workspaces.test.ts).

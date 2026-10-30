@@ -90,3 +90,12 @@ pnpm release
 ```
 
 预览只输出下一版本，不修改文件或运行发布 hooks。正式升版会依次检查提交格式、lint、包边界、测试、类型和构建，生成／更新 `CHANGELOG.md`，并创建本地版本 commit 和 tag。首次自动发布会分析已有历史。这两个命令都不推送、不发布 npm 包，也不部署应用。审查结果后再一起推送 `master` 和新 tag，例如 `git push --atomic origin master 0.1.0`（将 tag 替换为实际生成的版本）。
+
+[验证边界](docs/development.zh-CN.md#依赖与验证边界)区分 fixture E2E、空库 onboarding、真实 Worker 集成和运行角色 grants；它们不能互相替代。
+
+| 验证 | 进程／数据 | 证明范围 |
+| --- | --- | --- |
+| fixture E2E | Web + Server、预置专用数据库 | 界面与授权 |
+| 空库 onboarding | Web + Server、bootstrap CLI、同一专用空库 | 首次使用流程 |
+| 真实任务集成 | Worker、专用 PostgreSQL 和 Redis | 任务执行与 drain |
+| 运行角色 grants | 数据库和配置好的运行角色 | 运行权限，不是迁移 owner 权限 |

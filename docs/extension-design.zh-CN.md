@@ -10,7 +10,7 @@
 
 新增普通业务按“业务实现 → 应用注入 → API 路由”扩展；新增后台任务按“业务任务实现 → 显式注册消费者”扩展。生命周期逻辑不随消费者数量重复编写。
 
-保持六个共享包。统一同类工厂和业务操作的调用习惯，保留数据库、UI 和基础设施各自的接口。变更公共 HTTP 接口、兼容别名、队列名、任务名、重试／保留策略或数据库结构时，应单独评估兼容性与迁移方案。
+保留现有共享包。统一同类工厂和业务操作的调用习惯，保留数据库、UI 和基础设施各自的接口。变更公共 HTTP 接口、兼容别名、队列名、任务名、重试／保留策略或数据库结构时，应单独评估兼容性与迁移方案。
 
 ## 职责与接线位置
 
@@ -23,7 +23,11 @@
 | [Worker entry](../apps/worker/src/index.ts)、[lifecycle](../apps/worker/src/lifecycle.ts) 与心跳 | 信号、致命失败、进程退出、停止心跳、最终 deadline | 维护一次进程级退出流程 |
 | db／queue／observability／ui | 各自的基础设施或共享能力 | 只在能力本身变化时修改 |
 
-消费者协议归应用运行时所有，业务包继续返回原生 BullMQ Worker，使用结构类型匹配协议；业务代码不导入应用类型。queue 继续提供通用连接和 telemetry，不存储业务注册表。只读监控在 server 组装：profile producer 交出已有 Queue，server 注册表把稳定 key 和摘要投影绑到该实例。API 用 `@bull-board/api` 的 `BullMQAdapter` 实现 `queues` oRPC，并由 `pageProcedure("queues")` 保护。不挂载 Bull Board 的 HTTP 应用和 UI。新队列只有写进这个 server 注册表后才会出现在页面上。
+消费者协议归应用运行时所有，业务包继续返回原生 BullMQ Worker，使用结构类型匹配协议；业务代码不导入应用类型。queue 继续提供通用连接和 telemetry，不存储业务注册表。只读监控在 server 组装：profile producer 交出已有 Queue，server 注册表把稳定 key 和摘要投影绑到该实例。API 用 `@bull-board/api` 的 `BullMQAdapter` 实现 `queues` oRPC，并由 `platformProcedure` 保护。不挂载 Bull Board 的 HTTP 应用和 UI。新队列只有写进这个 server 注册表后才会出现在页面上。
+
+实际组装方向是：web 导入共享 access 契约和 API 类型；server 导入 API 工厂和 domain 服务，再把实例注入 API；worker 导入 domain 工厂并自行管理资源。API 的 access 适配层使用 Better Auth 和数据库，Todo 规则仍在 domain。这些依赖用于授权和资源归属；下方允许列表比实际使用的 import 更宽。
+
+新增任务时修改 domain 契约、producer、worker 和 exports，在 `apps/server/src/services.ts` 接入 producer 及其清理，并在 `apps/worker/src/runtime.ts` 注册消费者。若队列需要出现在监控中，还要将现有 Queue 和安全摘要接入 server 的 `createQueueMonitor` 注册表（摘要位于 `apps/server/src/queue-summaries.ts`）。消费者注册和监控注册服务于不同进程，互不自动完成。
 
 ## 工厂与业务操作
 
@@ -34,12 +38,12 @@
 ```ts
 const service = createTodosService({ db });
 const repository = createTodosRepository({ db: tx });
-const owned = repository.forUser(userId);
+const owned = repository.forUser(userId, workspaceId);
 
-await service.list({ userId, cursor, limit });
-await service.create({ userId, text });
-await service.setCompleted({ userId, id, completed });
-await service.delete({ userId, id });
+await service.list({ userId, workspaceId, cursor, limit });
+await service.create({ userId, workspaceId, text });
+await service.setCompleted({ userId, workspaceId, id, completed });
+await service.delete({ userId, workspaceId, id });
 
 await owned.list({ cursor, limit });
 await owned.setCompleted({ id, completed });
@@ -49,7 +53,7 @@ await profileJobs.enqueueProfileRead({ userId, requestId });
 await profileJobs.getProfileReadJob({ userId, jobId });
 ```
 
-- 多个业务字段使用对象；单个标识符可保留原始参数，如 `forUser(userId)`、`getProfile(userId)` 和 scope 内的 `delete(id)`。
+- 多个业务字段使用对象；单个标识符可保留原始参数，如 `forUser(userId, workspaceId)`、`getProfile(userId)` 和 scope 内的 `delete(id)`。
 - `db` 可为数据库或事务时，Repository 使用所需查询方法的结构类型，不要求连接池或 `close()`。事务仍由业务用例负责。
 - 用户范围来自已认证 session 或校验后的任务上下文；创建方法显式填入归属，不透传任意输入对象给数据库。
 - Scope 使用独立闭包，不修改共享实例的当前用户；业务方法返回结果，不返回查询构造器。
@@ -171,11 +175,13 @@ flowchart TB
   server["apps/server"]
   worker["apps/worker"]
   api["packages/api"]
+  access["packages/access"]
   business["packages/domain"]
   db["packages/db"]
   queue["packages/queue"]
   observability["packages/observability"]
   ui["packages/ui"]
+  web --> access
   web --> ui
   web -.->|仅类型| api
   server --> api
@@ -187,6 +193,7 @@ flowchart TB
   worker --> db
   worker --> queue
   worker --> observability
+  api --> access
   api --> business
   api --> db
   api --> queue
@@ -199,10 +206,10 @@ flowchart TB
 
 | 来源 | 允许依赖的内部包 |
 | --- | --- |
-| `apps/web` | ui，以及仅类型导入的 API 客户端契约 |
-| `apps/server` | api、domain、db、queue、observability |
+| `apps/web` | ui、access，以及仅类型导入的 API 客户端契约 |
+| `apps/server` | api、access、domain、db、queue、observability |
 | `apps/worker` | domain、db、queue、observability |
-| api | domain、db、queue、observability |
+| api | access、domain、db、queue、observability |
 | domain | db、queue、observability |
 | db | observability |
 | queue／observability／ui | 不依赖其他内部包 |
@@ -236,3 +243,14 @@ flowchart TB
 
 
 新增工具还需要稳定的 access 页面 key／路径、web 路由及展示目录元数据。API 使用 `pageProcedure` 授权并从 session 获取 owner；domain 独立执行归属检查。Worker 消费者须显式注册，展示目录不负责运行时接线。
+
+## 新增 workspace 页面工具
+
+此清单仅适用于 workspace 页面工具，不适用于后台任务。缺少工具配置或权限时默认拒绝。
+
+1. 在 [`packages/access/src/index.ts`](../packages/access/src/index.ts) 与 [`auth.ts`](../packages/access/src/auth.ts) 定义页面键、路径和原生权限。明确决定新工具是否属于 `standard` 默认角色；只有需要时才在 [`packages/api/src/workspaces.ts`](../packages/api/src/workspaces.ts) 的空间创建流程添加授权。
+2. 在空间创建中配置工具，在 [`apps/web/src/features/workspaces/index.tsx`](../apps/web/src/features/workspaces/index.tsx) 提供管理入口，并新增受保护路由及 [`catalog.ts`](../apps/web/src/lib/catalog.ts) 条目。新空间须分别启用工具并分配合适角色。
+3. 按需实现 domain 操作、API 授权／路由和 Server 依赖接线；数据或 Worker 访问变化时审查 schema、迁移和运行角色 grants。领域查询新增字段时，检查直接返回该对象的公共响应范围。
+4. 为已有空间规划迁移或管理员控制的升级，分别启用工具和授予权限；新空间默认值不会自动升级已有空间。
+
+后台任务需要 domain 契约、producer、Worker 工厂、producer 生命周期和消费者显式注册；队列监控注册可选，只有新增资源时才需要修改共享资源接线。

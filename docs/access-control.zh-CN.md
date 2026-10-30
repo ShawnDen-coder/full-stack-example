@@ -48,3 +48,5 @@ URL 中的空间；每次 Todo RPC 在 input 中固定 `workspaceId`。不使用
 
 Bootstrap 默认只授予平台身份。如需同时明确授予已有空间的 owner，使用
 `pnpm admin:bootstrap <user-id> --workspace-owner <workspace-id>`。
+
+空间创建与账号封禁共享行锁协议：[`workspaces.ts`](../packages/api/src/workspaces.ts) 和 [`auth.ts`](../packages/api/src/auth.ts) 锁定同一目标用户行，在事务内重新检查并写入，保证 owner 不可被封禁、被封禁用户不可成为 owner。新增路径须遵循同一协议，不能用事务外检查替代；锁也不能替代授权。参见[并发集成测试](../apps/server/tests/integration/workspaces.test.ts)。

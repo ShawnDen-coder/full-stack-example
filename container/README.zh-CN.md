@@ -85,3 +85,5 @@ pnpm exec varlock run --path ./deploy/ -- podman compose -f container/compose.pr
 ```
 
 生产配置检查需要提供必填部署值。配置检查通过后，仍需构建镜像，并按 [CI](../.github/workflows/ci.yml) 的流程执行生产冒烟检查。
+
+`pnpm infra:up` 需要支持 `up --wait` 的 Compose v2.24+ 兼容 provider；健康等待期限为 120 秒，并非镜像拉取及全部启动阶段的总超时。失败时检查 `podman compose -f container/compose.yml logs postgres redis`，并确认所选 provider 和 Podman machine。

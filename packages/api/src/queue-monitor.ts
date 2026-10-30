@@ -21,22 +21,15 @@ export class QueueMonitorUnavailableError extends Error {
 	}
 }
 
-export type MonitoringQueue = {
-	getJobLogs(
-		jobId: string,
-		start?: number,
-		end?: number,
-		asc?: boolean,
-	): Promise<{ logs: string[]; count: number }>;
-};
-
 export type QueueMonitorRegistration = {
 	key: string;
 	name: string;
-	queue: MonitoringQueue;
 	summarizeData: (data: unknown) => Record<string, string>;
 	summarizeResult: (result: unknown) => Record<string, string>;
-};
+} & (
+	| { queue: Queue; adapter?: never }
+	| { adapter: QueueReadAdapter; queue?: never }
+);
 
 type MonitoredJob = {
 	id?: string;
@@ -64,6 +57,12 @@ type MonitoredScheduler = {
 };
 
 export type QueueReadAdapter = {
+	getJobLogs(
+		jobId: string,
+		start?: number,
+		end?: number,
+		asc?: boolean,
+	): Promise<{ logs: string[]; count: number }>;
 	getJobCounts(): Promise<Record<string, number>>;
 	isPaused(): Promise<boolean>;
 	getJobs(
@@ -74,10 +73,6 @@ export type QueueReadAdapter = {
 	getJob(id: string): Promise<MonitoredJob | undefined>;
 	getJobSchedulers(start: number, end: number): Promise<MonitoredScheduler[]>;
 	getJobSchedulersCount(): Promise<number>;
-};
-
-type MonitorOptions = {
-	createAdapter?: (queue: MonitoringQueue) => QueueReadAdapter;
 };
 
 function clip(value: unknown): string | null {
@@ -97,17 +92,18 @@ function fields(record: Record<string, string>) {
 	return summary;
 }
 
-function createBullReader(queue: MonitoringQueue): QueueReadAdapter {
-	const adapter = new BullMQAdapter(queue as Queue);
+function createBullReader(queue: Queue): QueueReadAdapter {
+	const adapter = new BullMQAdapter(queue);
 	return {
+		getJobLogs: (id, start, end, asc) => queue.getJobLogs(id, start, end, asc),
 		getJobCounts: async () => ({ ...(await adapter.getJobCounts()) }),
 		isPaused: () => adapter.isPaused(),
 		getJobs: (statuses, start, end) =>
 			adapter.getJobs(statuses as JobStatus[], start, end),
 		getJob: (id) => adapter.getJob(id),
-		getJobSchedulersCount: () => (queue as Queue).getJobSchedulersCount(),
+		getJobSchedulersCount: () => queue.getJobSchedulersCount(),
 		getJobSchedulers: async (start, end) => {
-			const rows = await (queue as Queue).getJobSchedulers(start, end);
+			const rows = await queue.getJobSchedulers(start, end);
 			return Promise.all(
 				rows.map(async (row) => ({
 					id: row.key,
@@ -118,8 +114,7 @@ function createBullReader(queue: MonitoringQueue): QueueReadAdapter {
 					next: row.next ?? null,
 					lastRun:
 						row.next && (row.iterationCount ?? 0) > 1
-							? (await (queue as Queue).getJob(`repeat:${row.key}:${row.next}`))
-									?.timestamp
+							? (await queue.getJob(`repeat:${row.key}:${row.next}`))?.timestamp
 							: undefined,
 				})),
 			);
@@ -136,15 +131,14 @@ async function read<T>(work: () => Promise<T>) {
 	}
 }
 
-export function createQueueMonitor(
-	registrations: QueueMonitorRegistration[],
-	options: MonitorOptions = {},
-) {
-	const createAdapter = options.createAdapter ?? createBullReader;
+export function createQueueMonitor(registrations: QueueMonitorRegistration[]) {
 	const entries = new Map(
 		registrations.map((registration) => [
 			registration.key,
-			{ registration, adapter: createAdapter(registration.queue) },
+			{
+				registration,
+				adapter: registration.adapter ?? createBullReader(registration.queue),
+			},
 		]),
 	);
 
@@ -315,7 +309,7 @@ export function createQueueMonitor(
 				const job = await entry.adapter.getJob(jobId);
 				if (!job?.id) return null;
 				const start = (page - 1) * pageSize;
-				const result = await entry.registration.queue.getJobLogs(
+				const result = await entry.adapter.getJobLogs(
 					jobId,
 					start,
 					start + pageSize - 1,

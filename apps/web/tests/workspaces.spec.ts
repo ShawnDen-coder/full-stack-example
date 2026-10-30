@@ -6,22 +6,26 @@ import { expect, type Route, test } from "@playwright/test";
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 test("create workspaces, use cards and keep Todo data scoped when switching", async ({
 	page,
-	playwright,
 	browser,
 }, info) => {
 	const email = `${randomUUID()}@example.test`;
 	const password = "workspace-browser-test-password";
-	const request = await playwright.request.newContext();
-	const response = await request.post(
-		"http://127.0.0.1:43100/api/auth/sign-up/email",
-		{
-			headers: { Origin: "http://127.0.0.1:43101" },
-			data: { name: "Workspace tester", email, password },
-		},
-	);
-	expect(response.ok()).toBeTruthy();
-	const { user } = await response.json();
-	await request.dispose();
+	await page.goto("/sign-up");
+	await page.getByLabel("Name", { exact: true }).fill("Workspace tester");
+	await page.getByLabel("Email", { exact: true }).fill(email);
+	await page.getByLabel("Password", { exact: true }).fill(password);
+	await page.getByRole("button", { name: "Sign Up", exact: true }).click();
+	await expect(page).toHaveURL(/\/apps(?:\?|$)/);
+	const session = await page.evaluate(async () => {
+		const response = await fetch(
+			"http://127.0.0.1:43100/api/auth/get-session",
+			{ credentials: "include" },
+		);
+		return response.json();
+	});
+	const user = session.user as { id: string };
+	if (!process.env.TEST_DATABASE_URL)
+		throw new Error("TEST_DATABASE_URL is required for bootstrap");
 	try {
 		execFileSync("pnpm", ["admin:bootstrap", user.id], {
 			cwd: root,
@@ -77,6 +81,23 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 		await expect(
 			page.getByRole("link", { name: "Todos", exact: true }),
 		).toHaveAttribute("aria-current", "page");
+		await page.getByLabel("New task").fill("Onboarding task");
+		await page.getByRole("button", { name: "Add", exact: true }).click();
+		await page.getByRole("button", { name: "Edit Onboarding task" }).click();
+		await page.getByLabel("Task name").fill("Updated onboarding task");
+		await page.getByRole("button", { name: "Save", exact: true }).click();
+		await page
+			.getByRole("checkbox", { name: "Updated onboarding task" })
+			.click();
+		await expect(
+			page.getByRole("checkbox", { name: "Updated onboarding task" }),
+		).toBeChecked();
+		await page
+			.getByRole("button", { name: "Delete Updated onboarding task" })
+			.click();
+		await expect(
+			page.getByText("Updated onboarding task", { exact: true }),
+		).toHaveCount(0);
 		await page.getByLabel("New task").fill("Only in workspace A");
 		await page.getByRole("button", { name: "Add", exact: true }).click();
 		await expect(

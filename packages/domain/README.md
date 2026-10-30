@@ -174,3 +174,5 @@ filters both; inserts write both explicitly. The API verifies membership and too
 before invoking domain. A workspace ID in a payload is a locator, not authorization.
 The account-level profile-read job remains user-scoped; this change does not introduce
 a workspace task scheduler or a new worker dependency.
+
+The profile producer exposes its concrete native Queue only for Server monitoring assembly; the producer owns its lifetime. Consumers of the business client should use enqueue/status methods, not the queue handle. When adding fields to a domain query result, review every public response that returns that object directly.

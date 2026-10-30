@@ -108,3 +108,5 @@ against that database. Reconcile queued jobs before resuming consumers. Never us
 ## Observability
 
 See [observability operations](observability.md) for logs, traces, metrics, health probes, and failure checks. Collectors and exporters are never readiness dependencies.
+
+A worker readiness timeout does not cancel underlying I/O. A permanently hung check keeps the worker unhealthy; operators must restart it. A late result alone does not restore health: a new check must succeed within the deadline.

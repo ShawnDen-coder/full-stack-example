@@ -64,3 +64,5 @@ Worker 的 `DATABASE_URL` 和 `REDIS_URL` 指向与 API 相同的服务，不需
 ## 可观测性
 
 日志、trace、指标、健康探针及故障验收统一见[可观测性运维](observability.zh-CN.md)。Collector 和 exporter 不参与 readiness。
+
+Worker 就绪检查超时不会取消底层 I/O。检查永久挂起时 worker 会持续不健康，需要运维重启。迟到的结果不会恢复健康，必须由下一次新检查在期限内成功。

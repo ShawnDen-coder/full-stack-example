@@ -117,3 +117,12 @@ The first automatic release considers the existing history. Neither command
 pushes changes, publishes packages, or deploys the application. Review the
 result before pushing `master` and the new tag together, for example
 `git push --atomic origin master 0.1.0` (replace the tag with the generated one).
+
+The [validation boundaries](docs/development.md#dependency-and-validation-boundaries) distinguish fixture E2E, empty-database onboarding, real Worker integration, and runtime-role grants; none substitutes for the others.
+
+| Validation | Starts / data | Proof |
+| --- | --- | --- |
+| Fixture E2E | Web + Server, seeded dedicated DB | UI and access |
+| Empty-database onboarding | Web + Server and bootstrap CLI, same empty dedicated DB | First-use flow |
+| Real job integration | Worker, dedicated PostgreSQL and Redis | Job execution and drain |
+| Runtime-role grants | Database and provisioned runtime roles | Runtime privileges, not migration-owner privileges |

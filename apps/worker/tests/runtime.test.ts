@@ -359,3 +359,65 @@ test("each consumer must be consuming and connected for aggregate readiness", as
 	await assert.rejects(runtime.checkReady, /consumer-1/);
 	await runtime.close();
 });
+
+test("readiness waits for every consumer after one fails", async () => {
+	const f = fixture();
+	const pending = Promise.withResolvers<string | null>();
+	let calls = 0;
+	at(f.workers, 0).isRunning = () => false;
+	at(f.workers, 1).getBackend = () => ({
+		client: Promise.resolve({
+			status: "ready",
+			get: () => {
+				calls++;
+				return pending.promise;
+			},
+		}),
+	});
+	const runtime = await f.start();
+	let settled = false;
+	const check = runtime.checkReady().finally(() => {
+		settled = true;
+	});
+	await tick();
+	assert.equal(calls, 1);
+	assert.equal(settled, false);
+	pending.resolve(null);
+	await assert.rejects(check, /consumer-0/);
+	await runtime.close();
+});
+
+test("heartbeat does not repeat a hanging consumer after another fails", async () => {
+	const { startHeartbeat } = await import("../src/heartbeat");
+	const { mkdtemp, rm } = await import("node:fs/promises");
+	const { tmpdir } = await import("node:os");
+	const { join } = await import("node:path");
+	const f = fixture();
+	const pending = Promise.withResolvers<string | null>();
+	let calls = 0;
+	at(f.workers, 0).isRunning = () => false;
+	at(f.workers, 1).getBackend = () => ({
+		client: Promise.resolve({
+			status: "ready",
+			get: () => {
+				calls++;
+				return pending.promise;
+			},
+		}),
+	});
+	const runtime = await f.start();
+	const directory = await mkdtemp(join(tmpdir(), "worker-group-"));
+	try {
+		const heartbeat = await startHeartbeat(
+			runtime.checkReady,
+			join(directory, "ready"),
+		);
+		await new Promise((resolve) => setTimeout(resolve, 5200));
+		assert.equal(calls, 1);
+		await heartbeat.close();
+		pending.resolve(null);
+		await runtime.close();
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
+});

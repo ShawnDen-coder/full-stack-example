@@ -302,7 +302,7 @@ export async function startWorker({
 		async checkReady() {
 			if (state !== "running") throw new Error("Worker is not running");
 			await resources.checkReady();
-			await Promise.all(
+			const checks = await Promise.allSettled(
 				consumers.map(async ({ name, worker }) => {
 					if (!worker.isRunning())
 						throw consumerError(name, "is not consuming", undefined);
@@ -312,6 +312,12 @@ export async function startWorker({
 					await client.get("full-stack:worker:health");
 				}),
 			);
+			const errors = rejected(checks);
+			if (errors.length)
+				throw new AggregateError(
+					errors,
+					`Consumer readiness failed: ${errors.map(String).join(", ")}`,
+				);
 			if (state !== "running")
 				throw new Error("Worker stopped during readiness check");
 		},

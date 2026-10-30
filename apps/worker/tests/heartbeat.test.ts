@@ -50,3 +50,51 @@ test("cancelling the initial probe cannot leave a fresh heartbeat", async () => 
 		await rm(directory, { recursive: true, force: true });
 	}
 });
+
+test("a timed out check stays in flight until it settles; only a new success restores health", async () => {
+	const directory = await mkdtemp(join(tmpdir(), "worker-pending-"));
+	const file = join(directory, "ready.json");
+	const late = Promise.withResolvers<void>();
+	let calls = 0;
+	const delay = (ms: number) =>
+		new Promise((resolve) => setTimeout(resolve, ms));
+	try {
+		const heartbeat = await startHeartbeat(() => {
+			calls++;
+			return calls === 1 ? late.promise : Promise.resolve();
+		}, file);
+		await delay(10200);
+		assert.equal(calls, 1);
+		await assert.rejects(readFile(file), { code: "ENOENT" });
+		late.resolve();
+		await delay(100);
+		await assert.rejects(readFile(file), { code: "ENOENT" });
+		await delay(5000);
+		assert.ok(calls >= 2);
+		await readFile(file);
+		await heartbeat.close();
+		await assert.rejects(readFile(file), { code: "ENOENT" });
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
+});
+
+test("close does not wait for a permanently hung check or publish a late failure", async () => {
+	const directory = await mkdtemp(join(tmpdir(), "worker-close-"));
+	const file = join(directory, "ready.json");
+	const late = Promise.withResolvers<void>();
+	let calls = 0;
+	try {
+		const heartbeat = await startHeartbeat(() => {
+			calls++;
+			return late.promise;
+		}, file);
+		await heartbeat.close();
+		late.reject(new Error("late"));
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		assert.equal(calls, 1);
+		await assert.rejects(readFile(file), { code: "ENOENT" });
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
+});
