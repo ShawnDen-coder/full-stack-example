@@ -10,7 +10,7 @@
 
 新增普通业务按“业务实现 → 应用注入 → API 路由”扩展；新增后台任务按“业务任务实现 → 显式注册消费者”扩展。生命周期逻辑不随消费者数量重复编写。
 
-保留现有共享包。统一同类工厂和业务操作的调用习惯，保留数据库、UI 和基础设施各自的接口。变更公共 HTTP 接口、兼容别名、队列名、任务名、重试／保留策略或数据库结构时，应单独评估兼容性与迁移方案。
+保持共享包职责明确。统一同类工厂和业务操作的调用习惯，保留数据库、UI 和基础设施各自的接口。变更公共 HTTP 接口、兼容别名、队列名、任务名、重试／保留策略或数据库结构时，应单独评估兼容性与迁移方案。
 
 ## 职责与接线位置
 
@@ -18,16 +18,16 @@
 | --- | --- | --- |
 | [domain](../packages/domain/README.zh-CN.md) | 服务、Scoped Repository、任务契约／client／processor／Worker 工厂 | 新增业务代码和必要的公共子路径 |
 | [API context](../packages/api/src/context.ts) 与路由 | 服务能力类型、身份、输入校验、RPC 错误 | 注入业务方法并挂载路由 |
-| [server services](../apps/server/src/services.ts) | 创建并拥有数据库和任务 client | 新能力接线、就绪检查和资源关闭 |
+| [server services](../packages/runtime/src/server-resources.ts) | 创建并拥有数据库和任务 client | 新能力接线、就绪检查和资源关闭 |
 | [Worker runtime](../apps/worker/src/runtime.ts) | 消费者协议、显式注册列表、组装和生命周期 | 新消费者增加一个定义；新业务依赖才扩展资源组装 |
 | [Worker entry](../apps/worker/src/index.ts)、[lifecycle](../apps/worker/src/lifecycle.ts) 与心跳 | 信号、致命失败、进程退出、停止心跳、最终 deadline | 维护一次进程级退出流程 |
 | db／queue／observability／ui | 各自的基础设施或共享能力 | 只在能力本身变化时修改 |
 
-消费者协议归应用运行时所有，业务包继续返回原生 BullMQ Worker，使用结构类型匹配协议；业务代码不导入应用类型。queue 继续提供通用连接和 telemetry，不存储业务注册表。只读监控在 server 组装：profile producer 交出已有 Queue，server 注册表把稳定 key 和摘要投影绑到该实例。API 用 `@bull-board/api` 的 `BullMQAdapter` 实现 `queues` oRPC，并由 `platformProcedure` 保护。不挂载 Bull Board 的 HTTP 应用和 UI。新队列只有写进这个 server 注册表后才会出现在页面上。
+消费者协议归应用运行时所有，业务包继续返回原生 BullMQ Worker，使用结构类型匹配协议；业务代码不导入应用类型。queue 继续提供通用连接和 telemetry，不存储业务注册表。只读监控在 server 组装：profile producer 交出已有 Queue，server 注册表把稳定 key 和摘要投影绑到该实例。L2 runtime monitor 用 `@bull-board/api` 的 `BullMQAdapter` 实现 `queues` oRPC，并由 `platformProcedure` 保护。不挂载 Bull Board 的 HTTP 应用和 UI。新队列只有写进这个 server 注册表后才会出现在页面上。
 
-实际组装方向是：web 导入共享 access 契约和 API 类型；server 导入 API 工厂和 domain 服务，再把实例注入 API；worker 导入 domain 工厂并自行管理资源。API 的 access 适配层使用 Better Auth 和数据库，Todo 规则仍在 domain。这些依赖用于授权和资源归属；下方允许列表比实际使用的 import 更宽。
+L3 入口调用 L2 identity/domain/runtime 能力。runtime 工厂创建 L1 资源并返回服务、就绪和清理能力；API 不导入数据库。web 使用 access/UI 和 API 客户端类型；worker 显式注册 domain 消费者，不导入 API。
 
-新增任务时修改 domain 契约、producer、worker 和 exports，在 `apps/server/src/services.ts` 接入 producer 及其清理，并在 `apps/worker/src/runtime.ts` 注册消费者。若队列需要出现在监控中，还要将现有 Queue 和安全摘要接入 server 的 `createQueueMonitor` 注册表（摘要位于 `apps/server/src/queue-summaries.ts`）。消费者注册和监控注册服务于不同进程，互不自动完成。
+新增任务时修改 domain 契约、producer、worker 和 exports，在 `packages/runtime/src/server-resources.ts` 接入 producer 及其清理，并在 `apps/worker/src/runtime.ts` 注册消费者。若队列需要出现在监控中，还要将现有 Queue 和安全摘要接入 server 的 `createQueueMonitor` 注册表（摘要位于 `packages/runtime/src/queue-summaries.ts`）。消费者注册和监控注册服务于不同进程，互不自动完成。
 
 ## 工厂与业务操作
 
@@ -164,57 +164,9 @@ BullMQ 的 [`close()` 会等待正在处理的任务，且自身没有超时](ht
 
 ## 依赖边界检查
 
-`scripts/check-boundaries.mjs`（`pnpm check:boundaries`）已接入 CI，使用已安装的 TypeScript 解析器，无需新增依赖。生产 `src` 按以下规则检查：
-
-箭头从导入方指向允许依赖的内部包。这是 CI 的允许列表；有连线不表示当前已经使用该 import，也不表示 HTTP 调用。web 指向 API 的虚线仅允许路由类型契约；Worker 不依赖 API。
-
-<!-- mermaid:id=package-dependencies -->
-```mermaid
-flowchart TB
-  web["apps/web"]
-  server["apps/server"]
-  worker["apps/worker"]
-  api["packages/api"]
-  access["packages/access"]
-  business["packages/domain"]
-  db["packages/db"]
-  queue["packages/queue"]
-  observability["packages/observability"]
-  ui["packages/ui"]
-  web --> access
-  web --> ui
-  web -.->|仅类型| api
-  server --> api
-  server --> business
-  server --> db
-  server --> queue
-  server --> observability
-  worker --> business
-  worker --> db
-  worker --> queue
-  worker --> observability
-  api --> access
-  api --> business
-  api --> db
-  api --> queue
-  api --> observability
-  business --> db
-  business --> queue
-  business --> observability
-  db --> observability
-```
-
-| 来源 | 允许依赖的内部包 |
-| --- | --- |
-| `apps/web` | ui、access，以及仅类型导入的 API 客户端契约 |
-| `apps/server` | api、access、domain、db、queue、observability |
-| `apps/worker` | domain、db、queue、observability |
-| api | access、domain、db、queue、observability |
-| domain | db、queue、observability |
-| db | observability |
-| queue／observability／ui | 不依赖其他内部包 |
-
-检查静态 import／export、字面量动态 import 和类型导入；解析别名和跨目录相对路径，阻止通过相对路径绕过包边界或公共 exports，并检测包间循环。测试夹具和集成测试可跨应用访问，不纳入生产依赖图。先在现有代码上验证规则，再接入 CI；为允许／禁止、类型导入、别名及相对路径绕过提供有意义的检查器用例。
+参见[Lx 依赖规则](dependency-layers.zh-CN.md)。层级与同层允许边统一定义在
+`scripts/architecture-policy.mjs`。运行 `pnpm check:boundaries`，检查生产源码／配置、
+依赖声明、TypeScript 项目引用及循环；内部仅允许相邻层依赖，L0 仅表示外部依赖。
 
 ## 实现与验证
 
@@ -248,7 +200,7 @@ flowchart TB
 
 此清单仅适用于 workspace 页面工具，不适用于后台任务。缺少工具配置或权限时默认拒绝。
 
-1. 在 [`packages/access/src/index.ts`](../packages/access/src/index.ts) 与 [`auth.ts`](../packages/access/src/auth.ts) 定义页面键、路径和原生权限。明确决定新工具是否属于 `standard` 默认角色；只有需要时才在 [`packages/api/src/workspaces.ts`](../packages/api/src/workspaces.ts) 的空间创建流程添加授权。
+1. 在 [`packages/access/src/index.ts`](../packages/access/src/index.ts) 与 [`auth.ts`](../packages/access/src/auth.ts) 定义页面键、路径和原生权限。明确决定新工具是否属于 `standard` 默认角色；只有需要时才在 [`packages/identity/src/workspaces.ts`](../packages/identity/src/workspaces.ts) 的空间创建流程添加授权。
 2. 在空间创建中配置工具，在 [`apps/web/src/features/workspaces/index.tsx`](../apps/web/src/features/workspaces/index.tsx) 提供管理入口，并新增受保护路由及 [`catalog.ts`](../apps/web/src/lib/catalog.ts) 条目。新空间须分别启用工具并分配合适角色。
 3. 按需实现 domain 操作、API 授权／路由和 Server 依赖接线；数据或 Worker 访问变化时审查 schema、迁移和运行角色 grants。领域查询新增字段时，检查直接返回该对象的公共响应范围。
 4. 为已有空间规划迁移或管理员控制的升级，分别启用工具和授予权限；新空间默认值不会自动升级已有空间。

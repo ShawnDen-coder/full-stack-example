@@ -280,6 +280,15 @@ importers:
       '@biomejs/biome':
         specifier: ^2.5.15
         version: 2.5.15
+      '@full-stack-example/db':
+        specifier: workspace:*
+        version: link:packages/db
+      '@full-stack-example/observability':
+        specifier: workspace:*
+        version: link:packages/observability
+      '@full-stack-example/queue':
+        specifier: workspace:*
+        version: link:packages/queue
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
@@ -304,18 +313,15 @@ importers:
       '@full-stack-example/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@full-stack-example/db':
-        specifier: workspace:*
-        version: link:../../packages/db
       '@full-stack-example/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@full-stack-example/observability':
+      '@full-stack-example/identity':
         specifier: workspace:*
-        version: link:../../packages/observability
-      '@full-stack-example/queue':
+        version: link:../../packages/identity
+      '@full-stack-example/runtime':
         specifier: workspace:*
-        version: link:../../packages/queue
+        version: link:../../packages/runtime
       '@hono/node-server':
         specifier: ^2.1.1
         version: 2.1.5(hono@4.13.13)
@@ -534,18 +540,12 @@ importers:
 
   apps/worker:
     dependencies:
-      '@full-stack-example/db':
-        specifier: workspace:*
-        version: link:../../packages/db
       '@full-stack-example/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@full-stack-example/observability':
+      '@full-stack-example/runtime':
         specifier: workspace:*
-        version: link:../../packages/observability
-      '@full-stack-example/queue':
-        specifier: workspace:*
-        version: link:../../packages/queue
+        version: link:../../packages/runtime
       '@opentelemetry/api':
         specifier: 'catalog:'
         version: 1.10.0
@@ -654,30 +654,18 @@ importers:
 
   packages/api:
     dependencies:
-      '@better-auth/core':
-        specifier: 1.7.7
-        version: 1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(@opentelemetry/api@1.10.0)(better-call@1.4.0(zod@4.6.7))(jose@6.2.13)(kysely@0.29.7)(nanostores@1.5.5)
-      '@better-auth/drizzle-adapter':
-        specifier: 1.7.7
-        version: 1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(@opentelemetry/api@1.10.0)(better-call@1.4.0(zod@4.6.7))(jose@6.2.13)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.4.2)(drizzle-orm@1.0.0-rc.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.7))
-      '@bull-board/api':
-        specifier: 9.10.5
-        version: 9.10.5(@bull-board/ui@9.10.5(bullmq@6.4.2)(typescript@6.0.3))(bullmq@6.4.2)(typescript@6.0.3)
       '@full-stack-example/access':
         specifier: workspace:*
         version: link:../access
-      '@full-stack-example/db':
-        specifier: workspace:*
-        version: link:../db
       '@full-stack-example/domain':
         specifier: workspace:*
         version: link:../domain
-      '@full-stack-example/observability':
+      '@full-stack-example/identity':
         specifier: workspace:*
-        version: link:../observability
-      '@full-stack-example/queue':
+        version: link:../identity
+      '@full-stack-example/runtime':
         specifier: workspace:*
-        version: link:../queue
+        version: link:../runtime
       '@orpc/client':
         specifier: 'catalog:'
         version: 1.15.7(@opentelemetry/api@1.10.0)
@@ -690,24 +678,12 @@ importers:
       '@orpc/zod':
         specifier: 'catalog:'
         version: 1.15.7(@opentelemetry/api@1.10.0)(@orpc/contract@1.15.7(@opentelemetry/api@1.10.0))(@orpc/server@1.15.7(@opentelemetry/api@1.10.0))(zod@4.6.7)
-      '@types/pg':
-        specifier: 'catalog:'
-        version: 8.23.1
-      better-auth:
-        specifier: 'catalog:'
-        version: 1.7.7(@opentelemetry/api@1.10.0)(drizzle-kit@1.0.0-rc.4)(drizzle-orm@1.0.0-rc.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.7))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(vue@3.5.44(typescript@6.0.3))
-      bullmq:
-        specifier: 'catalog:'
-        version: 6.4.2(bullmq-otel@2.0.1)(ioredis@5.11.1)(pg@8.23.1)
-      cron-parser:
-        specifier: 5.10.2
-        version: 5.10.2
-      drizzle-orm:
-        specifier: 'catalog:'
-        version: 1.0.0-rc.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.7)
       hono:
         specifier: ^4.13.7
         version: 4.13.13
+      pino:
+        specifier: 'catalog:'
+        version: 10.4.0
       zod:
         specifier: 'catalog:'
         version: 4.6.7
@@ -772,6 +748,40 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
 
+  packages/identity:
+    dependencies:
+      '@better-auth/core':
+        specifier: 1.7.7
+        version: 1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(@opentelemetry/api@1.10.0)(better-call@1.4.0(zod@4.6.7))(jose@6.2.13)(kysely@0.29.7)(nanostores@1.5.5)
+      '@better-auth/drizzle-adapter':
+        specifier: 1.7.7
+        version: 1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(@opentelemetry/api@1.10.0)(better-call@1.4.0(zod@4.6.7))(jose@6.2.13)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.4.2)(drizzle-orm@1.0.0-rc.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.7))
+      '@full-stack-example/access':
+        specifier: workspace:*
+        version: link:../access
+      '@full-stack-example/db':
+        specifier: workspace:*
+        version: link:../db
+      '@orpc/server':
+        specifier: 'catalog:'
+        version: 1.15.7(@opentelemetry/api@1.10.0)
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.23.1
+      better-auth:
+        specifier: 'catalog:'
+        version: 1.7.7(@opentelemetry/api@1.10.0)(drizzle-kit@1.0.0-rc.4)(drizzle-orm@1.0.0-rc.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.7))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(vue@3.5.44(typescript@6.0.3))
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 1.0.0-rc.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.7)
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
   packages/observability:
     dependencies:
       '@opentelemetry/api':
@@ -817,6 +827,40 @@ importers:
       ioredis:
         specifier: 'catalog:'
         version: 5.11.1
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
+  packages/runtime:
+    dependencies:
+      '@bull-board/api':
+        specifier: 9.10.5
+        version: 9.10.5(@bull-board/ui@9.10.5(bullmq@6.4.2)(typescript@6.0.3))(bullmq@6.4.2)(typescript@6.0.3)
+      '@full-stack-example/db':
+        specifier: workspace:*
+        version: link:../db
+      '@full-stack-example/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@full-stack-example/identity':
+        specifier: workspace:*
+        version: link:../identity
+      '@full-stack-example/observability':
+        specifier: workspace:*
+        version: link:../observability
+      bullmq:
+        specifier: 'catalog:'
+        version: 6.4.2(bullmq-otel@2.0.1)(ioredis@5.11.1)(pg@8.23.1)
+      cron-parser:
+        specifier: 5.10.2
+        version: 5.10.2
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 1.0.0-rc.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.7)
+      pino:
+        specifier: 'catalog:'
+        version: 10.4.0
     devDependencies:
       typescript:
         specifier: 'catalog:'

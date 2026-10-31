@@ -1,10 +1,10 @@
-import type { Auth, Session } from "@full-stack-example/api/auth";
 import type { TodosService } from "@full-stack-example/domain/todos";
 import type { UsersService } from "@full-stack-example/domain/users";
 import type { ProfileReadClient } from "@full-stack-example/domain/users/jobs/profile-read/producer";
-import type { Logger } from "@full-stack-example/observability";
-import type { AccessService } from "./access";
-import type { QueueMonitor } from "./queue-monitor";
+import type { AccessService } from "@full-stack-example/identity/access";
+import type { Auth, Session } from "@full-stack-example/identity/auth";
+import type { QueueMonitor } from "@full-stack-example/runtime/queue-monitor";
+import type { Logger } from "pino";
 
 export type Services = {
 	accessService: AccessService;

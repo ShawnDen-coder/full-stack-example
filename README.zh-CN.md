@@ -47,10 +47,12 @@ API 地址为 [localhost:3000](http://localhost:3000)，提供[接口文档](htt
 | 检查、贡献与版本发布 | [贡献指南](CONTRIBUTING.zh-CN.md) |
 
 各包的代码入口与扩展步骤：
-[API](packages/api/README.zh-CN.md) · [领域](packages/domain/README.zh-CN.md) · [数据库](packages/db/README.zh-CN.md) · [队列](packages/queue/README.zh-CN.md) · [可观测性](packages/observability/README.zh-CN.md) · [UI](packages/ui/README.zh-CN.md)。
+[Identity](packages/identity/README.zh-CN.md) · [Runtime](packages/runtime/README.zh-CN.md) · [API](packages/api/README.zh-CN.md) · [领域](packages/domain/README.zh-CN.md) · [数据库](packages/db/README.zh-CN.md) · [队列](packages/queue/README.zh-CN.md) · [可观测性](packages/observability/README.zh-CN.md) · [UI](packages/ui/README.zh-CN.md)。
 
 命令定义见 [package.json](package.json)；共享 TypeScript 配置位于 [tsconfig.base.json](tsconfig.base.json)。
 
 容器配置统一位于 [container](container/README.zh-CN.md)：Compose、各应用的 Dockerfile、Nginx 和 Collector 配置。镜像构建上下文仍为仓库根目录，使用根目录的 `.dockerignore`；部署环境配置留在 `deploy/`。
 
 [角色与页面授权](docs/access-control.zh-CN.md) · [共享权限契约](packages/access/README.zh-CN.md)
+
+[Dependency layers / 依赖层级](docs/dependency-layers.zh-CN.md).

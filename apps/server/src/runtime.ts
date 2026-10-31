@@ -1,5 +1,5 @@
 import { createApi } from "@full-stack-example/api/create-api";
-import { type Logger, withDeadline } from "@full-stack-example/observability";
+import { type Logger, withDeadline } from "@full-stack-example/runtime/process";
 import { serve } from "@hono/node-server";
 import { createServices, type ServerConfig } from "./services";
 

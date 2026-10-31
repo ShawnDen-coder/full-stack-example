@@ -172,6 +172,9 @@ test("assembly rejection waits for acquired resources to finish closing", async 
 test("successful close is idempotent and closes producer before database", async () => {
 	const f = fixture();
 	const runtime = await createServices(config, f.logger, f.factories);
+	assert.equal("db" in runtime, false);
+	assert.equal("getQueueForMonitoring" in runtime.services.profileJobs, false);
+	assert.equal("close" in runtime.services.profileJobs, false);
 	const first = runtime.close();
 	assert.equal(runtime.close(), first);
 	await first;

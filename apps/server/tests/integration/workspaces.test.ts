@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { createApi } from "@full-stack-example/api/create-api";
 import type { AppRouterClient } from "@full-stack-example/api/routers/index";
+import { createDb } from "@full-stack-example/db";
 import {
 	member,
 	organization,
@@ -22,6 +23,7 @@ if (!process.env.TEST_DATABASE_URL || !process.env.TEST_REDIS_URL)
 test("workspace creation, membership, tools and Todo isolation form one authorization boundary", async () => {
 	const logger = createLogger("test");
 	logger.level = "silent";
+	let db!: ReturnType<typeof createDb>;
 	const runtime = await createServices(
 		{
 			DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
@@ -31,8 +33,14 @@ test("workspace creation, membership, tools and Todo isolation form one authoriz
 			CORS_ORIGIN: "http://localhost:3001",
 		},
 		logger,
+		{
+			createDb: (...args) => {
+				db = createDb(...args);
+				return db;
+			},
+		},
 	);
-	const { db, auth } = runtime;
+	const { auth } = runtime;
 	const ids: string[] = [];
 	const spaceIds: string[] = [];
 	try {

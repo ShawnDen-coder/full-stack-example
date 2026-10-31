@@ -1,0 +1,31 @@
+{
+	"name": "@full-stack-example/identity",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./auth": "./src/auth.ts",
+		"./access": "./src/access.ts"
+	},
+	"scripts": {
+		"build": "tsc -b",
+		"check-types": "tsc -b"
+	},
+	"dependencies": {
+		"@better-auth/core": "1.7.7",
+		"@better-auth/drizzle-adapter": "1.7.7",
+		"@full-stack-example/access": "workspace:*",
+		"@full-stack-example/db": "workspace:*",
+		"@orpc/server": "catalog:",
+		"@types/pg": "catalog:",
+		"better-auth": "catalog:",
+		"drizzle-orm": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"typescript": "catalog:"
+	},
+	"files": [
+		"src",
+		"dist"
+	]
+}

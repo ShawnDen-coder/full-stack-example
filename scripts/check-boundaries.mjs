@@ -3,18 +3,10 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 
-export const boundaryRules = {
-	"apps/web": ["ui", "api", "access"],
-	"apps/server": ["api", "domain", "db", "queue", "observability"],
-	"apps/worker": ["domain", "db", "queue", "observability"],
-	"packages/api": ["access", "domain", "db", "queue", "observability"],
-	"packages/domain": ["db", "queue", "observability"],
-	"packages/db": ["observability"],
-	"packages/queue": [],
-	"packages/observability": [],
-	"packages/ui": [],
-	"packages/access": [],
-};
+import { boundaryRules, workspaceLayers } from "./architecture-policy.mjs";
+import { checkLayerDependency } from "./dependency-layers.mjs";
+
+export { boundaryRules, workspaceLayers } from "./architecture-policy.mjs";
 
 function files(directory) {
 	if (!existsSync(directory)) return [];
@@ -22,7 +14,7 @@ function files(directory) {
 		const path = join(directory, entry.name);
 		return entry.isDirectory()
 			? files(path)
-			: /\.[cm]?[jt]sx?$/.test(path)
+			: /\.(?:[cm]?[jt]sx?|css)$/.test(path)
 				? [path]
 				: [];
 	});
@@ -135,7 +127,11 @@ function publicTargets(workspace, specifier) {
 		);
 }
 
-export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
+export function checkBoundaries(
+	workspaceRoot,
+	rules = boundaryRules,
+	layers = workspaceLayers,
+) {
 	const root = resolve(workspaceRoot);
 	const workspaces = ["apps", "packages"].flatMap((group) =>
 		readdirSync(join(root, group), { withFileTypes: true })
@@ -151,7 +147,7 @@ export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
 					? ts.readConfigFile(configPath, ts.sys.readFile)
 					: { config: {} };
 				if (config.error) throw new Error(`Cannot read ${configPath}`);
-				const { options } = ts.parseJsonConfigFileContent(
+				const { options, projectReferences } = ts.parseJsonConfigFileContent(
 					config.config,
 					ts.sys,
 					directory,
@@ -163,6 +159,7 @@ export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
 						readFileSync(join(directory, "package.json"), "utf8"),
 					),
 					options,
+					projectReferences: projectReferences ?? [],
 				};
 			}),
 	);
@@ -175,17 +172,86 @@ export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
 	const graph = new Map(
 		workspaces.map((workspace) => [workspace.id, new Set()]),
 	);
+	const checkEdge = (workspace, target, location) => {
+		graph.get(workspace.id).add(target.id);
+		const errors = [];
+		if (
+			!(rules[workspace.id] ?? []).includes(target.id.replace("packages/", ""))
+		)
+			errors.push(`dependency on ${target.id} is forbidden`);
+		const layerError = checkLayerDependency(workspace.id, target.id, layers);
+		if (layerError) errors.push(layerError);
+		if (location)
+			for (const error of errors) diagnostics.push(`${location}: ${error}`);
+		return errors;
+	};
 	for (const workspace of workspaces) {
 		if (!Object.hasOwn(rules, workspace.id))
 			diagnostics.push(`${workspace.id}: missing dependency policy`);
-		for (const file of files(join(workspace.directory, "src"))) {
+		if (!Number.isInteger(layers[workspace.id]) || layers[workspace.id] < 1)
+			diagnostics.push(`${workspace.id}: missing or invalid internal layer`);
+		// Validate declarations even if no source file currently imports the dependency.
+		for (const field of [
+			"dependencies",
+			"devDependencies",
+			"peerDependencies",
+			"optionalDependencies",
+		]) {
+			for (const name of Object.keys(workspace.manifest[field] ?? {})) {
+				const target = workspaces.find(
+					({ manifest }) => manifest.name === name,
+				);
+				if (target)
+					checkEdge(
+						workspace,
+						target,
+						`${workspace.id}/package.json (${field})`,
+					);
+				else if (name.startsWith("@full-stack-example/"))
+					diagnostics.push(
+						`${workspace.id}/package.json: unknown internal package ${name}`,
+					);
+			}
+		}
+		for (const ref of workspace.projectReferences) {
+			const target = owner(resolve(ref.path));
+			if (target)
+				checkEdge(
+					workspace,
+					target,
+					`${workspace.id}/tsconfig.json (references)`,
+				);
+			else
+				diagnostics.push(
+					`${workspace.id}/tsconfig.json: project reference has no internal dependency policy: ${ref.path}`,
+				);
+		}
+		// Check production configs as well as src. Test harnesses are deliberately separate.
+		const productionFiles = [
+			...files(join(workspace.directory, "src")),
+			...readdirSync(workspace.directory)
+				.filter((name) => /\.[cm]?[jt]sx?$/.test(name))
+				.map((name) => join(workspace.directory, name)),
+		];
+		for (const file of productionFiles) {
 			const source = ts.createSourceFile(
 				file,
 				readFileSync(file, "utf8"),
 				ts.ScriptTarget.Latest,
 				true,
 			);
-			for (const { specifier, typeOnly, line } of imports(source)) {
+			const references = file.endsWith(".css")
+				? [
+						...source.text.matchAll(
+							/@(?:import|reference)\s+(?:url\(\s*)?["']([^"']+)["']/g,
+						),
+					].map((match) => ({
+						specifier: match[1],
+						typeOnly: false,
+						line: source.text.slice(0, match.index).split("\n").length,
+					}))
+				: imports(source);
+			for (const { specifier, typeOnly, line } of references) {
 				const named = workspaces.find(
 					({ manifest }) =>
 						specifier === manifest.name ||
@@ -213,11 +279,25 @@ export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
 									workspace.directory,
 								substitutions[0].replace("*", wildcard),
 							);
+							if (file.endsWith(".css") && !existsSync(path)) path = undefined;
 							break;
 						}
 					}
 				if (!path && isAbsolute(specifier)) path = specifier;
 				const target = (path && owner(resolve(path))) || named;
+				if (
+					path &&
+					!path.split(sep).includes("node_modules") &&
+					(!target ||
+						/(^|\/)(tests?|fixtures)(\/|$)|\.(test|spec)\.[cm]?[jt]sx?$/.test(
+							relative(target.directory, path).split(sep).join("/"),
+						))
+				) {
+					diagnostics.push(
+						`${relative(root, file).split(sep).join("/")}:${line}: production code may not import test harnesses or files outside declared workspaces: ${specifier}`,
+					);
+					continue;
+				}
 				if (!target) {
 					if (specifier.startsWith("@full-stack-example/"))
 						diagnostics.push(
@@ -226,14 +306,7 @@ export function checkBoundaries(workspaceRoot, rules = boundaryRules) {
 					continue;
 				}
 				if (target === workspace && (!named || named === workspace)) continue;
-				if (target !== workspace) graph.get(workspace.id).add(target.id);
-				const errors = [];
-				if (
-					!(rules[workspace.id] ?? []).includes(
-						target.id.replace("packages/", ""),
-					)
-				)
-					errors.push(`dependency on ${target.id} is forbidden`);
+				const errors = checkEdge(workspace, target);
 				if (
 					!named ||
 					named !== target ||

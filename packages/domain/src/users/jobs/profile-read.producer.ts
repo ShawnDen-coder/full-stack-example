@@ -12,14 +12,8 @@ import {
 	type UserProfileJobResult,
 	userProfileJobSchema,
 } from "./profile-read.contract";
+import { ProfileJobsUnavailableError } from "./profile-read.errors";
 import { getProfileReadJob } from "./profile-read.status";
-
-export class ProfileJobsUnavailableError extends Error {
-	constructor() {
-		super("Profile jobs are temporarily unavailable");
-		this.name = "ProfileJobsUnavailableError";
-	}
-}
 
 export function createProfileReadClient({
 	redisUrl,

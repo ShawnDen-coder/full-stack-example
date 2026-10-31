@@ -128,3 +128,7 @@ popover、collapsible、scroll-area、calendar、switch 和 input-otp。
 `Field` 与现有认证表单共享。`Empty` 提供最小的中性空状态结构，业务文案和操作留在 web。`ToggleGroup` 封装 Radix 单选／多选控件并使用本地语义样式。
 
 `CommandDialog` 支持通过 `commandLabel` 命名搜索输入框（默认值为 “Search commands”）。
+
+## Lx
+
+L2. [Dependency policy / 依赖规则](../../docs/dependency-layers.zh-CN.md).

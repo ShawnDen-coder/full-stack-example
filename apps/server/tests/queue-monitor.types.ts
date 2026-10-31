@@ -1,8 +1,8 @@
+import type { createProfileReadClient } from "@full-stack-example/domain/users/jobs/profile-read/producer";
 import {
 	createQueueMonitor,
 	type QueueReadAdapter,
-} from "@full-stack-example/api/queue-monitor";
-import type { createProfileReadClient } from "@full-stack-example/domain/users/jobs/profile-read/producer";
+} from "@full-stack-example/runtime/queue-monitor";
 
 declare const queue: ReturnType<
 	ReturnType<typeof createProfileReadClient>["getQueueForMonitoring"]

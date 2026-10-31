@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test } from "node:test";
-import { createQueueMonitor } from "@full-stack-example/api/queue-monitor";
 import { createQueueConnection, Queue } from "@full-stack-example/queue";
+import { createQueueMonitor } from "@full-stack-example/runtime/queue-monitor";
 
 test("native queue monitoring reads lists, details, logs and schedulers from Redis", async () => {
 	const redisUrl = process.env.TEST_REDIS_URL;

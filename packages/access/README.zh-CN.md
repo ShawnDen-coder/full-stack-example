@@ -23,3 +23,7 @@
 成员角色。owner 是本地管理员，不是平台 superadmin。`workspaceToolKeys` 列出真实工具；
 新增工具需启用配置、角色授权、目录元数据和按空间隔离的 API/数据访问。缺配置默认拒绝。
 `/workspaces` 与 `/queues` 需要平台身份；等待加入空间的用户仍可访问 `/apps`。
+
+## Lx
+
+L2. [Dependency policy / 依赖规则](../../docs/dependency-layers.zh-CN.md).

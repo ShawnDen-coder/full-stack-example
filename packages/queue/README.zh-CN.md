@@ -19,7 +19,7 @@
 4. 创建资源的进程负责错误监听和关闭；关闭队列前先停止指标观察器，导入模块时不创建客户端。
 5. 升级 BullMQ 时同时检查 `bullmq-otel` 和显式声明的 `ioredis` peer 依赖兼容性。BullMQ 6.4.2 已保护关闭后的初始化错误事件，替代原先的 5.81.5 补丁（参见[上游 issue #3546](https://github.com/taskforcesh/bullmq/issues/3546)）。验证初始化失败和提前关闭，而不只测试成功连接。v6 的 Worker 就绪检查通过 `worker.getBackend().client` 访问 Redis。
 
-新增任务应修改业务模块，在 [server services](../../apps/server/src/services.ts) 接入生产者，并在 [Worker runtime](../../apps/worker/src/runtime.ts) 显式组装消费者。本包没有业务任务注册表，增加契约不会自动启动消费者。
+新增任务应修改业务模块，在 [server services](../runtime/src/server-resources.ts) 接入生产者，并在 [Worker runtime](../../apps/worker/src/runtime.ts) 显式组装消费者。本包没有业务任务注册表，增加契约不会自动启动消费者。
 
 ## 示例：允许配置 Redis 连接超时
 
@@ -56,3 +56,7 @@ pnpm --filter @full-stack-example/queue check-types
 ```
 
 连接、重试和上下文传播变更还需用专用服务执行 `pnpm test:integration`。依赖调整后验证构建和隔离的 server／worker 生产部署包，确认运行时携带兼容的 BullMQ、telemetry 和 Redis 驱动依赖，而不是只在工作区解析成功。
+
+## Lx
+
+L1. [Dependency policy / 依赖规则](../../docs/dependency-layers.zh-CN.md).

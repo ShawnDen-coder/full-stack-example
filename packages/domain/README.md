@@ -15,6 +15,7 @@ This package groups modules by domain, including service orchestration, SQL repo
 | [src/todos/repository.ts](src/todos/repository.ts) | SQL, projections and immutable `forUser(userId, workspaceId)` scopes |
 | [src/users/service.ts](src/users/service.ts) | A small query that does not need a separate repository |
 | [src/users/jobs/profile-read.contract.ts](src/users/jobs/profile-read.contract.ts) | Queue/task names, Zod payload, result type and retry/retention defaults |
+| [src/users/jobs/profile-read.errors.ts](src/users/jobs/profile-read.errors.ts) | Lightweight job failure contract for API and producer |
 | [src/users/jobs/profile-read.producer.ts](src/users/jobs/profile-read.producer.ts) | Enqueue, status access, queue observation, cleanup, and an assembly-only monitoring handle |
 | [src/users/jobs/profile-read.processor.ts](src/users/jobs/profile-read.processor.ts) | Payload validation and business execution without a Worker connection |
 | [src/users/jobs/profile-read.worker.ts](src/users/jobs/profile-read.worker.ts) | Consumer factory, attempt logs and metrics |
@@ -36,7 +37,7 @@ This package groups modules by domain, including service orchestration, SQL repo
 4. Wrap named business operations with `observeOperation`. Keep RPC errors and
    sessions in API, and add only required subpaths to [exports](package.json).
 5. Wire HTTP services through [API](../api/README.md) and
-   [server services](../../apps/server/src/services.ts).
+   [server services](../runtime/src/server-resources.ts).
 
 For a new job, follow the `users/jobs` files: define the contract, validate inputs,
 implement the processor, producer and Worker factory, and enforce ownership when
@@ -108,7 +109,7 @@ This separate proposed extension reads the same user profile as the existing
 job, returning `{ id, summary }` or `null`. It is read-only and can reuse the
 Worker's existing users service and database permissions.
 
-Copy all five `src/users/jobs/profile-read.*.ts` files, including the internal
+Copy all six `src/users/jobs/profile-read.*.ts` files, including the internal
 status helper, to `profile-summary.*.ts`. In the copies, update imports and symbols:
 
 | Existing | New |
@@ -176,3 +177,9 @@ The account-level profile-read job remains user-scoped; this change does not int
 a workspace task scheduler or a new worker dependency.
 
 The profile producer exposes its concrete native Queue only for Server monitoring assembly; the producer owns its lifetime. Consumers of the business client should use enqueue/status methods, not the queue handle. When adding fields to a domain query result, review every public response that returns that object directly.
+
+## Lx
+
+L2. [Dependency policy / 依赖规则](../../docs/dependency-layers.md).
+
+`ProfileJobsUnavailableError` is exported from `./users/jobs/profile-read/errors`; API error handling must not import the producer implementation.

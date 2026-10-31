@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { mock, test } from "node:test";
-import { createAccessService } from "@full-stack-example/api/access";
-import type { Auth, Session } from "@full-stack-example/api/auth";
 import type { ContextDependencies } from "@full-stack-example/api/context";
 import { createApi } from "@full-stack-example/api/create-api";
 import type { AppRouterClient } from "@full-stack-example/api/routers/index";
 import { createDb } from "@full-stack-example/db";
 import { createTodosService } from "@full-stack-example/domain/todos";
+import { createAccessService } from "@full-stack-example/identity/access";
+import type { Auth, Session } from "@full-stack-example/identity/auth";
 import { createLogger } from "@full-stack-example/observability";
 import { createQueueConnection } from "@full-stack-example/queue";
 import { serve } from "@hono/node-server";
@@ -479,7 +479,7 @@ test("structured logs redact credentials and retain request correlation and stac
 
 test("queue degradation has a separate readiness endpoint and maps job errors to 503", async () => {
 	const { ProfileJobsUnavailableError } = await import(
-		"@full-stack-example/domain/users/jobs/profile-read/producer"
+		"@full-stack-example/domain/users/jobs/profile-read/errors"
 	);
 	const f = await fixture();
 	try {

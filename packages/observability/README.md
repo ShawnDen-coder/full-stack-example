@@ -90,3 +90,7 @@ Follow [observability operations](../../docs/observability.md) for Collector set
 fields and failure scenarios. Use real-service integration tests for BullMQ
 propagation. Verify disabled telemetry and Collector outages still permit business
 operations; the diagnostic Collector does not provide durable trace/log storage.
+
+## Lx
+
+L1. [Dependency policy / 依赖规则](../../docs/dependency-layers.md).

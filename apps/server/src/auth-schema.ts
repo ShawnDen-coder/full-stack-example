@@ -1,11 +1,5 @@
-// Better Auth CLI entry: importing this file never starts queues, workers, or HTTP.
-import { createAuth } from "@full-stack-example/api/auth";
-import { createDb } from "@full-stack-example/db";
+// Better Auth CLI only: no queues, workers, or HTTP listeners.
+import { createAuthSchema } from "@full-stack-example/runtime/deployment";
 import { ENV } from "./env.server";
 
-export const auth = createAuth({
-	db: createDb(ENV),
-	secret: ENV.BETTER_AUTH_SECRET,
-	baseURL: ENV.BETTER_AUTH_URL,
-	trustedOrigins: [ENV.CORS_ORIGIN],
-});
+export const auth = createAuthSchema(ENV);

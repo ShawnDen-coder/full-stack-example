@@ -195,7 +195,7 @@ resource factory remains responsible for allocations it has not returned.
 | Entry point | Responsibility |
 | --- | --- |
 | `apps/server/src/index.ts` | Serve Hono over HTTP and own API process shutdown |
-| `apps/server/src/services.ts` | Create the database, Better Auth, queue client, and business services |
+| `packages/runtime/src/server-resources.ts` | Create the database, Better Auth, queue client, and business services |
 | `apps/worker/src/runtime.ts` | Create independent database/services and explicitly register and start consumers |
 | `packages/api/src/create-api.ts` | Accept initialized dependencies and return the Hono application |
 | `packages/api/src/context.ts` | Resolve sessions and provide business services to procedures |
@@ -216,7 +216,7 @@ const status = await client.users.getProfileReadJob({ id: job.id });
 
 The example job returns only `id`, `name`, and `emailVerified`. Inspect only your own jobs: `result` is `null` before completion or if the user no longer exists; missing or foreign jobs return `NOT_FOUND`. Completed jobs are retained for up to one hour / 1,000 entries; failed jobs for one day / 1,000 entries. Cleanup happens when later jobs finish. Poll with a deadline.
 
-To add a Service, expose its factory in domain, create it in `createServices`, add its type to API `Services`, and register its router. Job contracts and Worker factories belong to the owning domain package; register consumers explicitly in `apps/worker/src/runtime.ts`. See [extension examples](extension-examples.md) for the steps and [Worker runtime limits](operations.md#worker-runtime-limits) for startup, retries, and shutdown budgets.
+To add a Service, expose its factory in domain, create it in `runtime/server` (`createServerResources`), add its type to API `Services`, and register its router. Job contracts and Worker factories belong to the owning domain package; register consumers explicitly in `apps/worker/src/runtime.ts`. See [extension examples](extension-examples.md) for the steps and [Worker runtime limits](operations.md#worker-runtime-limits) for startup, retries, and shutdown budgets.
 
 ## Complete module example
 
@@ -265,4 +265,12 @@ Web uses HTTP at runtime; its type-only API router import is a compile-time depe
 | Real job integration | Tests start a real Worker against dedicated PostgreSQL and Redis | Enqueue, execution and drain across real services |
 | Runtime-role grants | Integration tests provision and exercise runtime roles | Database privileges; migrations run as owner do not establish these permissions |
 
-Playwright does not start Worker. `scripts/check-boundaries.mjs` inspects internal-package literal imports, exports, dynamic imports, require and type imports under production `src`, resolves aliases and public exports, and checks allowed edges and cycles. It excludes fixtures and does not prove the whole repository is decoupled.
+Playwright does not start Worker. `scripts/check-boundaries.mjs` inspects internal-package literal imports, exports, dynamic imports, require and type imports in production `src` and package-root JS/TS configs, resolves aliases and public exports, and checks layers, dependency declarations, project references and cycles. It excludes fixtures and does not prove the whole repository is decoupled.
+
+## Layered resource assembly
+
+See [Lx policy](dependency-layers.md). `apps/server/src/services.ts` invokes
+`packages/runtime/src/server-resources.ts`; new services are assembled there.
+`apps/worker/src/runtime.ts` calls `runtime/worker` and retains explicit consumer registration.
+Process configuration goes through `runtime/process`. API uses `identity` for auth/workspaces
+and `runtime/queue-monitor` for queue projection; it never imports L1 infrastructure.

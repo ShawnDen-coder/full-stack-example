@@ -1,9 +1,6 @@
 import { randomUUID } from "node:crypto";
-import {
-	observeHttp,
-	traceRequest,
-	withDeadline,
-} from "@full-stack-example/observability";
+import { createHttpObserver } from "@full-stack-example/runtime/http";
+import { withDeadline } from "@full-stack-example/runtime/process";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { isProcedure, ORPCError, onError } from "@orpc/server";
@@ -39,7 +36,7 @@ export function createApi(
 	},
 ) {
 	const app = new Hono<{ Variables: { requestId: string } }>();
-	const recordHttp = observeHttp();
+	const observeRequest = createHttpObserver(deps.logger);
 	app.use("*", async (c, next) => {
 		const requestId = randomUUID();
 		c.set("requestId", requestId);
@@ -70,26 +67,16 @@ export function createApi(
 					: "unmatched";
 		if (path === "/health" || path === "/ready" || path === "/ready/jobs")
 			return next();
-		return traceRequest(c.req.raw.headers, `${method} ${route}`, async () => {
-			const started = performance.now();
-			try {
-				await next();
-			} finally {
-				const duration = (performance.now() - started) / 1000;
-				recordHttp(method, route, c.res.status, duration);
-				deps.logger.info(
-					{
-						event: "http.completed",
-						request_id: requestId,
-						method,
-						route,
-						status: c.res.status,
-						duration_ms: Math.round(duration * 1000),
-					},
-					"HTTP request",
-				);
-			}
-		});
+		return observeRequest(
+			{
+				headers: c.req.raw.headers,
+				method,
+				route,
+				requestId,
+				status: () => c.res.status,
+			},
+			next,
+		);
 	});
 	app.use(
 		"*",

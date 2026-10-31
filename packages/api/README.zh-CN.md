@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [项目说明](../../README.zh-CN.md)
 
-负责服务端的 HTTP 和认证边界：Hono 组装、Better Auth、oRPC 输入校验、session 解析和传输层错误映射。
+L3 HTTP 接入边界：Hono 组装、oRPC 输入校验、注入的 session 解析和传输错误映射。身份与运行支撑能力由 L2 提供。
 
 ## 代码入口
 
@@ -13,19 +13,19 @@
 | [src/procedures.ts](src/procedures.ts) | 公开及需要登录的 procedure 构造器 |
 | [src/routers/todo.ts](src/routers/todo.ts) | 输入校验和用户范围 CRUD 的参考实现 |
 | [src/routers/index.ts](src/routers/index.ts) | 注册路由并推导客户端类型 |
-| [src/queue-monitor.ts](src/queue-monitor.ts) | 基于 `@bull-board/api` 的只读 BullMQ 投影 |
+| [runtime queue monitor](../runtime/src/queue-monitor.ts) | 基于 `@bull-board/api` 的只读 BullMQ 投影 |
 | [src/routers/queues.ts](src/routers/queues.ts) | 受平台权限保护的队列、任务、日志和定时过程 |
-| [src/auth.ts](src/auth.ts) | Better Auth 工厂 |
+| [identity auth](../identity/src/auth.ts) | Better Auth 工厂 |
 
 ## 扩展步骤
 
-1. 先在 [domain](../domain/README.zh-CN.md) 实现操作。将具体服务类型加入 `Services`，在 [server services](../../apps/server/src/services.ts) 中实例化，再注入 `createApi`。
+1. 先在 [domain](../domain/README.zh-CN.md) 实现操作。将具体服务类型加入 `Services`，在 [server services](../runtime/src/server-resources.ts) 中实例化，再注入 `createApi`。
 2. 在 `src/routers` 下增加路由，用 Zod 校验输入，再调用 `context.services`。`protectedProcedure` 要求登录；每个工具操作使用 `pageProcedure(page)` 检查页面权限，并从 `context.session.user.id` 获取归属用户。新工具不能只依赖登录保护。
 3. 资源不存在和属于其他用户时统一返回 `NOT_FOUND`。将已知业务失败转换为稳定的 RPC 错误，不返回数据库驱动的内部错误信息。
 4. 在 `src/routers/index.ts` 注册路由。操作名表达具体含义，例如 `setCompleted`；已有客户端需要时保留兼容别名。
 5. 依赖创建、端口监听和退出仍由应用负责。只有其他包需要新入口时才增加 [package export](package.json)。
 
-认证插件或表结构选项从 `src/auth.ts` 修改，先按[认证表结构生成流程](../../docs/development.zh-CN.md#生成-better-auth-表结构)生成，再走[数据库迁移流程](../db/README.zh-CN.md)。
+认证插件或表结构选项从 `packages/identity/src/auth.ts` 修改，先按[认证表结构生成流程](../../docs/development.zh-CN.md#生成-better-auth-表结构)生成，再走[数据库迁移流程](../db/README.zh-CN.md)。
 
 ## 示例：开放 todo.rename
 
@@ -83,8 +83,12 @@ pnpm --filter server test
 原生 Organization 写接口使用允许列表，成员与角色必须属于显式指定的组织；owner 变更、移除、
 邀请和删除仍未开放。Queues 使用 `platformProcedure`；账号资料任务继续按用户隔离。
 
-普通业务规则和可复用用例属于 domain。access/workspaces 是 Better Auth 组织管理的特定适配层：可以解析会话、执行原生权限检查、在事务中配置组织成员和角色，并映射传输错误。此例外不适用于 Todo 普通业务。出现真实的非 HTTP 复用需求时再提取具体用例；domain 不接收 `Headers`、session 或 `ORPCError`。
+API 属于 L3，不得导入 L1 db/queue/observability。身份与工作区能力归 L2 identity；队列监控和运行资源归 L2 runtime；Todo 规则留在 domain。参见[分层规则](../../docs/dependency-layers.zh-CN.md)。
 
 队列监控注册项二选一：原生 BullMQ `Queue` 或包含日志读取的完整 `QueueReadAdapter`。两者只用于应用组装；procedure 接收监控能力，队列仍由 producer 负责关闭。
 
 空间创建和账号封禁共享[用户行锁协议](../../docs/access-control.zh-CN.md)：在同一事务内检查和写入，并另行执行授权。参见[并发测试](../../apps/server/tests/integration/workspaces.test.ts)。
+
+## Lx
+
+L3. [Dependency policy / 依赖规则](../../docs/dependency-layers.zh-CN.md).

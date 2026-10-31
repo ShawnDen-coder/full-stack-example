@@ -1,15 +1,12 @@
-import { createDb } from "@full-stack-example/db";
-import {
-	createUsersService,
-	type UsersService,
-} from "@full-stack-example/domain/users";
+import type { UsersService } from "@full-stack-example/domain/users";
 import { USER_PROFILE_QUEUE } from "@full-stack-example/domain/users/jobs/profile-read/contract";
 import { createProfileReadWorker } from "@full-stack-example/domain/users/jobs/profile-read/worker";
 import {
 	createLogger,
 	type Logger,
 	withDeadline,
-} from "@full-stack-example/observability";
+} from "@full-stack-example/runtime/process";
+import { createWorkerResources } from "@full-stack-example/runtime/worker";
 
 export type WorkerConfig = {
 	DATABASE_URL: string;
@@ -73,22 +70,7 @@ export type WorkerFactories = {
 };
 
 const defaultFactories: WorkerFactories = {
-	createResources(config, logger) {
-		const db = createDb(config, {
-			connectionTimeoutMillis: config.WORKER_STARTUP_TIMEOUT_MS,
-			queryTimeoutMillis: config.DB_QUERY_TIMEOUT_MS,
-			max: config.DB_POOL_MAX,
-			role: "worker",
-			logger,
-		});
-		return {
-			services: { usersService: createUsersService({ db }) },
-			async checkReady() {
-				await db.$client.query("SELECT 1");
-			},
-			close: () => db.close(),
-		};
-	},
+	createResources: createWorkerResources,
 	consumerDefinitions,
 };
 
