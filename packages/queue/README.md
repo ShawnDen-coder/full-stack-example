@@ -32,7 +32,7 @@ connection options and the native telemetry adapter; business jobs live elsewher
    Worker readiness accesses Redis through `worker.getBackend().client` in v6.
 
 To add a task, extend domain, wire its producer in
-[server services](../../apps/server/src/services.ts), and explicitly compose its
+[server services](../runtime/src/server-resources.ts), and explicitly compose its
 consumer in [Worker runtime](../../apps/worker/src/runtime.ts). This package has
 no task registration table, and adding a contract alone does not start a consumer.
 
@@ -85,3 +85,7 @@ Connection, retry or propagation changes also require `pnpm test:integration`
 with dedicated services. After dependency changes, build and check isolated
 server/worker production deployments so the runtime receives compatible BullMQ,
 telemetry and Redis driver dependencies rather than relying on workspace resolution.
+
+## Lx
+
+L1. [Dependency policy / 依赖规则](../../docs/dependency-layers.md).

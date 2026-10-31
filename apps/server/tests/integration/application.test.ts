@@ -125,12 +125,18 @@ test("scoped Todo repositories isolate owners and participate in transaction rol
 test("migrations, real authentication, owner isolation, pagination and independent worker", {
 	timeout: 60000,
 }, async () => {
-	const runtime = await createServices(config, logger);
+	let db!: ReturnType<typeof createDb>;
+	const runtime = await createServices(config, logger, {
+		createDb: (...args) => {
+			db = createDb(...args);
+			return db;
+		},
+	});
 	const identities: string[] = [];
 	let worker: Awaited<ReturnType<typeof startWorker>> | undefined;
 	try {
-		await migrate(runtime.db, { migrationsFolder });
-		await migrate(runtime.db, { migrationsFolder });
+		await migrate(db, { migrationsFolder });
+		await migrate(db, { migrationsFolder });
 		await runtime.checkReady();
 		worker = await startWorker({
 			config: {
@@ -174,7 +180,7 @@ test("migrations, real authentication, owner isolation, pagination and independe
 				.object({ user: z.object({ id: z.string() }) })
 				.parse(await response.json());
 			identities.push(body.user.id);
-			await runtime.db.insert(member).values({
+			await db.insert(member).values({
 				id: randomUUID(),
 				userId: body.user.id,
 				organizationId: "application",
@@ -391,8 +397,7 @@ test("migrations, real authentication, owner isolation, pagination and independe
 		assert.equal((await app.request("/ready")).status, 200);
 	} finally {
 		await worker?.close();
-		for (const id of identities)
-			await runtime.db.delete(user).where(eq(user.id, id));
+		for (const id of identities) await db.delete(user).where(eq(user.id, id));
 		await runtime.close();
 	}
 });

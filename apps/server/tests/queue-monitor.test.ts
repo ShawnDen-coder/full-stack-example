@@ -4,11 +4,11 @@ import {
 	createQueueMonitor,
 	QueueMonitorUnavailableError,
 	type QueueReadAdapter,
-} from "@full-stack-example/api/queue-monitor";
+} from "@full-stack-example/runtime/queue-monitor";
 import {
 	summarizeProfileJobData,
 	summarizeProfileJobResult,
-} from "../src/queue-summaries";
+} from "@full-stack-example/runtime/queue-summaries";
 
 type Job = {
 	id?: string;

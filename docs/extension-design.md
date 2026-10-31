@@ -13,7 +13,7 @@ Extend regular features through business implementation, application injection
 and API routing. Extend background work through business-owned task implementation
 and explicit consumer registration. Lifecycle algorithms are shared across consumers.
 
-Keep the existing shared packages. Standardize comparable factories and business calls
+Keep shared package responsibilities explicit. Standardize comparable factories and business calls
 while retaining database, UI and infrastructure-specific interfaces. Changes to public
 HTTP payloads/results, compatibility aliases, queue/task names, retry/retention policies,
 or database schema require a separate compatibility and migration assessment.
@@ -24,7 +24,7 @@ or database schema require a separate compatibility and migration assessment.
 | --- | --- | --- |
 | [domain](../packages/domain/README.md) | Services, scoped repositories, task contract/client/processor/Worker factories | Feature code and required public subpaths |
 | [API context](../packages/api/src/context.ts) and routers | Service capabilities, identity, input validation and RPC errors | Inject operations and mount routers |
-| [server services](../apps/server/src/services.ts) | Database and task client creation/ownership | Wire capabilities, readiness and cleanup |
+| [server services](../packages/runtime/src/server-resources.ts) | Database and task client creation/ownership | Wire capabilities, readiness and cleanup |
 | [Worker runtime](../apps/worker/src/runtime.ts) | Consumer protocol, explicit definitions, composition and lifecycle | One definition per new consumer; resource composition changes only for new dependencies |
 | [Worker entry](../apps/worker/src/index.ts), [lifecycle](../apps/worker/src/lifecycle.ts) and heartbeat | Signals, fatal failures, process exit, heartbeat removal and final deadline | One process-level exit path |
 | db/queue/observability/ui | Their infrastructure or shared capabilities | Changes only when the capability itself changes |
@@ -34,14 +34,14 @@ returning native BullMQ Workers that structurally satisfy it, without importing
 application types. Queue remains generic connection/telemetry infrastructure. Read-only monitoring
 is assembled in the server: the profile producer exposes its existing Queue,
 and the server registry maps a stable key plus summary projectors onto that
-instance. API wraps `@bull-board/api` `BullMQAdapter` behind `queues` oRPC
+instance. The L2 runtime monitor wraps `@bull-board/api` `BullMQAdapter` behind `queues` oRPC
 procedures protected by `platformProcedure`. Bull Board's HTTP app and UI
 are not mounted. A new queue appears in the UI only after that server registry
 lists it.
 
-The concrete composition follows that direction: web imports shared access contracts and API types; server imports API factories and domain services, then injects their instances into the API; worker imports domain factories and owns its own resources. The API access adapter uses Better Auth and the database, while Todo rules remain in domain. These edges are necessary for authorization and resource ownership; the allowlist below is broader than the imports currently used.
+The L3 entries call L2 identity/domain/runtime capabilities. Runtime factories acquire L1 resources and return service capabilities with readiness and cleanup; API never imports the database. Web uses access/UI and only the API client type. Worker registers domain consumers explicitly and does not import API.
 
-For a new job, extend the domain contract/producer/worker and exports, wire the producer and its cleanup in `apps/server/src/services.ts`, and register the consumer in `apps/worker/src/runtime.ts`. If the queue should appear in monitoring, also add its existing Queue and safe summaries to the server's `createQueueMonitor` registry (summaries live in `apps/server/src/queue-summaries.ts`). Consumer registration and monitoring registration serve different processes and neither implies the other.
+For a new job, extend the domain contract/producer/worker and exports, wire the producer and its cleanup in `packages/runtime/src/server-resources.ts`, and register the consumer in `apps/worker/src/runtime.ts`. If the queue should appear in monitoring, also add its existing Queue and safe summaries to the server's `createQueueMonitor` registry (summaries live in `packages/runtime/src/queue-summaries.ts`). Consumer registration and monitoring registration serve different processes and neither implies the other.
 
 ## Factories and business operations
 
@@ -231,66 +231,10 @@ per-consumer automatic restart inside the process.
 
 ## Dependency boundary checks
 
-`scripts/check-boundaries.mjs` (`pnpm check:boundaries`) runs in CI and uses the
-existing TypeScript parser without new dependencies. It checks production src
-against this internal dependency policy:
-
-Arrows below point from an importer to an allowed internal dependency. This is the
-CI allowlist, so an edge does not mean that import is currently used or that an HTTP
-call occurs. The dotted web-to-API edge permits only the router's type contract;
-Worker has no API dependency.
-
-<!-- mermaid:id=package-dependencies -->
-```mermaid
-flowchart TB
-  web["apps/web"]
-  server["apps/server"]
-  worker["apps/worker"]
-  api["packages/api"]
-  access["packages/access"]
-  business["packages/domain"]
-  db["packages/db"]
-  queue["packages/queue"]
-  observability["packages/observability"]
-  ui["packages/ui"]
-  web --> access
-  web --> ui
-  web -.->|Types only| api
-  server --> api
-  server --> business
-  server --> db
-  server --> queue
-  server --> observability
-  worker --> business
-  worker --> db
-  worker --> queue
-  worker --> observability
-  api --> access
-  api --> business
-  api --> db
-  api --> queue
-  api --> observability
-  business --> db
-  business --> queue
-  business --> observability
-  db --> observability
-```
-
-| Source | Allowed internal dependencies |
-| --- | --- |
-| apps/web | ui, access and type-only API client contracts |
-| apps/server | api, domain, db, queue, observability |
-| apps/worker | domain, db, queue, observability |
-| api | access, domain, db, queue, observability |
-| domain | db, queue, observability |
-| db | observability |
-| queue/observability/ui | No other internal packages |
-
-Inspect static imports/exports, literal dynamic imports and type imports. Resolve
-aliases and cross-directory relative paths, enforce public exports, and detect
-package cycles. Exclude fixtures/integration tests that legitimately cross app
-boundaries. Validate current production code before enabling CI, and cover
-allowed/forbidden edges, type-only imports, aliases and relative-path bypasses.
+See [Lx dependency policy](dependency-layers.md). Layer assignments and explicit
+peer grants are maintained in `scripts/architecture-policy.mjs`. Run
+`pnpm check:boundaries`; production source/configs, dependency declarations and
+TypeScript project references must obey adjacent-layer rules. L0 is external only.
 
 ## Implementation and verification
 
@@ -341,7 +285,7 @@ A new tool also needs a stable access page key/path, a route and display metadat
 
 This checklist applies to workspace page tools, not background jobs. Missing tool configuration or permission denies access by default.
 
-1. Define the page key/path and native permission in [`packages/access/src/index.ts`](../packages/access/src/index.ts) and [`auth.ts`](../packages/access/src/auth.ts). Decide explicitly whether the new tool belongs in the `standard` role; add that grant to workspace creation in [`packages/api/src/workspaces.ts`](../packages/api/src/workspaces.ts) only if intended.
+1. Define the page key/path and native permission in [`packages/access/src/index.ts`](../packages/access/src/index.ts) and [`auth.ts`](../packages/access/src/auth.ts). Decide explicitly whether the new tool belongs in the `standard` role; add that grant to workspace creation in [`packages/identity/src/workspaces.ts`](../packages/identity/src/workspaces.ts) only if intended.
 2. Add tool configuration during workspace creation and expose management in [`apps/web/src/features/workspaces/index.tsx`](../apps/web/src/features/workspaces/index.tsx); add the protected route and [`catalog.ts`](../apps/web/src/lib/catalog.ts). Enable the tool and assign an appropriate role for each new workspace.
 3. Implement domain operations, API authorization/router and Server dependency wiring as needed. Review schema, migrations and runtime-role grants when data or worker access changes. Review direct public responses when a domain query gains fields.
 4. Plan a migration or administrator-controlled rollout for existing workspaces: enable the tool and grant its permission separately. New defaults do not automatically upgrade existing workspaces.

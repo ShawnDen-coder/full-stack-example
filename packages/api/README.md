@@ -2,8 +2,8 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [Project](../../README.md)
 
-HTTP and authentication boundaries for the server: Hono composition, Better Auth,
-oRPC input validation, session resolution and transport error mapping.
+L3 HTTP boundaries: Hono composition, oRPC validation, injected session resolution
+and transport error mapping. Identity and runtime capabilities are provided by L2.
 
 ## Entry points
 
@@ -14,15 +14,15 @@ oRPC input validation, session resolution and transport error mapping.
 | [src/procedures.ts](src/procedures.ts) | Public and authenticated procedure builders |
 | [src/routers/todo.ts](src/routers/todo.ts) | Reference for validated, owner-scoped CRUD |
 | [src/routers/index.ts](src/routers/index.ts) | Router registration and inferred client types |
-| [src/queue-monitor.ts](src/queue-monitor.ts) | Read-only BullMQ projection over `@bull-board/api` |
+| [runtime queue monitor](../runtime/src/queue-monitor.ts) | Read-only BullMQ projection over `@bull-board/api` |
 | [src/routers/queues.ts](src/routers/queues.ts) | Platform-protected queue, job, log and scheduler procedures |
-| [src/auth.ts](src/auth.ts) | Better Auth factory |
+| [identity auth](../identity/src/auth.ts) | Better Auth factory |
 
 ## Extend
 
 1. Implement the operation in [domain](../domain/README.md). Add its concrete
    service type to `Services`; instantiate it in
-   [server services](../../apps/server/src/services.ts) and pass it through `createApi`.
+   [server services](../runtime/src/server-resources.ts) and pass it through `createApi`.
 2. Add a router under `src/routers`. Validate payloads with Zod and call
    `context.services`. `protectedProcedure` requires login; use
    `pageProcedure(page)` for page authorization on every tool operation, and
@@ -35,7 +35,7 @@ oRPC input validation, session resolution and transport error mapping.
 5. Keep dependency creation, listening and shutdown in the application. Add a
    [package export](package.json) only when another package needs a new entry point.
 
-Auth plugin/schema changes start in `src/auth.ts`; follow
+Auth plugin/schema changes start in `packages/identity/src/auth.ts`; follow
 [auth schema generation](../../docs/development.md#better-auth-schema-generation),
 then the [database migration workflow](../db/README.md).
 
@@ -111,8 +111,12 @@ Organization writes are allowlisted; role and member targets must belong to the 
 organization. Owner changes, removal, invitations and deletion remain unavailable.
 Queues use `platformProcedure`; account-level profile jobs retain their user scope.
 
-Ordinary business rules and reusable use cases belong in domain. The access/workspaces adapter is a specific exception for Better Auth organization management: it may resolve sessions, enforce native permissions, transact organization membership and role configuration, and map transport errors. This exception does not cover ordinary Todo business logic. Extract a concrete use case when a real non-HTTP reuse need arises; domain must not accept `Headers`, sessions, or `ORPCError`.
+API is L3 and must not import L1 db/queue/observability. Identity and workspace capabilities live in L2 identity; queue monitoring and operational resources live in L2 runtime. Ordinary Todo rules remain in domain. See the [layer policy](../../docs/dependency-layers.md).
 
 Queue monitoring registrations choose either a native BullMQ `Queue` or a complete `QueueReadAdapter`, including logs. Both are assembly-only; procedures receive the monitor capability, and the producer remains responsible for closing the queue.
 
 Workspace creation and account bans share the [user-row lock protocol](../../docs/access-control.md): check and write under the same transaction, alongside authorization. See the [concurrency test](../../apps/server/tests/integration/workspaces.test.ts).
+
+## Lx
+
+L3. [Dependency policy / 依赖规则](../../docs/dependency-layers.md).

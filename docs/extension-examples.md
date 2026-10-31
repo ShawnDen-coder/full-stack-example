@@ -31,7 +31,7 @@ remains `{ id, text, completed }`. No schema change is involved.
 | `packages/domain/src/todos/repository.ts` | Add `rename` inside `forUser`, using `ownedTodo(id)` and the existing projection |
 | `packages/domain/src/todos/service.ts` | Validate/normalize text and observe `todos.rename` |
 | `packages/api/src/routers/todo.ts` | Add the authenticated `rename` procedure and map no match to `NOT_FOUND` |
-| `apps/server/src/services.ts` | Reuse the existing `createTodosService({ db })` instance |
+| `packages/runtime/src/server-resources.ts` | Reuse the existing `createTodosService({ db })` instance |
 | `apps/web/src/features/todos/` | Inline edit form and typed mutation; preserve identity-scoped cache invalidation |
 
 The implemented flow follows the [repository/service example](../packages/domain/README.md#example-rename-an-owned-todo),
@@ -56,7 +56,7 @@ Requests never include user ownership from the browser. The server checks worksp
 membership, tool enablement and page permission before binding the workspace scope.
 
 For a genuinely new service rather than a method, the server wiring expands:
-add its domain package export, construct its factory in `createServices`, add
+add its domain package export, construct its factory in `createServerResources`, add
 its concrete type to API `Services`, include the instance in the returned
 `services`, and register its router in `appRouter`. A service sharing `db` must
 not close it. New owned clients need readiness, constructor rollback and drain
@@ -92,7 +92,7 @@ alias (do not append a second declaration):
 export type ProfileSummaryClient = ReturnType<typeof createProfileSummaryClient>;
 ```
 
-In `apps/server/src/services.ts`, import the new client factory from its public
+In `packages/runtime/src/server-resources.ts`, import the new client factory from its public
 producer subpath and create it inside the existing startup `try` block:
 
 ```ts

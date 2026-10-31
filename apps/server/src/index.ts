@@ -1,14 +1,11 @@
-import { createLogger, withDeadline } from "@full-stack-example/observability";
-import { startTelemetry } from "@full-stack-example/observability/telemetry";
+import {
+	createProcessContext,
+	withDeadline,
+} from "@full-stack-example/runtime/process";
 import { ENV } from "./env.server";
 import { startServer } from "./runtime";
 
-const telemetry = startTelemetry("server", ENV);
-const logger = createLogger("server", undefined, {
-	level: ENV.LOG_LEVEL,
-	version: ENV.OTEL_SERVICE_VERSION,
-	environment: ENV.NODE_ENV,
-});
+const { logger, telemetry } = createProcessContext("server", ENV);
 const startup = startServer(ENV, logger);
 let shutdownPromise: Promise<void> | undefined;
 function shutdown() {

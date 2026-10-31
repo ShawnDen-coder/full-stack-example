@@ -7,6 +7,8 @@ export const packageNames = [
 	"access",
 	"api",
 	"domain",
+	"identity",
+	"runtime",
 	"db",
 	"queue",
 	"observability",
@@ -20,6 +22,10 @@ export function pages(language: Language) {
 	return [
 		{ source: `README${suffix}.md`, route: "/" },
 		{ source: `docs/development${suffix}.md`, route: "/guide/development/" },
+		{
+			source: `docs/dependency-layers${suffix}.md`,
+			route: "/guide/dependency-layers/",
+		},
 		{
 			source: `docs/extension-examples${suffix}.md`,
 			route: "/guide/extension-examples/",
@@ -122,6 +128,10 @@ export function sidebar(language: Language) {
 				item(
 					zh ? "架构与接线" : "Architecture and wiring",
 					"/guide/development/",
+				),
+				item(
+					zh ? "依赖层级" : "Dependency layers",
+					"/guide/dependency-layers/",
 				),
 				item(
 					zh ? "扩展示例" : "Extension examples",

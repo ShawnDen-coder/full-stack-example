@@ -1,0 +1,36 @@
+{
+	"name": "@full-stack-example/runtime",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./server": "./src/server-resources.ts",
+		"./worker": "./src/worker-resources.ts",
+		"./process": "./src/process.ts",
+		"./http": "./src/http.ts",
+		"./queue-monitor": "./src/queue-monitor.ts",
+		"./deployment": "./src/deployment.ts",
+		"./queue-summaries": "./src/queue-summaries.ts"
+	},
+	"scripts": {
+		"build": "tsc -b",
+		"check-types": "tsc -b"
+	},
+	"dependencies": {
+		"@bull-board/api": "9.10.5",
+		"@full-stack-example/db": "workspace:*",
+		"@full-stack-example/domain": "workspace:*",
+		"@full-stack-example/observability": "workspace:*",
+		"bullmq": "catalog:",
+		"cron-parser": "5.10.2",
+		"drizzle-orm": "catalog:",
+		"@full-stack-example/identity": "workspace:*",
+		"pino": "catalog:"
+	},
+	"devDependencies": {
+		"typescript": "catalog:"
+	},
+	"files": [
+		"src",
+		"dist"
+	]
+}

@@ -110,3 +110,7 @@ newly registered accounts no longer automatically join `application`.
 
 Bootstrap only assigns the platform role by default. To explicitly grant ownership of
 an existing workspace as well, use `pnpm admin:bootstrap <user-id> --workspace-owner <workspace-id>`.
+
+## Lx
+
+L1. [Dependency policy / 依赖规则](../../docs/dependency-layers.md).

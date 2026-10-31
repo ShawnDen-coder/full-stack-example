@@ -64,3 +64,7 @@ pnpm --filter @full-stack-example/observability check-types
 ```
 
 Collector 配置、字段和故障场景见[可观测性运维指南](../../docs/observability.zh-CN.md)。BullMQ 上下文传播用真实服务集成测试验证；确认关闭 telemetry 或 Collector 故障仍可执行业务。诊断 Collector 不提供持久化 trace／日志存储。
+
+## Lx
+
+L1. [Dependency policy / 依赖规则](../../docs/dependency-layers.zh-CN.md).

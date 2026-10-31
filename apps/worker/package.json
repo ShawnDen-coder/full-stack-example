@@ -4,17 +4,14 @@
 	"type": "module",
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
-		"build": "tsc -b ../../packages/domain && tsdown",
-		"check-types": "tsc -b ../../packages/domain && tsc --noEmit",
+		"build": "tsc -b ../../packages/runtime && tsdown",
+		"check-types": "tsc -b ../../packages/runtime && tsc --noEmit",
 		"start": "node dist/index.mjs",
 		"test": "node --import tsx --test tests/*.test.ts",
 		"env:generate": "varlock codegen"
 	},
 	"dependencies": {
-		"@full-stack-example/db": "workspace:*",
-		"@full-stack-example/queue": "workspace:*",
 		"varlock": "catalog:",
-		"@full-stack-example/observability": "workspace:*",
 		"@full-stack-example/domain": "workspace:*",
 		"pino": "catalog:",
 		"@opentelemetry/api": "catalog:",
@@ -26,7 +23,8 @@
 		"@opentelemetry/sdk-trace": "catalog:",
 		"pg": "catalog:",
 		"bullmq": "catalog:",
-		"bullmq-otel": "catalog:"
+		"bullmq-otel": "catalog:",
+		"@full-stack-example/runtime": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/node": "^24.0.0",

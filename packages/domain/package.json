@@ -6,7 +6,8 @@
 		"./todos": "./src/todos/service.ts",
 		"./users/jobs/profile-read/contract": "./src/users/jobs/profile-read.contract.ts",
 		"./users/jobs/profile-read/producer": "./src/users/jobs/profile-read.producer.ts",
-		"./users/jobs/profile-read/worker": "./src/users/jobs/profile-read.worker.ts"
+		"./users/jobs/profile-read/worker": "./src/users/jobs/profile-read.worker.ts",
+		"./users/jobs/profile-read/errors": "./src/users/jobs/profile-read.errors.ts"
 	},
 	"scripts": {
 		"build": "tsc -b",

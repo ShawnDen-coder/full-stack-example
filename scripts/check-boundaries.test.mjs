@@ -3,7 +3,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { boundaryRules, checkBoundaries } from "./check-boundaries.mjs";
+import {
+	boundaryRules,
+	checkBoundaries,
+	workspaceLayers,
+} from "./check-boundaries.mjs";
 
 function fixture(t) {
 	const root = mkdtempSync(join(tmpdir(), "package-boundaries-"));
@@ -38,7 +42,10 @@ function fixture(t) {
 			}),
 		);
 	}
-	return { put, check: (rules) => checkBoundaries(root, rules) };
+	return {
+		put,
+		check: (rules, layers) => checkBoundaries(root, rules, layers),
+	};
 }
 
 test("allows public exports, wildcard UI entries and type-only API contracts", (t) => {
@@ -144,9 +151,12 @@ test("detects package cycles even when both edges are individually permitted", (
 		"import type { B } from '@full-stack-example/api';",
 	);
 	const errors = f.check({ ...boundaryRules, "packages/domain": ["api"] });
-	assert.deepEqual(errors, [
-		"Package cycle: packages/api -> packages/domain -> packages/api",
-	]);
+	assert.ok(
+		errors.includes(
+			"Package cycle: packages/api -> packages/domain -> packages/api",
+		),
+	);
+	assert.ok(errors.some((error) => error.includes("reverse dependency")));
 });
 
 test("test fixtures are excluded and new production workspaces require a policy", (t) => {
@@ -158,7 +168,10 @@ test("test fixtures are excluded and new production workspaces require a policy"
 	assert.deepEqual(f.check(), []);
 	f.put("packages/new/package.json", '{"name":"@full-stack-example/new"}');
 	f.put("packages/new/src/index.ts", "export {};");
-	assert.deepEqual(f.check(), ["packages/new: missing dependency policy"]);
+	assert.deepEqual(f.check(), [
+		"packages/new: missing dependency policy",
+		"packages/new: missing or invalid internal layer",
+	]);
 });
 
 test("aliases cannot redirect public-looking package names to private or foreign code", (t) => {
@@ -195,6 +208,140 @@ import { privateValue } from '@full-stack-example/ui/components/private';`,
 	assert.equal(
 		errors.filter((error) => error.includes("use a public package export"))
 			.length,
+		2,
+	);
+});
+
+test("allowlists cannot authorize skipped layers, even for type-only imports", (t) => {
+	const f = fixture(t);
+	f.put(
+		"apps/server/src/leak.ts",
+		"import type { Database } from '@full-stack-example/db';",
+	);
+	const errors = f.check({ ...boundaryRules, "apps/server": ["db"] });
+	assert.ok(errors.some((error) => error.includes("skipped internal layer")));
+});
+
+test("all levels may import L0 vendors, but internal packages cannot become L0", (t) => {
+	const f = fixture(t);
+	for (const id of Object.keys(boundaryRules))
+		f.put(
+			`${id}/src/vendor.ts`,
+			"import { z } from 'zod'; import fs from 'node:fs';",
+		);
+	assert.deepEqual(f.check(), []);
+	assert.ok(
+		f
+			.check(undefined, { ...workspaceLayers, "packages/db": 0 })
+			.some((error) => error.includes("invalid internal layer")),
+	);
+});
+
+test("valid same-layer references need explicit permission and remain acyclic", (t) => {
+	const f = fixture(t);
+	f.put(
+		"packages/db/src/index.ts",
+		"import { value } from '@full-stack-example/observability';",
+	);
+	assert.deepEqual(f.check(), []);
+	f.put(
+		"packages/observability/src/index.ts",
+		"import { value } from '@full-stack-example/db';",
+	);
+	assert.ok(f.check().some((error) => error.includes("forbidden")));
+	assert.ok(
+		f
+			.check({ ...boundaryRules, "packages/observability": ["db"] })
+			.some((error) => error.startsWith("Package cycle:")),
+	);
+});
+
+test("declarations and project references cannot hide unused forbidden dependencies", (t) => {
+	const f = fixture(t);
+	f.put(
+		"apps/server/package.json",
+		JSON.stringify({
+			name: "server",
+			devDependencies: { "@full-stack-example/db": "workspace:*" },
+		}),
+	);
+	f.put(
+		"apps/worker/tsconfig.json",
+		JSON.stringify({ references: [{ path: "../../packages/db" }] }),
+	);
+	const errors = f.check();
+	assert.ok(
+		errors.some(
+			(error) =>
+				error.includes("package.json (devDependencies)") &&
+				error.includes("skipped"),
+		),
+	);
+	assert.ok(
+		errors.some(
+			(error) =>
+				error.includes("tsconfig.json (references)") &&
+				error.includes("skipped"),
+		),
+	);
+});
+
+test("declaration-only cycles are rejected", (t) => {
+	const f = fixture(t);
+	f.put(
+		"packages/db/package.json",
+		JSON.stringify({
+			name: "@full-stack-example/db",
+			dependencies: { "@full-stack-example/observability": "workspace:*" },
+		}),
+	);
+	f.put(
+		"packages/observability/package.json",
+		JSON.stringify({
+			name: "@full-stack-example/observability",
+			peerDependencies: { "@full-stack-example/db": "workspace:*" },
+		}),
+	);
+	assert.ok(
+		f
+			.check({ ...boundaryRules, "packages/observability": ["db"] })
+			.some((error) => error.startsWith("Package cycle:")),
+	);
+});
+
+test("CSS and build config imports follow the same internal dependency policy", (t) => {
+	const f = fixture(t);
+	f.put(
+		"apps/web/src/leak.css",
+		'@import "@full-stack-example/db/private.css";',
+	);
+	f.put("apps/server/build.config.ts", "import '@full-stack-example/db';");
+	const errors = f.check();
+	assert.ok(
+		errors.some(
+			(error) => error.includes("leak.css") && error.includes("skipped"),
+		),
+	);
+	assert.ok(
+		errors.some(
+			(error) => error.includes("build.config.ts") && error.includes("skipped"),
+		),
+	);
+});
+
+test("production modules cannot launder dependencies through excluded test harnesses", (t) => {
+	const f = fixture(t);
+	f.put(
+		"apps/server/tests/helper.ts",
+		"export { value } from '@full-stack-example/db';",
+	);
+	f.put("scripts/helper.ts", "export { value } from '@full-stack-example/db';");
+	f.put(
+		"apps/server/src/leak.ts",
+		"import '../tests/helper'; import '../../../scripts/helper';",
+	);
+	assert.equal(
+		f.check().filter((error) => error.includes("test harnesses")).length,
 		2,
 	);
 });

@@ -150,3 +150,7 @@ columns, URL state and business dialogs remain in web rather than this package.
 `Field` is shared with the existing authentication forms. `Empty` supplies a minimal neutral empty-state structure; feature copy and actions remain in web. `ToggleGroup` wraps the Radix single/multiple controls with local semantic styling.
 
 `CommandDialog` accepts `commandLabel` to name its search input (default: “Search commands”).
+
+## Lx
+
+L2. [Dependency policy / 依赖规则](../../docs/dependency-layers.md).

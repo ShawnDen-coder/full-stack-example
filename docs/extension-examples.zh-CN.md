@@ -26,7 +26,7 @@
 | `packages/domain/src/todos/repository.ts` | 在 `forUser` 中增加 `rename`，复用 `ownedTodo(id)` 和现有投影 |
 | `packages/domain/src/todos/service.ts` | 校验／规范文本，为 `todos.rename` 增加观测 |
 | `packages/api/src/routers/todo.ts` | 增加认证后的 `rename` procedure，无匹配资源时返回 `NOT_FOUND` |
-| `apps/server/src/services.ts` | 复用已有的 `createTodosService({ db })` 实例 |
+| `packages/runtime/src/server-resources.ts` | 复用已有的 `createTodosService({ db })` 实例 |
 | `apps/web/src/features/todos/` | 行内编辑表单和类型安全 mutation，保留按身份隔离的缓存失效逻辑 |
 
 已实现的流程串联 [Repository／Service 示例](../packages/domain/README.zh-CN.md#示例重命名自己的-todo)，以及 [API 示例](../packages/api/README.zh-CN.md#示例开放-todorename)。`Services.todosService` 已使用推导出的 `TodosService`，`appRouter.todo` 也已挂载；增加这个操作无需新建 Server client、增加 `Services` 属性或 package export。同步修改测试中的 typed service fake。
@@ -35,7 +35,7 @@
 
 重命名成功后，先使用服务端响应更新缓存中的对应行，再使 `["user", userId, "workspace", workspaceId, "todos"]` 下所有分页失效。因此后台刷新失败也会显示已保存的文本。普通写入错误由编辑器处理，未授权错误仍进入全局会话边界。浏览器请求不携带归属用户字段；服务端先校验空间成员资格、工具启用状态及页面权限，再绑定 workspace 范围。
 
-如果增加的是一个全新 Service，而不只是现有 Service 的方法，还需要：增加 domain package export，在 `createServices` 调用工厂，将具体服务类型加入 API `Services`，将实例放入返回的 `services`，并在 `appRouter` 注册新 router。共享 `db` 的 Service 不负责关闭数据库；新增独立 client 时，要补齐就绪、构造失败回滚和 drain 清理，并在依赖数据库的资源关闭后再关闭数据库。
+如果增加的是一个全新 Service，而不只是现有 Service 的方法，还需要：增加 domain package export，在 `createServerResources` 调用工厂，将具体服务类型加入 API `Services`，将实例放入返回的 `services`，并在 `appRouter` 注册新 router。共享 `db` 的 Service 不负责关闭数据库；新增独立 client 时，要补齐就绪、构造失败回滚和 drain 清理，并在依赖数据库的资源关闭后再关闭数据库。
 
 运行 `pnpm check-types`、`pnpm check:boundaries` 和 `pnpm test`。配置专用 `TEST_DATABASE_URL`／`TEST_REDIS_URL` 后，运行 `pnpm test:integration` 和 `pnpm test:e2e`。检查 Alice 修改后刷新仍能看到结果，Bob 不能读取或修改 Alice 的 Todo，非法文本不进入 SQL，写入失败保留草稿。测试位置包括现有 Server 测试和 `apps/web/tests/session.spec.ts`。
 
@@ -57,7 +57,7 @@ Processor 和 status 文件仍是内部实现。Producer 导出 `createProfileSu
 export type ProfileSummaryClient = ReturnType<typeof createProfileSummaryClient>;
 ```
 
-在 `apps/server/src/services.ts` 从新 producer 公共子路径导入工厂，并在现有启动 `try` 块内创建：
+在 `packages/runtime/src/server-resources.ts` 从新 producer 公共子路径导入工厂，并在现有启动 `try` 块内创建：
 
 ```ts
 const profileSummaryJobs = createProfileSummaryClient({

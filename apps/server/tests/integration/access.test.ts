@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { createAccessService } from "@full-stack-example/api/access";
-import { createAuth } from "@full-stack-example/api/auth";
 import { createDb } from "@full-stack-example/db";
 import { member, organizationRole, user } from "@full-stack-example/db/schema";
+import { createAccessService } from "@full-stack-example/identity/access";
+import { createAuth } from "@full-stack-example/identity/auth";
 import { eq, inArray } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 

@@ -1,14 +1,8 @@
-import { createLogger } from "@full-stack-example/observability";
-import { startTelemetry } from "@full-stack-example/observability/telemetry";
+import { createProcessContext } from "@full-stack-example/runtime/process";
 import { ENV } from "./env.server";
 import { startWorkerProcess } from "./lifecycle";
 
-const telemetry = startTelemetry("worker", ENV);
-const logger = createLogger("worker", undefined, {
-	level: ENV.LOG_LEVEL,
-	version: ENV.OTEL_SERVICE_VERSION,
-	environment: ENV.NODE_ENV,
-});
+const { logger, telemetry } = createProcessContext("worker", ENV);
 const worker = startWorkerProcess({
 	config: ENV,
 	logger,

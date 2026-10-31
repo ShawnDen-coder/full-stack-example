@@ -171,7 +171,7 @@ Server 调用方需要 await `createServices`。组装失败时，服务会在
 | 入口 | 负责内容 |
 | --- | --- |
 | `apps/server/src/index.ts` | 启动 Hono HTTP 服务，管理 API 进程退出 |
-| `apps/server/src/services.ts` | 创建数据库、Better Auth、队列 client 和业务服务 |
+| `packages/runtime/src/server-resources.ts` | 创建数据库、Better Auth、队列 client 和业务服务 |
 | `apps/worker/src/runtime.ts` | 创建独立数据库与服务，显式注册并启动消费者 |
 | `packages/api/src/create-api.ts` | 接收已初始化的依赖，返回 Hono 应用 |
 | `packages/api/src/context.ts` | 解析 session，向 procedure 提供业务服务 |
@@ -192,7 +192,7 @@ const status = await client.users.getProfileReadJob({ id: job.id });
 
 示例任务只返回 `id`、`name`、`emailVerified`。查询自己的任务，未完成或用户已不存在时 `result` 为 `null`；不存在或属于其他用户时返回 `NOT_FOUND`。完成结果最多保留一小时／1,000 条，失败任务最多保留一天／1,000 条；清理由后续任务完成触发。轮询需设置 deadline。
 
-新增 Service 时，在 domain 暴露工厂，在 `createServices` 创建，将服务类型加入 API `Services` 并注册 router。后台任务的契约和 Worker 工厂归所属业务包，消费者在 `apps/worker/src/runtime.ts` 显式注册。具体步骤见[扩展示例](extension-examples.zh-CN.md)，启动、重试和关闭预算见[Worker 运行限制](operations.zh-CN.md#worker-运行限制)。
+新增 Service 时，在 domain 暴露工厂，在 `runtime/server` 的 `createServerResources` 创建，将服务类型加入 API `Services` 并注册 router。后台任务的契约和 Worker 工厂归所属业务包，消费者在 `apps/worker/src/runtime.ts` 显式注册。具体步骤见[扩展示例](extension-examples.zh-CN.md)，启动、重试和关闭预算见[Worker 运行限制](operations.zh-CN.md#worker-运行限制)。
 
 ## 完整模块示例
 
@@ -221,4 +221,12 @@ Web 运行时通过 HTTP 通信；仅类型导入的 API router 是编译期依�
 | 真实任务集成 | 测试针对专用 PostgreSQL 和 Redis 启动真实 Worker | 真实服务间入队、执行和 drain |
 | 运行角色 grants | 集成测试配置并使用运行角色 | 数据库权限；迁移 owner 凭据不能证明运行角色权限 |
 
-Playwright 不启动 Worker。`scripts/check-boundaries.mjs` 检查生产 `src` 中内部包的字面量 import、export、动态 import、require 和类型引用，解析别名及公开入口并检查允许边与循环；它排除 fixture，不能证明全仓库已经解耦。
+Playwright 不启动 Worker。`scripts/check-boundaries.mjs` 检查生产 `src` 与包根 JS/TS 配置的内部引用，以及 package.json 依赖和 TS 项目引用；解析别名及公开入口并检查层级、允许边与循环；它排除 fixture，不能证明全仓库已经解耦。
+
+## 分层资源组装
+
+参见[Lx 规则](dependency-layers.zh-CN.md)。`apps/server/src/services.ts` 调用
+`packages/runtime/src/server-resources.ts`，新增服务在后者组装。
+`apps/worker/src/runtime.ts` 调用 `runtime/worker`，仍显式注册消费者。
+进程配置经过 `runtime/process`；API 通过 identity 使用认证／工作区能力，
+通过 `runtime/queue-monitor` 使用队列投影，不导入 L1 基础包。

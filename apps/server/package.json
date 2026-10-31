@@ -14,16 +14,13 @@
 	},
 	"dependencies": {
 		"@full-stack-example/api": "workspace:*",
-		"@full-stack-example/db": "workspace:*",
 		"@orpc/openapi": "catalog:",
 		"@orpc/server": "catalog:",
 		"@orpc/zod": "catalog:",
 		"better-auth": "catalog:",
 		"varlock": "catalog:",
 		"zod": "catalog:",
-		"@full-stack-example/queue": "workspace:*",
 		"@hono/node-server": "^2.1.1",
-		"@full-stack-example/observability": "workspace:*",
 		"drizzle-orm": "catalog:",
 		"@full-stack-example/domain": "workspace:*",
 		"pino": "catalog:",
@@ -36,7 +33,9 @@
 		"@opentelemetry/sdk-trace": "catalog:",
 		"pg": "catalog:",
 		"bullmq": "catalog:",
-		"bullmq-otel": "catalog:"
+		"bullmq-otel": "catalog:",
+		"@full-stack-example/runtime": "workspace:*",
+		"@full-stack-example/identity": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/node": "^24.0.0",

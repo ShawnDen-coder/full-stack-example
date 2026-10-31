@@ -1,7 +1,10 @@
+import {
+	jobStatuses,
+	QueueMonitorUnavailableError,
+} from "@full-stack-example/runtime/queue-monitor";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { platformProcedure } from "../procedures";
-import { jobStatuses, QueueMonitorUnavailableError } from "../queue-monitor";
 
 const queueKey = z.string().trim().min(1).max(64);
 const jobId = z.string().trim().min(1).max(128);

@@ -28,3 +28,7 @@ and pnpm check-types.
 `enabled=true`, a role grant, catalog metadata, and workspace-scoped API/data access.
 Missing configuration denies access. `/workspaces` and `/queues` require the platform
 role. `/apps` remains available for users awaiting membership.
+
+## Lx
+
+L2. [Dependency policy / 依赖规则](../../docs/dependency-layers.md).

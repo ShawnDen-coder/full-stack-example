@@ -78,3 +78,7 @@ Todo 空间范围。旧 Todo 归入 application；没有 owner 的行继续不�
 
 Bootstrap 默认只授予平台身份。如需同时明确授予已有空间的 owner，使用
 `pnpm admin:bootstrap <user-id> --workspace-owner <workspace-id>`。
+
+## Lx
+
+L1. [Dependency policy / 依赖规则](../../docs/dependency-layers.zh-CN.md).

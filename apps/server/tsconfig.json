@@ -3,6 +3,15 @@
 	"references": [
 		{
 			"path": "../../packages/api"
+		},
+		{
+			"path": "../../packages/runtime"
+		},
+		{
+			"path": "../../packages/identity"
+		},
+		{
+			"path": "../../packages/domain"
 		}
 	],
 	"compilerOptions": {
