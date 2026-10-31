@@ -678,6 +678,12 @@ importers:
       '@orpc/zod':
         specifier: 'catalog:'
         version: 1.15.7(@opentelemetry/api@1.10.0)(@orpc/contract@1.15.7(@opentelemetry/api@1.10.0))(@orpc/server@1.15.7(@opentelemetry/api@1.10.0))(zod@4.6.7)
+      better-auth:
+        specifier: 'catalog:'
+        version: 1.7.7(@opentelemetry/api@1.10.0)(drizzle-kit@1.0.0-rc.4)(drizzle-orm@1.0.0-rc.4(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.7))(pg@8.23.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.17)(vue@3.5.44(typescript@6.0.3))
+      cron-parser:
+        specifier: 5.10.2
+        version: 5.10.2
       hono:
         specifier: ^4.13.7
         version: 4.13.13
