@@ -18,6 +18,8 @@
 		"@orpc/openapi": "catalog:",
 		"@orpc/server": "catalog:",
 		"@orpc/zod": "catalog:",
+		"better-auth": "catalog:",
+		"cron-parser": "5.10.2",
 		"hono": "^4.13.7",
 		"zod": "catalog:",
 		"@full-stack-example/identity": "workspace:*",
