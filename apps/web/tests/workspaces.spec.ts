@@ -89,14 +89,16 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 		const b = spaces[1];
 		if (!a || !b) throw new Error("Expected two workspaces");
 		await page.goto("/workspaces");
-		await page.getByRole("button", { name: "Cards", exact: true }).click();
-		await expect(
-			page.getByRole("button", { name: "Cards", exact: true }),
-		).toHaveAttribute("aria-pressed", "true");
+		// A saved legacy list preference must not change the cards-only page.
+		await page.evaluate(() => localStorage.setItem("workspaces:view", "list"));
 		await page.reload();
+		await expect(page.locator("table")).toHaveCount(0);
+		await expect(
+			page.getByRole("button", { name: "List", exact: true }),
+		).toHaveCount(0);
 		await expect(
 			page.getByRole("button", { name: "Cards", exact: true }),
-		).toHaveAttribute("aria-pressed", "true");
+		).toHaveCount(0);
 		const settings = page.getByRole("button", {
 			name: `Settings for ${a.name}`,
 			exact: true,
@@ -208,14 +210,13 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 				),
 			).toBe(true);
 		}
-		await page.getByRole("button", { name: "List", exact: true }).click();
 		await expect(
 			page.getByRole("button", { name: `Settings for ${renamed}` }),
 		).toBeVisible();
 		await page.getByRole("button", { name: "Toggle theme" }).click();
 		await page.getByRole("menuitem", { name: "Dark" }).click();
 		await page.screenshot({
-			path: info.outputPath("management-list-390-dark.png"),
+			path: info.outputPath("management-cards-390-dark.png"),
 			fullPage: true,
 		});
 		expect(

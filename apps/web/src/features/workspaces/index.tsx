@@ -11,14 +11,6 @@ import { Icon } from "@full-stack-example/ui/components/icon";
 import { Input } from "@full-stack-example/ui/components/input";
 import { Label } from "@full-stack-example/ui/components/label";
 import { Switch } from "@full-stack-example/ui/components/switch";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@full-stack-example/ui/components/table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Settings } from "lucide-react";
 import { useRef, useState } from "react";
@@ -40,15 +32,6 @@ export function Workspaces() {
 	const [selected, setSelected] = useState<string>();
 	const settingsTrigger = useRef<HTMLButtonElement>(null);
 	const createTrigger = useRef<HTMLButtonElement>(null);
-	const [view, setView] = useState<"list" | "cards">(() => {
-		try {
-			return localStorage.getItem("workspaces:view") === "cards"
-				? "cards"
-				: "list";
-		} catch {
-			return "list";
-		}
-	});
 	const queries = useQueryClient();
 	const spaces = useQuery({
 		queryKey: ["workspaces", "all", offset],
@@ -84,25 +67,8 @@ export function Workspaces() {
 	);
 	return (
 		<div className="mx-auto w-full max-w-240 space-y-4">
-			<div className="flex flex-wrap items-center justify-between gap-2">
+			<div className="flex flex-wrap items-center justify-end gap-2">
 				<h1 className="sr-only">Workspaces</h1>
-				<fieldset aria-label="Workspace view" className="flex gap-1">
-					{(["list", "cards"] as const).map((value) => (
-						<Button
-							key={value}
-							variant={view === value ? "secondary" : "ghost"}
-							aria-pressed={view === value}
-							onClick={() => {
-								setView(value);
-								try {
-									localStorage.setItem("workspaces:view", value);
-								} catch {}
-							}}
-						>
-							{value === "list" ? "List" : "Cards"}
-						</Button>
-					))}
-				</fieldset>
 				<Dialog
 					open={open}
 					onOpenChange={(next) => {
@@ -238,93 +204,38 @@ export function Workspaces() {
 				<p role="status">Loading workspaces…</p>
 			) : (
 				<>
-					{view === "cards" ? (
-						<div className="grid @min-[1000px]/content:grid-cols-3 @min-[640px]/content:grid-cols-2 grid-cols-1 gap-4">
-							{spaces.data.items.map((space) => (
-								<div
-									key={space.id}
-									className="flex min-w-0 items-center gap-3 rounded-xl border p-4"
-								>
-									<WorkspaceLogo
-										id={space.id}
-										name={space.name}
-										hasLogo={space.hasLogo}
-									/>
-									<div className="min-w-0 flex-1">
-										<div className="break-words font-medium">{space.name}</div>
-										<div className="break-all text-muted-foreground text-sm">
-											{space.slug}
-										</div>
+					<div className="grid @min-[1000px]/content:grid-cols-3 @min-[640px]/content:grid-cols-2 grid-cols-1 gap-4">
+						{spaces.data.items.map((space) => (
+							<div
+								key={space.id}
+								className="flex min-w-0 items-center gap-3 rounded-xl border p-4"
+							>
+								<WorkspaceLogo
+									id={space.id}
+									name={space.name}
+									hasLogo={space.hasLogo}
+								/>
+								<div className="min-w-0 flex-1">
+									<div className="break-words font-medium">{space.name}</div>
+									<div className="break-all text-muted-foreground text-sm">
+										{space.slug}
 									</div>
-									<Button
-										variant="ghost"
-										size="icon"
-										className="size-11"
-										aria-label={`Settings for ${space.name}`}
-										onClick={(event) => {
-											settingsTrigger.current = event.currentTarget;
-											setSelected(space.id);
-										}}
-									>
-										<Icon icon={Settings} />
-									</Button>
 								</div>
-							))}
-						</div>
-					) : (
-						<div>
-							<Table className="table-fixed">
-								<TableHeader className="hidden sm:table-header-group">
-									<TableRow>
-										<TableHead className="w-3/5">Workspace</TableHead>
-										<TableHead>Slug</TableHead>
-										<TableHead className="w-16 text-right">
-											<span className="sr-only">Settings</span>
-										</TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{spaces.data.items.map((space) => (
-										<TableRow key={space.id} className="h-16 sm:h-14">
-											<TableCell className="min-w-0 whitespace-normal font-medium">
-												<div className="flex items-center gap-3">
-													<WorkspaceLogo
-														id={space.id}
-														name={space.name}
-														hasLogo={space.hasLogo}
-														className="size-8"
-													/>
-													<div className="min-w-0">
-														<div className="break-words">{space.name}</div>
-														<div className="break-all font-normal text-muted-foreground text-sm sm:hidden">
-															{space.slug}
-														</div>
-													</div>
-												</div>
-											</TableCell>
-											<TableCell className="hidden min-w-0 whitespace-normal break-all text-muted-foreground sm:table-cell">
-												{space.slug}
-											</TableCell>
-											<TableCell className="w-16 text-right">
-												<Button
-													variant="ghost"
-													size="icon"
-													className="size-11 sm:size-9"
-													aria-label={`Settings for ${space.name}`}
-													onClick={(event) => {
-														settingsTrigger.current = event.currentTarget;
-														setSelected(space.id);
-													}}
-												>
-													<Icon icon={Settings} />
-												</Button>
-											</TableCell>
-										</TableRow>
-									))}
-								</TableBody>
-							</Table>
-						</div>
-					)}
+								<Button
+									variant="ghost"
+									size="icon"
+									className="size-11"
+									aria-label={`Settings for ${space.name}`}
+									onClick={(event) => {
+										settingsTrigger.current = event.currentTarget;
+										setSelected(space.id);
+									}}
+								>
+									<Icon icon={Settings} />
+								</Button>
+							</div>
+						))}
+					</div>
 					{selectedSpace && (
 						<WorkspaceSettings
 							key={selectedSpace.id}

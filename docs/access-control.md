@@ -25,7 +25,7 @@ The former Tasks demo is not a workspace task center.
 
 - `/workspaces`: platform metadata list, transactional creation with an existing
   account owner, and tool enable/disable. Creator membership is never implicit.
-  Cards and list display the same page; the preference is stored locally.
+  Workspace management uses a single responsive card view with pagination.
 - Workspace settings: platform superadmins or the target workspace owner/admin
   may atomically change its name and logo. Only platform superadmins can change
   tool availability. Slug is immutable; logos are bounded, normalized raster data.

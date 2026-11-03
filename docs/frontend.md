@@ -17,7 +17,7 @@ collection, not a production backend. Its MIT notice is retained in
 | `/tasks` | Original task table, filters, sorting, selection, dialogs and pagination; sample data |
 | `/apps` | Authenticated tool center; lists only visible tools and pages |
 | `/apps/integrations-demo` | Original integrations grid; sample connections |
-| `/workspaces` | Superadmin workspace list, creation and settings; Cards/List preference is device-local |
+| `/workspaces` | Superadmin workspace cards, creation and settings |
 | `/admin/users?workspace=<id>` | Current workspace owner/admin members and page roles |
 | `/users` | Compatibility entry for the current workspace Members & access screen (`/admin/users` is canonical) |
 | `/chats` | Original conversation UI and sample conversations; no messages sent |

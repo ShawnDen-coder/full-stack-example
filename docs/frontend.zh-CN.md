@@ -15,7 +15,7 @@
 | `/tasks` | 原版任务表格、筛选、排序、选择、弹窗和分页，示例任务 |
 | `/apps` | 登录后的工具中心，仅显示可访问工具和页面 |
 | `/apps/integrations-demo` | 原版集成演示，连接状态为示例 |
-| `/workspaces` | superadmin 管理 Workspace 列表、创建和设置；Cards/List 偏好保存在设备本地 |
+| `/workspaces` | superadmin 通过卡片管理 Workspace、创建和设置 |
 | `/admin/users?workspace=<id>` | 当前 Workspace owner/admin 管理成员和页面角色 |
 | `/users` | 当前 Workspace 的 Members & access 兼容入口（规范入口为 `/admin/users`） |
 | `/chats` | 原版会话界面与示例消息，不发送消息 |
