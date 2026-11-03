@@ -387,13 +387,15 @@ test("readiness waits for every consumer after one fails", async () => {
 	await runtime.close();
 });
 
-test("heartbeat does not repeat a hanging consumer after another fails", async () => {
+test("heartbeat does not repeat a hanging consumer after another fails", async (t) => {
+	t.mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
 	const { startHeartbeat } = await import("../src/heartbeat");
 	const { mkdtemp, rm } = await import("node:fs/promises");
 	const { tmpdir } = await import("node:os");
 	const { join } = await import("node:path");
 	const f = fixture();
 	const pending = Promise.withResolvers<string | null>();
+	const probing = Promise.withResolvers<void>();
 	let calls = 0;
 	at(f.workers, 0).isRunning = () => false;
 	at(f.workers, 1).getBackend = () => ({
@@ -401,23 +403,32 @@ test("heartbeat does not repeat a hanging consumer after another fails", async (
 			status: "ready",
 			get: () => {
 				calls++;
+				probing.resolve();
 				return pending.promise;
 			},
 		}),
 	});
 	const runtime = await f.start();
 	const directory = await mkdtemp(join(tmpdir(), "worker-group-"));
+	let heartbeat: Awaited<ReturnType<typeof startHeartbeat>> | undefined;
 	try {
-		const heartbeat = await startHeartbeat(
+		const startup = startHeartbeat(
 			runtime.checkReady,
 			join(directory, "ready"),
 		);
-		await new Promise((resolve) => setTimeout(resolve, 5200));
+		await probing.promise;
+		t.mock.timers.tick(2000);
+		heartbeat = await startup;
+		t.mock.timers.tick(5000);
+		await tick();
 		assert.equal(calls, 1);
 		await heartbeat.close();
 		pending.resolve(null);
 		await runtime.close();
 	} finally {
+		await heartbeat?.close();
+		pending.resolve(null);
+		await runtime.close();
 		await rm(directory, { recursive: true, force: true });
 	}
 });
