@@ -130,6 +130,55 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 			page.getByRole("button", { name: `Settings for ${renamed}` }),
 		).toBeFocused();
 		await page.getByRole("button", { name: `Settings for ${renamed}` }).click();
+		await expect(page.getByRole("dialog").locator("img")).toBeVisible();
+		await page.getByRole("button", { name: "Remove", exact: true }).click();
+		await expect(page.getByRole("dialog").locator("img")).toHaveCount(0);
+		// Another editor replaces the server logo while this dialog has a removal draft.
+		const blueLogo = await page.evaluate(() => {
+			const canvas = document.createElement("canvas");
+			canvas.width = 2;
+			canvas.height = 2;
+			const context = canvas.getContext("2d");
+			if (!context) throw new Error("Canvas unavailable");
+			context.fillStyle = "blue";
+			context.fillRect(0, 0, 2, 2);
+			return canvas.toDataURL("image/webp");
+		});
+		expect(
+			(
+				await page
+					.context()
+					.request.post(
+						"http://127.0.0.1:43100/rpc/access/updateWorkspaceBasics",
+						{
+							data: {
+								json: { workspaceId: a.id, name: renamed, logo: blueLogo },
+							},
+						},
+					)
+			).ok(),
+		).toBe(true);
+		const refreshedLogo = page.waitForResponse(
+			(response) =>
+				response.url().endsWith("/rpc/access/workspaceLogo") &&
+				response.request().postDataJSON().json.workspaceId === a.id,
+		);
+		await page.evaluate(() =>
+			window.dispatchEvent(new Event("visibilitychange")),
+		);
+		await refreshedLogo;
+		await expect(page.getByRole("dialog").locator("img")).toHaveCount(0);
+		await page
+			.getByRole("button", { name: "Save changes", exact: true })
+			.click();
+		await expect(page.getByRole("dialog")).toHaveCount(0);
+		const removedLogo = await page
+			.context()
+			.request.post("http://127.0.0.1:43100/rpc/access/workspaceLogo", {
+				data: { json: { workspaceId: a.id } },
+			});
+		expect((await removedLogo.json()).json.logo).toBeNull();
+		await page.getByRole("button", { name: `Settings for ${renamed}` }).click();
 		await page.getByRole("tab", { name: "Tools" }).click();
 		const todosSwitch = page.getByRole("switch", { name: "Enable Todos" });
 		await expect(todosSwitch).toBeChecked();
@@ -245,9 +294,13 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 		await page
 			.getByRole("menuitemradio", { name: b.name, exact: true })
 			.click();
-		await page
-			.getByRole("button", { name: "Todos", exact: true })
-			.press("Enter");
+		await expect(page).toHaveURL(new RegExp(`workspace=${b.id}`));
+		await expect(
+			page.getByRole("button", { name: `Switch workspace: ${b.name}` }),
+		).toBeVisible();
+		await targetTool.focus();
+		await expect(targetTool).toBeFocused();
+		await page.keyboard.press("Enter");
 		await expect(page.getByText("No todos yet. Add one above!")).toBeVisible();
 		if (!pending) throw new Error("Expected a delayed request");
 		await pending

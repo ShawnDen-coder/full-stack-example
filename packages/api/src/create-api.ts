@@ -101,20 +101,27 @@ export function createApi(
 		);
 		return c.json({ error: "Internal Server Error" }, 500);
 	});
-	for (const path of [
+	const workspaceWritePaths = new Set([
 		"/rpc/access/createWorkspace",
 		"/rpc/access/updateWorkspaceBasics",
 		"/api-reference/access/createWorkspace",
 		"/api-reference/access/updateWorkspaceBasics",
-	]) {
-		app.use(
-			path,
-			bodyLimit({
-				maxSize: 64 * 1024,
-				onError: (c) => c.json({ error: "Request body too large" }, 413),
-			}),
-		);
-	}
+	]);
+	const limitWorkspaceBody = bodyLimit({
+		maxSize: 64 * 1024,
+		onError: (c) => c.json({ error: "Request body too large" }, 413),
+	});
+	app.use("*", (c, next) => {
+		let path = c.req.path;
+		try {
+			path = decodeURIComponent(path);
+		} catch {
+			// A malformed path is left for the router to reject.
+		}
+		return workspaceWritePaths.has(path.replace(/\/+$/, ""))
+			? limitWorkspaceBody(c, next)
+			: next();
+	});
 	app.on(["GET", "POST"], "/api/auth/*", (c) => deps.auth.handler(c.req.raw));
 	app.get("/", (c) => c.text("OK"));
 	app.get("/health", (c) => c.text("OK"));

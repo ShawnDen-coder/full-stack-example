@@ -67,6 +67,7 @@ export function Workspaces() {
 				tools: todos ? ["todos"] : [],
 				logo,
 			}),
+		onError: () => {},
 		onSuccess: async () => {
 			setOpen(false);
 			setName("");

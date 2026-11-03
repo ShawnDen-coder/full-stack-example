@@ -53,7 +53,7 @@ export function LogoPreview({
 				<img
 					src={safeLogo}
 					alt=""
-					className="size-full object-cover"
+					className="size-full object-contain"
 					onError={onError}
 				/>
 			) : (

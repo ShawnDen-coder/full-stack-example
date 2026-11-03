@@ -1,6 +1,19 @@
 import { ORPCError } from "@orpc/server";
 import sharp from "sharp";
 
+function isAnimatedPng(bytes: Buffer): boolean {
+	for (let offset = 8; offset + 12 <= bytes.length; ) {
+		const length = bytes.readUInt32BE(offset);
+		const end = offset + 12 + length;
+		if (end > bytes.length) return false;
+		const type = bytes.toString("ascii", offset + 4, offset + 8);
+		if (type === "acTL") return true;
+		if (type === "IEND") return false;
+		offset = end;
+	}
+	return false;
+}
+
 // Only normalized, bounded raster data is persisted. Never trust the browser's MIME.
 export async function normalizeWorkspaceLogo(
 	value: string | null,
@@ -19,6 +32,9 @@ export async function normalizeWorkspaceLogo(
 			message: "Invalid or oversized image.",
 		});
 	try {
+		// libvips can expose an APNG as a one-page PNG, so inspect its chunks too.
+		if (match[1] === "png" && isAnimatedPng(bytes))
+			throw new Error("Animated PNG");
 		const image = sharp(bytes, {
 			limitInputPixels: 256 * 256,
 			animated: true,

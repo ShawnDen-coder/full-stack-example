@@ -105,6 +105,7 @@ function AccessManagement() {
 	const [tab, setTab] = useState("members");
 	const addMember = useMutation({
 		mutationFn: () => client.access.addMember({ workspaceId, email }),
+		onError: () => {},
 		onSuccess: () => {
 			setEmail("");
 			setAddOpen(false);
