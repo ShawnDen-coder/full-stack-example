@@ -127,8 +127,9 @@ test("fatal loop failure drains the process and exits nonzero; cleanup failure s
 });
 
 test("the hard shutdown deadline terminates a child even when a consumer never drains", {
-	timeout: 10000,
-}, async () => {
+	// Cold TS/module startup is separate from the shutdown deadline under test.
+	timeout: 30000,
+}, async (t) => {
 	const source = `
 import { startWorkerProcess } from ${JSON.stringify(new URL("../src/lifecycle.ts", import.meta.url).href)};
 import { createLogger } from '@full-stack-example/observability';
@@ -140,21 +141,45 @@ const worker = startWorkerProcess({
  telemetry: { shutdown: async () => {} }, exit: code => process.exit(code),
 });
 await worker.ready;
-await worker.shutdown();`;
+process.once('message', async message => {
+ if (message === 'shutdown') await worker.shutdown();
+});
+process.send('ready');`;
 	const child = spawn(
 		process.execPath,
 		["--import", "tsx", "--input-type=module", "--eval", source],
-		{ stdio: "pipe" },
+		{ stdio: ["ignore", "ignore", "pipe", "ipc"] },
 	);
+	t.after(() => {
+		if (child.exitCode === null && child.signalCode === null)
+			child.kill("SIGKILL");
+	});
 	let errors = "";
-	child.stderr.on("data", (chunk) => {
+	child.stderr?.on("data", (chunk) => {
 		errors += chunk;
 	});
+	const exited = once(child, "exit");
+	await Promise.race([
+		once(child, "message").then(([message]) => assert.equal(message, "ready")),
+		exited.then(([code, signal]) => {
+			throw new Error(
+				`Worker exited before ready (${code}, ${signal}): ${errors}`,
+			);
+		}),
+	]);
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const shutdownDeadline = new Promise<never>((_, reject) => {
+		timer = setTimeout(
+			() => reject(new Error(`Worker did not exit after shutdown: ${errors}`)),
+			2000,
+		);
+	});
 	try {
-		const [code, signal] = await once(child, "exit");
+		child.send("shutdown");
+		const [code, signal] = await Promise.race([exited, shutdownDeadline]);
 		assert.equal(signal, null, errors);
 		assert.equal(code, 1, errors);
 	} finally {
-		if (child.exitCode === null) child.kill("SIGKILL");
+		clearTimeout(timer);
 	}
 });
