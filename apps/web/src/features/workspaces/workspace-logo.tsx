@@ -1,4 +1,5 @@
 import { Icon } from "@full-stack-example/ui/components/icon";
+import { cn } from "@full-stack-example/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Building2 } from "lucide-react";
 import { useState } from "react";
@@ -8,10 +9,12 @@ export function WorkspaceLogo({
 	id,
 	name,
 	hasLogo,
+	className,
 }: {
 	id: string;
 	name: string;
 	hasLogo: boolean;
+	className?: string;
 }) {
 	const [failedLogo, setFailedLogo] = useState<string | null>(null);
 	const logo = useQuery({
@@ -22,6 +25,7 @@ export function WorkspaceLogo({
 	return (
 		<LogoPreview
 			name={name}
+			className={className}
 			logo={hasLogo && logo.data?.logo !== failedLogo ? logo.data?.logo : null}
 			onError={() => setFailedLogo(logo.data?.logo ?? null)}
 		/>
@@ -32,10 +36,12 @@ export function LogoPreview({
 	name,
 	logo,
 	onError,
+	className,
 }: {
 	name: string;
 	logo?: string | null;
 	onError?: () => void;
+	className?: string;
 }) {
 	const safeLogo =
 		logo &&
@@ -45,7 +51,10 @@ export function LogoPreview({
 			: null;
 	return (
 		<span
-			className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted font-medium"
+			className={cn(
+				"flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted font-medium",
+				className,
+			)}
 			aria-hidden="true"
 			title={name}
 		>

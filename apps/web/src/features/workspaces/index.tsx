@@ -83,8 +83,8 @@ export function Workspaces() {
 		(space) => space.id === selected,
 	);
 	return (
-		<div className="space-y-6">
-			<div className="flex flex-wrap items-center justify-end gap-2">
+		<div className="mx-auto w-full max-w-240 space-y-4">
+			<div className="flex flex-wrap items-center justify-between gap-2">
 				<h1 className="sr-only">Workspaces</h1>
 				<fieldset aria-label="Workspace view" className="flex gap-1">
 					{(["list", "cards"] as const).map((value) => (
@@ -273,38 +273,43 @@ export function Workspaces() {
 						</div>
 					) : (
 						<div>
-							<Table>
+							<Table className="table-fixed">
 								<TableHeader className="hidden sm:table-header-group">
 									<TableRow>
-										<TableHead>Workspace</TableHead>
+										<TableHead className="w-3/5">Workspace</TableHead>
 										<TableHead>Slug</TableHead>
-										<TableHead className="text-right">Settings</TableHead>
+										<TableHead className="w-16 text-right">
+											<span className="sr-only">Settings</span>
+										</TableHead>
 									</TableRow>
 								</TableHeader>
-								<TableBody className="block sm:table-row-group">
+								<TableBody>
 									{spaces.data.items.map((space) => (
-										<TableRow
-											key={space.id}
-											className="grid grid-cols-[minmax(0,1fr)_auto] sm:table-row"
-										>
-											<TableCell className="col-span-2 min-w-0 whitespace-normal break-all font-medium">
+										<TableRow key={space.id} className="h-16 sm:h-14">
+											<TableCell className="min-w-0 whitespace-normal font-medium">
 												<div className="flex items-center gap-3">
 													<WorkspaceLogo
 														id={space.id}
 														name={space.name}
 														hasLogo={space.hasLogo}
+														className="size-8"
 													/>
-													{space.name}
+													<div className="min-w-0">
+														<div className="break-words">{space.name}</div>
+														<div className="break-all font-normal text-muted-foreground text-sm sm:hidden">
+															{space.slug}
+														</div>
+													</div>
 												</div>
 											</TableCell>
-											<TableCell className="min-w-0 whitespace-normal break-all text-muted-foreground">
+											<TableCell className="hidden min-w-0 whitespace-normal break-all text-muted-foreground sm:table-cell">
 												{space.slug}
 											</TableCell>
-											<TableCell className="text-right">
+											<TableCell className="w-16 text-right">
 												<Button
 													variant="ghost"
 													size="icon"
-													className="size-11"
+													className="size-11 sm:size-9"
 													aria-label={`Settings for ${space.name}`}
 													onClick={(event) => {
 														settingsTrigger.current = event.currentTarget;
