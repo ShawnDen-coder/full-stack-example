@@ -204,7 +204,7 @@ export function Workspaces() {
 				<p role="status">Loading workspaces…</p>
 			) : (
 				<>
-					<div className="grid @min-[1000px]/content:grid-cols-3 @min-[640px]/content:grid-cols-2 grid-cols-1 gap-4">
+					<div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
 						{spaces.data.items.map((space) => (
 							<div
 								key={space.id}
