@@ -2,10 +2,16 @@
 	"fileKey": "wbcGZwxsUSTjA3oALLEaBX",
 	"pageId": "182:2",
 	"frames": {
-		"desktopCards": "213:2945",
-		"mobileCards": "213:2971",
+		"desktopCards": "183:1314",
+		"mobileCards": "186:1680",
+		"tabletCards": "227:5125",
 		"settingsGeneralDesktop": "218:3036",
 		"settingsToolsDesktop": "218:3112",
+		"settingsOwnerDesktop": "239:7254",
+		"settingsOwnerMobile": "239:7310",
+		"createDesktop": "235:7692",
+		"createMobile": "235:7906",
+		"createFailure": "236:10935",
 		"desktopDefault": "183:1314",
 		"mobileDefault": "186:1680"
 	},
@@ -15,7 +21,7 @@
 		"rejectedReport": "workspace-ui-coco-logo-contract-20261103",
 		"reason": "The report retained inline Todos controls and separate Edit logo actions, contrary to the user's unified settings request",
 		"conflictingDesignOperations": "Cancelled; Cindy delivery reviewed and integrated in b70171d",
-		"obsoleteFigmaFrames": "Logo-only proposals renamed Superseded on the design page",
+		"obsoleteFigmaFrames": "Deleted superseded logo-only proposals, duplicate views, legacy List components and stale handoff boards; see figma-cleanup-2026-11-03.json",
 		"restoredPrimaryViews": "Seven frames each contain six settings gears and zero inline Enabled, Disabled or Edit logo controls"
 	},
 	"behavior": {
@@ -33,19 +39,17 @@
 	"verification": {
 		"editableStructure": true,
 		"imageFilledUiNodes": 0,
-		"fontFamilies": [
-			"Inter"
-		],
+		"fontFamilies": ["Inter"],
 		"desktopCardCount": 6,
 		"mobileCardCount": 6,
 		"screenshotsReviewed": [
-			"desktopList",
 			"desktopCards",
 			"mobileCards",
 			"settingsGeneralDesktop",
 			"settingsToolsDesktop"
 		],
 		"prototypeVerification": "Navigation reaction destinations inspected; no real application testing implied",
+		"cleanupVerification": "All four retained pages checked after deletion: 2,956 instances resolve their components; 65 per-page unique reaction destinations and 11 flow starting points resolve. Desktop cards, creation dialog, mobile owner settings and Tool home screenshots reviewed.",
 		"implementation": "Cindy delivery integrated; reviewed server authorization, body limit, image decoding and editable client state",
 		"reviewFixes": [
 			"Normalize equivalent RPC/OpenAPI paths before body-limit matching",
@@ -83,12 +87,7 @@
 		"padding": 3,
 		"triggerHeight": 29,
 		"change": "Remove the fixed-width trailing blank area and match existing Tabs components",
-		"screens": [
-			"183:1593",
-			"183:1852",
-			"186:1804",
-			"188:2216"
-		]
+		"screens": ["183:1593", "183:1852", "186:1804", "188:2216"]
 	},
 	"clippingFix": {
 		"grid": "Repeat auto-fill columns with a 17rem minimum capped at 100% of the grid; sizing depends on available grid width rather than the shell container",

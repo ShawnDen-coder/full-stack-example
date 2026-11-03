@@ -1,0 +1,420 @@
+{
+	"fileKey": "wbcGZwxsUSTjA3oALLEaBX",
+	"date": "2026-11-03",
+	"scope": "Figma prototype consolidation; application code unchanged",
+	"pageCount": {
+		"before": 6,
+		"after": 4
+	},
+	"pages": [
+		{
+			"id": "56:7051",
+			"name": "01 · 应用原型",
+			"sections": [
+				{
+					"id": "108:4715",
+					"name": "01 · Tool home / Todos"
+				},
+				{
+					"id": "108:4717",
+					"name": "02 · Layout / 响应式基准"
+				},
+				{
+					"id": "108:4718",
+					"name": "03 · 导航与搜索状态"
+				},
+				{
+					"id": "281:8042",
+					"name": "04 · Queues / 主流程与状态"
+				},
+				{
+					"id": "281:8043",
+					"name": "05 · Queues / 搜索与详情"
+				},
+				{
+					"id": "281:8044",
+					"name": "06 · Queues / 边界与说明"
+				}
+			]
+		},
+		{
+			"id": "182:2",
+			"name": "02 · Workspace 管理",
+			"sections": [
+				{
+					"id": "280:6808",
+					"name": "01 · Workspace / 桌面与响应式"
+				},
+				{
+					"id": "280:6809",
+					"name": "02 · Members & access"
+				},
+				{
+					"id": "280:6810",
+					"name": "03 · Workspace settings"
+				},
+				{
+					"id": "280:6811",
+					"name": "04 · 创建与成员操作"
+				},
+				{
+					"id": "280:6812",
+					"name": "05 · Workspace 入口"
+				}
+			]
+		},
+		{
+			"id": "0:1",
+			"name": "03 · Foundations / 基础规范",
+			"sections": [
+				{
+					"id": "111:4715",
+					"name": "01 · 变量来源与迁移说明 / 保留原始记录"
+				},
+				{
+					"id": "111:4716",
+					"name": "02 · Light / Dark 语义色板"
+				}
+			]
+		},
+		{
+			"id": "1:149",
+			"name": "04 · Components / 组件库",
+			"sections": [
+				{
+					"id": "109:5664",
+					"name": "01 · 当前共享 Header"
+				},
+				{
+					"id": "109:5665",
+					"name": "02 · Button / 当前四种尺寸"
+				},
+				{
+					"id": "109:5666",
+					"name": "03 · 表单控件"
+				},
+				{
+					"id": "109:5667",
+					"name": "04 · 信息展示与选择"
+				},
+				{
+					"id": "109:5668",
+					"name": "05 · 浮层与反馈"
+				},
+				{
+					"id": "109:5669",
+					"name": "06 · 设置与预览"
+				},
+				{
+					"id": "109:5670",
+					"name": "07 · 导航与外壳 / 源码基础组件"
+				},
+				{
+					"id": "109:5671",
+					"name": "08 · Tool Card 与 Todo"
+				},
+				{
+					"id": "109:5672",
+					"name": "09 · 图标"
+				},
+				{
+					"id": "109:5673",
+					"name": "90 · 兼容参考 / 旧 Header 与旧 Button"
+				},
+				{
+					"id": "108:4719",
+					"name": "10 · Layout / 共享母版"
+				},
+				{
+					"id": "280:6813",
+					"name": "11 · Workspace / 组件母版"
+				},
+				{
+					"id": "110:8092",
+					"name": "12 · 控件状态示例"
+				}
+			]
+		}
+	],
+	"deletedPages": [
+		{
+			"id": "34:2",
+			"name": "90 · 历史方案 / A-B-C"
+		},
+		{
+			"id": "2:432",
+			"name": "04 · 源码迁移与状态验证",
+			"preservedSection": "110:8092"
+		}
+	],
+	"deletedNodes": {
+		"workspace": [
+			{
+				"id": "213:2945",
+				"name": "Platform workspaces / Cards / Desktop"
+			},
+			{
+				"id": "213:2971",
+				"name": "Platform workspaces / Cards / Mobile"
+			},
+			{
+				"id": "186:766",
+				"name": "Create workspace / Desktop dialog"
+			},
+			{
+				"id": "186:2129",
+				"name": "Create workspace / Mobile dialog"
+			},
+			{
+				"id": "186:1611",
+				"name": "Create workspace / Server errors"
+			},
+			{
+				"id": "188:2372",
+				"name": "Delivery / Capability boundary and review notes"
+			},
+			{
+				"id": "188:2400",
+				"name": "States / Loading, empty, errors and scope changes"
+			},
+			{
+				"id": "188:2432",
+				"name": "Page / Overview"
+			},
+			{
+				"id": "193:2235",
+				"name": "States / Editable UI examples"
+			},
+			{
+				"id": "235:7220",
+				"name": "Superseded / Logo-only proposal / Logo / Preview / Desktop"
+			},
+			{
+				"id": "235:7272",
+				"name": "Superseded / Logo-only proposal / Logo / Unset / Desktop"
+			},
+			{
+				"id": "235:7324",
+				"name": "Superseded / Logo-only proposal / Logo / Remove / Desktop"
+			},
+			{
+				"id": "235:7377",
+				"name": "Superseded / Logo-only proposal / Logo / Saving / Desktop"
+			},
+			{
+				"id": "235:7429",
+				"name": "Superseded / Logo-only proposal / Logo / Save failed / Desktop"
+			},
+			{
+				"id": "235:7482",
+				"name": "Superseded / Logo-only proposal / Logo / Processing / Desktop"
+			},
+			{
+				"id": "235:7535",
+				"name": "Superseded / Logo-only proposal / Logo / Invalid image / Desktop"
+			},
+			{
+				"id": "235:7588",
+				"name": "Superseded / Logo-only proposal / Logo / Preview / Mobile"
+			},
+			{
+				"id": "235:7632",
+				"name": "Superseded / Logo-only proposal / Logo / Save failed / Mobile"
+			},
+			{
+				"id": "235:8054",
+				"name": "Superseded / Logo-only proposal / Logo / Interaction and capability contract"
+			},
+			{
+				"id": "235:8078",
+				"name": "Superseded / Logo-only proposal / Logo / Error copy and keyboard states"
+			},
+			{
+				"id": "183:1294",
+				"name": "Workspace management / Workspace row"
+			},
+			{
+				"id": "186:1730",
+				"name": "Workspace management / Mobile workspace row"
+			},
+			{
+				"id": "227:4546",
+				"name": "Workspace management / View selector / List"
+			},
+			{
+				"id": "227:4551",
+				"name": "Workspace management / View selector / Cards"
+			}
+		],
+		"application": [
+			{
+				"id": "108:4716",
+				"name": "02 · 待选方案 / 紧凑工具卡"
+			},
+			{
+				"id": "108:4720",
+				"name": "06 · 布局说明与兼容检查"
+			},
+			{
+				"id": "119:4715",
+				"name": "实现截图验收 · 149ef3e"
+			},
+			{
+				"id": "56:9938",
+				"name": "目录 / 当前设计"
+			},
+			{
+				"id": "56:9939",
+				"name": "目录 / 阅读顺序"
+			},
+			{
+				"id": "56:7951",
+				"name": "Layout · 767 · 抽屉关闭"
+			},
+			{
+				"id": "56:9967",
+				"name": "1440 · 折叠 / 标准"
+			},
+			{
+				"id": "56:10115",
+				"name": "1024 · 折叠 / 标准"
+			},
+			{
+				"id": "56:8620",
+				"name": "次要能力 · 1920 Wide"
+			},
+			{
+				"id": "79:4150",
+				"name": "1920 · Search open"
+			},
+			{
+				"id": "84:4294",
+				"name": "768 · Search open"
+			},
+			{
+				"id": "77:4221",
+				"name": "1920 · Workspace menu open"
+			},
+			{
+				"id": "147:7403",
+				"name": "History · BullMQ · Waiting default / 1440 · page 2"
+			},
+			{
+				"id": "147:7604",
+				"name": "History · BullMQ · Waiting / 1024 · page 2"
+			},
+			{
+				"id": "147:8010",
+				"name": "History · BullMQ · Delayed / 1440 · page 2"
+			}
+		]
+	},
+	"prototypeRedirects": {
+		"workspace": {
+			"213:2945": "183:1314",
+			"213:2971": "186:1680",
+			"186:766": "235:7692",
+			"186:2129": "235:7906",
+			"186:1611": "236:10935"
+		},
+		"application": {
+			"56:7741": "101:4516",
+			"56:7908": "101:4763",
+			"56:7951": "101:4763",
+			"56:9967": "56:8184",
+			"56:10115": "56:8184",
+			"56:8620": "56:8478",
+			"79:4150": "56:8839",
+			"84:4294": "56:8980",
+			"77:4221": "61:3976"
+		}
+	},
+	"rewrittenReactionNodes": 33,
+	"preservedAssets": [
+		{
+			"id": "108:4719",
+			"page": "1:149",
+			"name": "10 · Layout / 共享母版"
+		},
+		{
+			"id": "280:6813",
+			"page": "1:149",
+			"name": "11 · Workspace / 组件母版"
+		},
+		{
+			"id": "110:8092",
+			"page": "1:149",
+			"name": "12 · 控件状态示例"
+		}
+	],
+	"updatedScreens": [
+		{
+			"id": "235:7692",
+			"change": "Creation dialog background uses canonical card grid"
+		},
+		{
+			"id": "235:7906",
+			"change": "Mobile creation background uses canonical card grid"
+		},
+		{
+			"id": "236:10935",
+			"change": "Atomic creation failure background uses canonical card grid"
+		},
+		{
+			"id": "239:7254",
+			"change": "Owner/admin logo-only dialog replaced with unified General settings"
+		},
+		{
+			"id": "239:7310",
+			"change": "Mobile owner/admin logo-only dialog replaced with unified General settings"
+		}
+	],
+	"validation": [
+		{
+			"page": "56:7051",
+			"name": "01 · 应用原型",
+			"instances": 1382,
+			"components": 0,
+			"missingComponents": [],
+			"prototypeTargets": 34,
+			"brokenTargets": [],
+			"flows": 5,
+			"brokenFlows": []
+		},
+		{
+			"page": "182:2",
+			"name": "02 · Workspace 管理",
+			"instances": 923,
+			"components": 0,
+			"missingComponents": [],
+			"prototypeTargets": 21,
+			"brokenTargets": [],
+			"flows": 6,
+			"brokenFlows": []
+		},
+		{
+			"page": "0:1",
+			"name": "03 · Foundations / 基础规范",
+			"instances": 0,
+			"components": 0,
+			"missingComponents": [],
+			"prototypeTargets": 0,
+			"brokenTargets": [],
+			"flows": 0,
+			"brokenFlows": []
+		},
+		{
+			"page": "1:149",
+			"name": "04 · Components / 组件库",
+			"instances": 651,
+			"components": 349,
+			"missingComponents": [],
+			"prototypeTargets": 10,
+			"brokenTargets": [],
+			"flows": 0,
+			"brokenFlows": []
+		}
+	],
+	"screenshotsReviewed": ["183:1314", "239:7310", "235:7692", "101:4516"],
+	"retention": "Keep responsive layouts, permission variants, meaningful interaction states and referenced compatibility components. Component IDs and canonical Workspace/Members screen IDs preserved."
+}
