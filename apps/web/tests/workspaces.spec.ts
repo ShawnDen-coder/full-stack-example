@@ -38,18 +38,34 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 		await page.getByRole("button", { name: "Sign In", exact: true }).click();
 		await expect(page).toHaveURL(/\/apps(?:\?|$)/);
 		const spaces: Array<{ name: string; id: string }> = [];
+		const runId = randomUUID().slice(0, 8);
 		for (const suffix of ["A", "B"]) {
+			const workspaceName = `Workspace ${suffix} ${runId}`;
 			await page.goto("/workspaces");
 			await page
 				.getByRole("button", { name: "New workspace", exact: true })
 				.click();
-			await page
-				.getByLabel("Name", { exact: true })
-				.fill(`Workspace ${suffix}`);
+			await page.getByLabel("Name", { exact: true }).fill(workspaceName);
 			await page
 				.getByLabel("Slug", { exact: true })
 				.fill(`browser-${randomUUID()}`);
 			await page.getByLabel("Owner email").fill(email);
+			if (suffix === "A") {
+				await page.route("**/rpc/access/createWorkspace", (route) =>
+					route.fulfill({
+						status: 503,
+						json: { json: { message: "Unavailable" } },
+					}),
+				);
+				await page
+					.getByRole("button", { name: "Create workspace", exact: true })
+					.click();
+				await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible();
+				await expect(page.getByLabel("Name", { exact: true })).toHaveValue(
+					workspaceName,
+				);
+				await page.unroute("**/rpc/access/createWorkspace");
+			}
 			await page
 				.getByRole("button", { name: "Create workspace", exact: true })
 				.click();
@@ -57,7 +73,7 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 			await page.getByRole("button", { name: "Switch workspace" }).click();
 			await page
 				.getByRole("menuitemradio", {
-					name: `Workspace ${suffix}`,
+					name: workspaceName,
 					exact: true,
 				})
 				.click();
@@ -65,13 +81,102 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 				page.getByRole("button", { name: "Todos", exact: true }),
 			).toBeVisible();
 			spaces.push({
-				name: `Workspace ${suffix}`,
+				name: workspaceName,
 				id: new URL(page.url()).searchParams.get("workspace") ?? "",
 			});
 		}
 		const a = spaces[0];
 		const b = spaces[1];
 		if (!a || !b) throw new Error("Expected two workspaces");
+		await page.goto("/workspaces");
+		await page.getByRole("button", { name: "Cards", exact: true }).click();
+		await expect(
+			page.getByRole("button", { name: "Cards", exact: true }),
+		).toHaveAttribute("aria-pressed", "true");
+		await page.reload();
+		await expect(
+			page.getByRole("button", { name: "Cards", exact: true }),
+		).toHaveAttribute("aria-pressed", "true");
+		const settings = page.getByRole("button", {
+			name: `Settings for ${a.name}`,
+			exact: true,
+		});
+		await settings.click();
+		await page.getByLabel("Logo", { exact: true }).setInputFiles({
+			name: "logo.png",
+			mimeType: "image/png",
+			buffer: Buffer.from(
+				"iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAE0lEQVQImWP4z8DwnwGM/zMwAAAf7gP9qS/A4gAAAABJRU5ErkJggg==",
+				"base64",
+			),
+		});
+		await expect(page.getByRole("dialog").locator("img")).toBeVisible();
+		const renamed = `Renamed workspace ${runId}`;
+		await page.getByLabel("Name", { exact: true }).fill(renamed);
+		await page.route("**/rpc/access/updateWorkspaceBasics", (route) =>
+			route.fulfill({
+				status: 503,
+				json: { json: { message: "Unavailable" } },
+			}),
+		);
+		await page.getByRole("button", { name: "Save changes" }).click();
+		await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible();
+		await expect(page.getByLabel("Name", { exact: true })).toHaveValue(renamed);
+		await page.unroute("**/rpc/access/updateWorkspaceBasics");
+		await page.getByRole("button", { name: "Save changes" }).click();
+		await expect(page.getByRole("dialog")).toHaveCount(0);
+		await expect(page.locator("img[src^='data:image/']").first()).toBeVisible();
+		await expect(
+			page.getByRole("button", { name: `Settings for ${renamed}` }),
+		).toBeFocused();
+		await page.getByRole("button", { name: `Settings for ${renamed}` }).click();
+		await page.getByRole("tab", { name: "Tools" }).click();
+		const todosSwitch = page.getByRole("switch", { name: "Enable Todos" });
+		await expect(todosSwitch).toBeChecked();
+		await page.route("**/rpc/access/setTool", (route) =>
+			route.fulfill({
+				status: 503,
+				json: { json: { message: "Unavailable" } },
+			}),
+		);
+		await todosSwitch.click();
+		await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible();
+		await expect(todosSwitch).toBeChecked();
+		await page.unroute("**/rpc/access/setTool");
+		await page.getByRole("button", { name: "Done", exact: true }).click();
+		await expect(page.locator("[data-sonner-toast]")).toHaveCount(0, {
+			timeout: 15000,
+		});
+		for (const width of [1440, 768, 390]) {
+			await page.setViewportSize({ width, height: 1000 });
+			await page.screenshot({
+				path: info.outputPath(`management-cards-${width}.png`),
+				fullPage: true,
+			});
+			expect(
+				await page.evaluate(
+					() => document.documentElement.scrollWidth <= innerWidth,
+				),
+			).toBe(true);
+		}
+		await page.getByRole("button", { name: "List", exact: true }).click();
+		await expect(
+			page.getByRole("button", { name: `Settings for ${renamed}` }),
+		).toBeVisible();
+		await page.getByRole("button", { name: "Toggle theme" }).click();
+		await page.getByRole("menuitem", { name: "Dark" }).click();
+		await page.screenshot({
+			path: info.outputPath("management-list-390-dark.png"),
+			fullPage: true,
+		});
+		expect(
+			await page.evaluate(
+				() => document.documentElement.scrollWidth <= innerWidth,
+			),
+		).toBe(true);
+		await page.getByRole("button", { name: "Toggle theme" }).click();
+		await page.getByRole("menuitem", { name: "Light" }).click();
+		await page.setViewportSize({ width: 1440, height: 1000 });
 		await page.goto(`/apps?workspace=${a.id}`);
 		const card = page.getByRole("button", { name: "Todos", exact: true });
 		await card.click();
@@ -107,7 +212,13 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 		await page
 			.getByRole("menuitemradio", { name: b.name, exact: true })
 			.click();
-		await page.getByRole("button", { name: "Todos", exact: true }).focus();
+		await expect(page).toHaveURL(new RegExp(`workspace=${b.id}`));
+		await expect(
+			page.getByRole("button", { name: `Switch workspace: ${b.name}` }),
+		).toBeVisible();
+		const targetTool = page.getByRole("button", { name: "Todos", exact: true });
+		await targetTool.focus();
+		await expect(targetTool).toBeFocused();
 		await page.keyboard.press("Enter");
 		await expect(page.getByText("No todos yet. Add one above!")).toBeVisible();
 		await expect(

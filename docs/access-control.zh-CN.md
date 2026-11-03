@@ -22,6 +22,10 @@ URL 中的空间；每次 Todo RPC 在 input 中固定 `workspaceId`。不使用
 - `/workspaces`：平台管理员分页查看空间元数据、新建空间并指定已有账号 owner、启停工具。
   组织、owner、standard 角色和工具配置在一个事务内创建，创建者不会自动成为成员。
 - `/admin/users?workspace=<id>`：owner/admin 用精确邮箱添加已有账号，管理本空间角色。
+  当前空间的 owner/admin 可从切换器进入 **Members & access**；`/users` 是同一页面的兼容入口。
+- Workspace settings：平台 superadmin 或目标空间 owner/admin 可原子修改名称与 logo；
+  只有平台 superadmin 可启停工具，slug 保持不变。Logo 使用受限且规范化的静态图片，
+  成员可读取本空间 logo，但不会因此获得管理权限。卡片和列表共用分页数据，视图偏好保存在本地。
   重复添加不产生重复成员；只有 owner 能管理 admin。
 - `/queues`：独立的平台运维入口，不接受 workspace 的页面授权。
 - Todo：成员身份 ∩ 工具启用 ∩ 原生角色授权；SQL 再同时约束 workspace 和登录用户。

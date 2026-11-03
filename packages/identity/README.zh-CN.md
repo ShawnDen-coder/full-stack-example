@@ -8,6 +8,10 @@ L2 身份与工作区能力，负责 Better Auth 配置、原生权限检查、�
 
 `./auth` 使用注入数据库创建 Better Auth；`./access` 提供授权与工作区 facade。SQL 与事务逻辑从 API 迁入，不改变 HTTP 契约。
 
+Workspace 基础信息通过 workspace service 原子更新。平台 superadmin 和目标空间
+owner/admin 可修改名称和 logo；slug 不可修改。服务端接受最多 32 KiB、256 × 256
+像素的静态 PNG/WebP data URL，完整解码并重编码为不含 metadata 的 WebP；仅平台管理员或空间成员可读取。
+
 ## 扩展
 
 遵守[分层规则](../../docs/dependency-layers.zh-CN.md)，只新增明确能力入口，不建立转发基础设施的 barrel。

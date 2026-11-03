@@ -15,7 +15,9 @@
 | `/tasks` | 原版任务表格、筛选、排序、选择、弹窗和分页，示例任务 |
 | `/apps` | 登录后的工具中心，仅显示可访问工具和页面 |
 | `/apps/integrations-demo` | 原版集成演示，连接状态为示例 |
-| `/users` | 原版用户表格、角色、状态、新增／邀请／删除弹窗，示例用户 |
+| `/workspaces` | superadmin 管理 Workspace 列表、创建和设置；Cards/List 偏好保存在设备本地 |
+| `/admin/users?workspace=<id>` | 当前 Workspace owner/admin 管理成员和页面角色 |
+| `/users` | 当前 Workspace 的 Members & access 兼容入口（规范入口为 `/admin/users`） |
 | `/chats` | 原版会话界面与示例消息，不发送消息 |
 | `/settings` | Better Auth 真实个人资料更新，邮箱只读 |
 | `/settings/appearance` | 设备本地浅色／深色／跟随系统偏好，即时生效 |

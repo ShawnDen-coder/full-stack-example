@@ -94,7 +94,16 @@ test("administrators configure native page roles through real services", async (
 		);
 		await login(page, owner.email);
 		await login(ordinary, person.email);
-		await page.goto("/admin/users");
+		await page.goto("/apps?workspace=application");
+		await page.getByRole("button", { name: /Switch workspace/ }).click();
+		await page.getByRole("menuitem", { name: "Members & access" }).click();
+		await expect(page).toHaveURL(/\/admin\/users\?workspace=application/);
+		await ordinary.goto("/apps?workspace=application");
+		await ordinary.getByRole("button", { name: /Switch workspace/ }).click();
+		await expect(
+			ordinary.getByRole("menuitem", { name: "Members & access" }),
+		).toHaveCount(0);
+		await ordinary.keyboard.press("Escape");
 
 		await page.getByRole("tab", { name: "Page roles" }).click();
 		await page
@@ -164,7 +173,7 @@ test("administrators configure native page roles through real services", async (
 			.getByRole("button", { name: "Edit browser-limited", exact: true })
 			.click();
 		await manager
-			.getByRole("checkbox", { name: "View Todos", exact: true })
+			.getByRole("checkbox", { name: "Use Todos", exact: true })
 			.check();
 		await manager
 			.getByRole("button", { name: "Save changes", exact: true })

@@ -91,11 +91,11 @@ export const catalog = [
 	},
 	{
 		id: "users",
-		title: "Users and access",
+		title: "Members & access",
 		url: "/admin/users",
 		icon: ShieldCheck,
 		group: "admin",
-		description: "Manage users and page permissions.",
+		description: "Manage workspace members and page roles.",
 		match: "exact",
 		kind: "admin",
 	},

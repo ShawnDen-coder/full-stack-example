@@ -7,6 +7,7 @@ import { isProcedure, ORPCError, onError } from "@orpc/server";
 import { RPCHandler, type RPCHandlerOptions } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import {
 	type Context,
@@ -100,6 +101,20 @@ export function createApi(
 		);
 		return c.json({ error: "Internal Server Error" }, 500);
 	});
+	for (const path of [
+		"/rpc/access/createWorkspace",
+		"/rpc/access/updateWorkspaceBasics",
+		"/api-reference/access/createWorkspace",
+		"/api-reference/access/updateWorkspaceBasics",
+	]) {
+		app.use(
+			path,
+			bodyLimit({
+				maxSize: 64 * 1024,
+				onError: (c) => c.json({ error: "Request body too large" }, 413),
+			}),
+		);
+	}
 	app.on(["GET", "POST"], "/api/auth/*", (c) => deps.auth.handler(c.req.raw));
 	app.get("/", (c) => c.text("OK"));
 	app.get("/health", (c) => c.text("OK"));

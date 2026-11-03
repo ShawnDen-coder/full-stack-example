@@ -17,7 +17,9 @@ collection, not a production backend. Its MIT notice is retained in
 | `/tasks` | Original task table, filters, sorting, selection, dialogs and pagination; sample data |
 | `/apps` | Authenticated tool center; lists only visible tools and pages |
 | `/apps/integrations-demo` | Original integrations grid; sample connections |
-| `/users` | Original user table, roles, statuses, add/invite/delete dialogs; sample users |
+| `/workspaces` | Superadmin workspace list, creation and settings; Cards/List preference is device-local |
+| `/admin/users?workspace=<id>` | Current workspace owner/admin members and page roles |
+| `/users` | Compatibility entry for the current workspace Members & access screen (`/admin/users` is canonical) |
 | `/chats` | Original conversation UI and sample conversations; no messages sent |
 | `/settings` | Live Better Auth profile update; email remains read-only |
 | `/settings/appearance` | Live device-local light/dark/system preference |

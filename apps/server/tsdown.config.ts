@@ -7,6 +7,6 @@ export default defineConfig({
 	clean: true,
 	deps: {
 		alwaysBundle: [/@full-stack-example\/.*/],
-		neverBundle: ["pino", "pg", "bullmq", "bullmq-otel"],
+		neverBundle: ["pino", "pg", "bullmq", "bullmq-otel", "sharp"],
 	},
 });

@@ -5,11 +5,13 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@full-stack-example/ui/components/dropdown-menu";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useMatch, useMatches } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { useAccess } from "@/lib/access";
 import { breadcrumbAncestors, breadcrumbTargets } from "@/lib/breadcrumbs";
 import { catalog } from "@/lib/catalog";
+import { client } from "@/utils/orpc";
 
 export function Breadcrumbs() {
 	const matches = useMatches();
@@ -28,6 +30,14 @@ export function Breadcrumbs() {
 		shouldThrow: false,
 	});
 	const access = useAccess();
+	const spaces = useQuery({
+		queryKey: ["workspaces", "mine"],
+		queryFn: () => client.access.mine(),
+		staleTime: 0,
+	});
+	const currentSpace = spaces.data?.find(
+		(space) => space.id === access.data?.organizationId,
+	);
 	const queueKey =
 		job?.params.queueKey ??
 		jobs?.params.queueKey ??
@@ -43,7 +53,13 @@ export function Breadcrumbs() {
 					? "Schedulers"
 					: catalog.find((entry) => entry.id === key)?.title;
 	const current =
-		queuePage && queueKey && leaf ? `${queueKey} / ${leaf}` : leaf;
+		queuePage && queueKey && leaf
+			? `${queueKey} / ${leaf}`
+			: key === "workspaces"
+				? "Platform / Workspaces"
+				: key === "users" && currentSpace
+					? `${currentSpace.name} / ${leaf}`
+					: leaf;
 	if (!current) return null;
 	const chain = breadcrumbAncestors(key, queueKey, {
 		toolHome: Boolean(access.data && canVisit(access.data, "/apps")),
@@ -195,7 +211,7 @@ export function Breadcrumbs() {
 							</span>
 						</>
 					) : (
-						leaf
+						current
 					)}
 				</DropdownMenuTrigger>
 				<DropdownMenuContent

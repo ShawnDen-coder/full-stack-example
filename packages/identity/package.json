@@ -19,6 +19,7 @@
 		"@types/pg": "catalog:",
 		"better-auth": "catalog:",
 		"drizzle-orm": "catalog:",
+		"sharp": "^0.35.5",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

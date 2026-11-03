@@ -12,8 +12,9 @@ import {
 	workspaceTool,
 } from "@full-stack-example/db/schema";
 import { ORPCError } from "@orpc/server";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import type { Auth } from "./auth";
+import { normalizeWorkspaceLogo } from "./workspace-logo";
 
 export function createWorkspaceService(auth: Auth, db: Database) {
 	async function actor(headers: Headers, platform = false) {
@@ -31,6 +32,7 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 					id: organization.id,
 					name: organization.name,
 					slug: organization.slug,
+					hasLogo: sql<boolean>`${organization.logo} IS NOT NULL`,
 				})
 				.from(organization)
 				.innerJoin(member, eq(member.organizationId, organization.id))
@@ -44,6 +46,7 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 					id: organization.id,
 					name: organization.name,
 					slug: organization.slug,
+					hasLogo: sql<boolean>`${organization.logo} IS NOT NULL`,
 				})
 				.from(organization)
 				.orderBy(asc(organization.name), asc(organization.id))
@@ -70,9 +73,11 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 				slug: string;
 				ownerEmail: string;
 				tools: WorkspaceToolKey[];
+				logo?: string | null;
 			},
 		) {
 			await actor(headers, true);
+			const logo = await normalizeWorkspaceLogo(input.logo ?? null);
 			try {
 				return await db.transaction(async (tx) => {
 					const [owner] = await tx
@@ -89,6 +94,7 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 						id,
 						name: input.name,
 						slug: input.slug,
+						logo,
 						createdAt: new Date(),
 					});
 					await tx.insert(member).values({
@@ -125,6 +131,78 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 					});
 				throw error;
 			}
+		},
+		async logo(headers: Headers, workspaceId: string) {
+			const current = await actor(headers);
+			if (current.role !== "superadmin") {
+				const [membership] = await db
+					.select({ id: member.id })
+					.from(member)
+					.where(
+						and(
+							eq(member.userId, current.id),
+							eq(member.organizationId, workspaceId),
+						),
+					);
+				if (!membership) throw new ORPCError("FORBIDDEN");
+			}
+			const [space] = await db
+				.select({ logo: organization.logo })
+				.from(organization)
+				.where(eq(organization.id, workspaceId));
+			if (!space) throw new ORPCError("NOT_FOUND");
+			return space;
+		},
+		async updateBasics(
+			headers: Headers,
+			input: { workspaceId: string; name: string; logo: string | null },
+		) {
+			const current = await actor(headers);
+			if (current.role !== "superadmin") {
+				const [membership] = await db
+					.select({ role: member.role })
+					.from(member)
+					.where(
+						and(
+							eq(member.userId, current.id),
+							eq(member.organizationId, input.workspaceId),
+						),
+					);
+				if (
+					!membership?.role
+						.split(",")
+						.some((role) => role === "owner" || role === "admin")
+				)
+					throw new ORPCError("FORBIDDEN");
+			}
+			const logo = await normalizeWorkspaceLogo(input.logo);
+			return db.transaction(async (tx) => {
+				if (current.role !== "superadmin") {
+					const [membership] = await tx
+						.select({ role: member.role })
+						.from(member)
+						.where(
+							and(
+								eq(member.userId, current.id),
+								eq(member.organizationId, input.workspaceId),
+							),
+						)
+						.for("update");
+					if (
+						!membership?.role
+							.split(",")
+							.some((role) => role === "owner" || role === "admin")
+					)
+						throw new ORPCError("FORBIDDEN");
+				}
+				const [space] = await tx
+					.update(organization)
+					.set({ name: input.name, logo })
+					.where(eq(organization.id, input.workspaceId))
+					.returning({ id: organization.id });
+				if (!space) throw new ORPCError("NOT_FOUND");
+				return space;
+			});
 		},
 		async setTool(
 			headers: Headers,
