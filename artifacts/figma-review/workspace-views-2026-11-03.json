@@ -2,12 +2,12 @@
 	"fileKey": "wbcGZwxsUSTjA3oALLEaBX",
 	"pageId": "182:2",
 	"frames": {
-		"desktopList": "183:1314",
 		"desktopCards": "213:2945",
-		"mobileList": "186:1680",
 		"mobileCards": "213:2971",
 		"settingsGeneralDesktop": "218:3036",
-		"settingsToolsDesktop": "218:3112"
+		"settingsToolsDesktop": "218:3112",
+		"desktopDefault": "183:1314",
+		"mobileDefault": "186:1680"
 	},
 	"workspaceCardComponent": "213:2928",
 	"review": {
@@ -19,17 +19,16 @@
 		"restoredPrimaryViews": "Seven frames each contain six settings gears and zero inline Enabled, Disabled or Edit logo controls"
 	},
 	"behavior": {
-		"switcher": "List / Cards, immediately before New workspace",
-		"defaultView": "list",
-		"preference": "Persist the display mode locally; keep the same workspace scope, data and pagination",
-		"prototype": "List and Cards controls navigate between matching desktop or mobile frames",
+		"defaultView": "cards",
+		"prototype": "Default desktop and mobile frames show cards; gear opens unified settings",
 		"desktop": "Three columns, six cards, 16 px gap",
 		"mobile": "One column, six cards at 390 px",
 		"pageIdentity": "Breadcrumb only",
 		"cardContents": "Logo, name, slug and a top-right settings gear; no inline Todos status or separate Edit logo action",
 		"settingsGeneral": "Edit name and logo together; slug remains read-only",
 		"settingsTools": "Enable Todos switch is inside Tools and remains platform-admin controlled",
-		"logo": "Building2 fallback; upload, replace and remove live inside unified workspace settings; authorized persistence implemented"
+		"logo": "Building2 fallback; upload, replace and remove live inside unified workspace settings; authorized persistence implemented",
+		"display": "Cards only; no view switch or saved display preference"
 	},
 	"verification": {
 		"editableStructure": true,
@@ -65,27 +64,30 @@
 			"integration": "13 passed using dedicated PostgreSQL and Redis",
 			"e2e": "Full run: 63 passed, 2 failed. Both failures passed targeted rerun after Workspace keyboard synchronization was corrected; queue test unchanged.",
 			"linuxServerImage": "Incomplete: full Podman build stalled after dependency installation; stopped. Native sharp smoke previously passed in delivery review."
-		}
+		},
+		"currentBrowserChecks": "Mocked API preview: cards are default even with a legacy list preference; no Cards/List toggle or table; desktop/tablet/mobile cards and both access tabs visually checked; no horizontal overflow."
 	},
 	"layoutRefinement": {
 		"contentMaxWidth": 960,
-		"desktopRowHeight": 56,
-		"mobileRowHeight": 64,
-		"listLogoSize": 32,
 		"sectionGap": 16,
-		"toolbar": "View switch on the left, New workspace on the right",
-		"mobileList": "Name and slug stacked in the identity cell; separate settings action retains a 44px target",
-		"pagination": "Shown only when another page exists",
-		"figmaListBefore": {
-			"width": 1126,
-			"height": 649,
-			"rowHeight": 80
-		},
-		"figmaListAfter": {
-			"width": 960,
-			"height": 429,
-			"rowHeight": 56
-		},
-		"browserChecks": "List and Cards visually checked at 390, 768, 1440 and 1920px; no horizontal overflow. Settings dialog opened at 390px. Uses mocked API data."
+		"toolbar": "New workspace aligned right",
+		"view": "Cards only, responsive 3/2/1 columns",
+		"pagination": "Shown only when another page exists"
+	},
+	"accessTabs": {
+		"membersMaster": "260:6804",
+		"pageRolesMaster": "260:6809",
+		"figmaWidth": 175,
+		"browserWidth": 175.6875,
+		"height": 36,
+		"padding": 3,
+		"triggerHeight": 29,
+		"change": "Remove the fixed-width trailing blank area and match existing Tabs components",
+		"screens": [
+			"183:1593",
+			"183:1852",
+			"186:1804",
+			"188:2216"
+		]
 	}
 }
