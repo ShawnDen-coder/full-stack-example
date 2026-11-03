@@ -11,6 +11,7 @@ connection options and the native telemetry adapter; business jobs live elsewher
 | --- | --- |
 | [src/index.ts](src/index.ts) | `createQueueConnection`, `createQueueTelemetry`, Queue/Worker exports |
 | [tests/connection.test.mjs](tests/connection.test.mjs) | Initialization/close race regression tests without Redis |
+| [tests/connection-options.test.mjs](tests/connection-options.test.mjs) | URL/TLS parsing and producer/Worker connection options |
 
 ## Extend
 

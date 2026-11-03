@@ -14,6 +14,7 @@
 | [src/telemetry.ts](src/telemetry.ts) | 每个进程显式启动和关闭 SDK |
 | [src/deadline.ts](src/deadline.ts) | Promise 超时 helper |
 | [tests/telemetry.test.ts](tests/telemetry.test.ts) | 上下文隔离、敏感信息排除和导出失败测试 |
+| [tests/logging.test.ts](tests/logging.test.ts) | 凭据脱敏和请求／异常上下文测试 |
 
 ## 扩展步骤
 

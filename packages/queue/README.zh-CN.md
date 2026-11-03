@@ -10,6 +10,7 @@
 | --- | --- |
 | [src/index.ts](src/index.ts) | `createQueueConnection`、`createQueueTelemetry` 和 Queue／Worker 导出 |
 | [tests/connection.test.mjs](tests/connection.test.mjs) | 不依赖 Redis 的初始化／关闭竞态回归测试 |
+| [tests/connection-options.test.mjs](tests/connection-options.test.mjs) | URL／TLS 解析和 producer／Worker 连接选项 |
 
 ## 扩展步骤
 

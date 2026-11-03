@@ -8,7 +8,6 @@ import { createTodosService } from "@full-stack-example/domain/todos";
 import { createAccessService } from "@full-stack-example/identity/access";
 import type { Auth, Session } from "@full-stack-example/identity/auth";
 import { createLogger } from "@full-stack-example/observability";
-import { createQueueConnection } from "@full-stack-example/queue";
 import { serve } from "@hono/node-server";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
@@ -287,24 +286,6 @@ test("profile and queue routes use the authenticated user ID", async () => {
 	}
 });
 
-test("Redis connection supports TLS, database selection and rejects invalid protocols", () => {
-	const connection = createQueueConnection("rediss://localhost:6380/2");
-	assert.ok("host" in connection);
-	if ("host" in connection) {
-		assert.equal(connection.port, 6380);
-		assert.equal(connection.db, 2);
-		assert.equal(connection.commandTimeout, 2000);
-		const worker = createQueueConnection("redis://localhost", "worker");
-		assert.equal(worker.maxRetriesPerRequest, null);
-		assert.equal(worker.commandTimeout, undefined);
-		assert.deepEqual(connection.tls, {});
-	}
-	assert.throws(() => createQueueConnection("https://localhost"));
-	assert.throws(() =>
-		createQueueConnection("redis://localhost/not-a-database"),
-	);
-});
-
 test("CORS preflight returns before auth and service resolution", async () => {
 	const f = await fixture();
 	try {
@@ -443,38 +424,6 @@ test("readiness has a deadline even when a dependency never settles", async () =
 	} finally {
 		await f.close();
 	}
-});
-
-test("structured logs redact credentials and retain request correlation and stack", () => {
-	const lines: string[] = [];
-	const logger = createLogger("redaction-test", {
-		write: (line) => {
-			lines.push(line);
-		},
-	});
-	logger.error(
-		{
-			err: new Error("connection postgres://user:secret-value@host/db failed"),
-			requestId: "request-1",
-			headers: {
-				cookie: "private-cookie",
-				authorization: "Bearer private-token",
-			},
-			password: "private-password",
-		},
-		"Request failed",
-	);
-	const output = lines.join("");
-	for (const value of [
-		"secret-value",
-		"private-cookie",
-		"private-token",
-		"private-password",
-	])
-		assert.ok(!output.includes(value));
-	const entry = JSON.parse(output);
-	assert.equal(entry.requestId, "request-1");
-	assert.ok(entry.err.stack);
 });
 
 test("queue degradation has a separate readiness endpoint and maps job errors to 503", async () => {
