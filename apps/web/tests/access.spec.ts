@@ -96,6 +96,13 @@ test("administrators configure native page roles through real services", async (
 		await login(ordinary, person.email);
 		await page.goto("/apps?workspace=application");
 		await page.getByRole("button", { name: /Switch workspace/ }).click();
+		await page.getByRole("menuitem", { name: "Workspace settings" }).click();
+		await expect(
+			page.getByRole("dialog", { name: "Workspace settings" }),
+		).toBeVisible();
+		await expect(page.getByRole("tab", { name: "Tools" })).toHaveCount(0);
+		await page.getByRole("button", { name: "Cancel" }).click();
+		await page.getByRole("button", { name: /Switch workspace/ }).click();
 		await page.getByRole("menuitem", { name: "Members & access" }).click();
 		await expect(page).toHaveURL(/\/admin\/users\?workspace=application/);
 		await ordinary.goto("/apps?workspace=application");
@@ -166,7 +173,16 @@ test("administrators configure native page roles through real services", async (
 			.click();
 		await expect(page.getByRole("dialog")).toHaveCount(0);
 		await login(manager, staff.email);
-		await manager.goto("/admin/users");
+		await manager.goto("/apps?workspace=application");
+		await manager.getByRole("button", { name: /Switch workspace/ }).click();
+		await manager.getByRole("menuitem", { name: "Workspace settings" }).click();
+		await expect(
+			manager.getByRole("dialog", { name: "Workspace settings" }),
+		).toBeVisible();
+		await expect(manager.getByRole("tab", { name: "Tools" })).toHaveCount(0);
+		await manager.getByRole("button", { name: "Cancel" }).click();
+		await manager.getByRole("button", { name: /Switch workspace/ }).click();
+		await manager.getByRole("menuitem", { name: "Members & access" }).click();
 		await expect(await findMember(manager, owner.email)).toBeDisabled();
 		await manager.getByRole("tab", { name: "Page roles" }).click();
 		await manager

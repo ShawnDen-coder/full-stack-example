@@ -88,7 +88,7 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 		const a = spaces[0];
 		const b = spaces[1];
 		if (!a || !b) throw new Error("Expected two workspaces");
-		await page.goto("/workspaces");
+		await page.goto(`/workspaces?workspace=${a.id}`);
 		// A saved legacy list preference must not change the cards-only page.
 		await page.evaluate(() => localStorage.setItem("workspaces:view", "list"));
 		await page.reload();
@@ -194,6 +194,51 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 		await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible();
 		await expect(todosSwitch).toBeChecked();
 		await page.unroute("**/rpc/access/setTool");
+		const getToolState = async () => {
+			const response = await page
+				.context()
+				.request.post("http://127.0.0.1:43100/rpc/access/workspaces", {
+					data: { json: { offset: 0 } },
+				});
+			expect(response.ok()).toBe(true);
+			const { items } = (await response.json()).json;
+			return items
+				.find((space: { id: string }) => space.id === a.id)
+				?.tools.find((tool: { key: string }) => tool.key === "todos")?.enabled;
+		};
+		expect(await getToolState()).toBe(true);
+		for (const enabled of [false, true, false, true]) {
+			await expect(todosSwitch).toBeEnabled();
+			const refreshed = page.waitForResponse(
+				(response) =>
+					response.url().endsWith("/rpc/access/workspaces") &&
+					response.status() === 200,
+			);
+			await todosSwitch.click();
+			await refreshed;
+			await expect(todosSwitch).toHaveAttribute(
+				"aria-checked",
+				String(enabled),
+			);
+			const access = await page
+				.context()
+				.request.post("http://127.0.0.1:43100/rpc/access/me", {
+					data: { json: { workspaceId: a.id } },
+				});
+			expect(access.ok()).toBe(true);
+			const snapshot = (await access.json()).json;
+			expect(snapshot.pages.includes("todos")).toBe(enabled);
+			expect(await getToolState()).toBe(enabled);
+			const scoped = await page.context().newPage();
+			await scoped.goto(`/apps?workspace=${a.id}`);
+			await expect(
+				scoped.getByRole("link", { name: "Todos", exact: true }),
+			).toHaveCount(enabled ? 1 : 0);
+			await scoped.goto(`/todos?workspace=${a.id}`);
+			if (enabled) await expect(scoped.getByLabel("New task")).toBeVisible();
+			else await expect(scoped).toHaveURL(/\/no-access(?:\?|$)/);
+			await scoped.close();
+		}
 		await page.getByRole("button", { name: "Done", exact: true }).click();
 		await expect(page.locator("[data-sonner-toast]")).toHaveCount(0, {
 			timeout: 15000,
