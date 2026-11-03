@@ -16,6 +16,7 @@ import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { and, eq, inArray } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import sharp from "sharp";
 import { createServices } from "../../src/services";
 
 if (!process.env.TEST_DATABASE_URL || !process.env.TEST_REDIS_URL)
@@ -122,12 +123,42 @@ test("workspace creation, membership, tools and Todo isolation form one authoriz
 		spaceIds.push(a.id);
 		const b = await create("B");
 		spaceIds.push(b.id);
-		const png =
-			"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAE0lEQVQImWP4z8DwnwGM/zMwAAAf7gP9qS/A4gAAAABJRU5ErkJggg==";
+		const pixels = Buffer.alloc(64 * 64 * 3);
+		for (let y = 0; y < 64; y++) {
+			for (let x = 0; x < 64; x++) {
+				const offset = (y * 64 + x) * 3;
+				pixels[offset] = x * 4;
+				pixels[offset + 1] = y * 4;
+				pixels[offset + 2] = (x + y) * 2;
+			}
+		}
+		const gradient = await sharp(pixels, {
+			raw: { width: 64, height: 64, channels: 3 },
+		})
+			.png()
+			.toBuffer();
 		await owner.client.access.updateWorkspaceBasics({
 			workspaceId: a.id,
 			name: "Renamed A",
-			logo: png,
+			logo: `data:image/png;base64,${gradient.toString("base64")}`,
+		});
+		const savedLogo = (
+			await owner.client.access.workspaceLogo({ workspaceId: a.id })
+		).logo;
+		await owner.client.access.updateWorkspaceBasics({
+			workspaceId: a.id,
+			name: "Name only",
+			logo: savedLogo,
+		});
+		assert.ok(
+			(await owner.client.access.workspaceLogo({ workspaceId: a.id })).logo ===
+				savedLogo,
+			"renaming must preserve the exact stored logo bytes",
+		);
+		await owner.client.access.updateWorkspaceBasics({
+			workspaceId: a.id,
+			name: "Renamed A",
+			logo: savedLogo,
 		});
 		assert.match(
 			(await owner.client.access.workspaceLogo({ workspaceId: a.id })).logo ??
@@ -138,6 +169,22 @@ test("workspace creation, membership, tools and Todo isolation form one authoriz
 			(await owner.client.access.mine()).find((space) => space.id === a.id)
 				?.name,
 			"Renamed A",
+		);
+		// Valid two-frame APNG: sharp exposes only its first frame as PNG.
+		const apng =
+			"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACGFjVEwAAAACAAAAAPONk3AAAAAaZmNUTAAAAAAAAAABAAAAAQAAAAAAAAAAAAEACgAAWn8w0AAAAA1JREFUeJxj+M/A8B8ABQAB/4mZPR0AAAAaZmNUTAAAAAEAAAABAAAAAQAAAAAAAAAAAAEACgAAwQzaBAAAABFmZEFUAAAAAnicY2Bg+P8fAAMCAf/1e6XXAAAAAElFTkSuQmCC";
+		await assert.rejects(
+			() =>
+				owner.client.access.updateWorkspaceBasics({
+					workspaceId: a.id,
+					name: "Animated input",
+					logo: apng,
+				}),
+			{ code: "BAD_REQUEST" },
+		);
+		assert.equal(
+			(await owner.client.access.workspaceLogo({ workspaceId: a.id })).logo,
+			savedLogo,
 		);
 		await assert.rejects(
 			() => outsider.client.access.workspaceLogo({ workspaceId: a.id }),
@@ -166,16 +213,39 @@ test("workspace creation, membership, tools and Todo isolation form one authoriz
 				?.name,
 			"Renamed A",
 		);
-		assert.equal(
-			(
-				await app.request("/rpc/access/updateWorkspaceBasics", {
-					method: "POST",
-					headers: { "content-type": "application/json", cookie: owner.cookie },
-					body: "x".repeat(70_000),
-				})
-			).status,
-			413,
-		);
+		for (const prefix of ["/rpc", "/api-reference"]) {
+			for (const procedure of ["createWorkspace", "updateWorkspaceBasics"]) {
+				const input =
+					procedure === "createWorkspace"
+						? {
+								name: "Too large",
+								slug: randomUUID(),
+								ownerEmail: owner.email,
+								tools: [],
+							}
+						: { workspaceId: a.id, name: "Too large", logo: null };
+				const body =
+					JSON.stringify(prefix === "/rpc" ? { json: input } : input) +
+					" ".repeat(70_000);
+				for (const suffix of ["", "/", "//"]) {
+					const path = `${prefix}/access/${procedure}${suffix}`;
+					assert.equal(
+						(
+							await app.request(path, {
+								method: "POST",
+								headers: {
+									"content-type": "application/json",
+									cookie: platform.cookie,
+								},
+								body,
+							})
+						).status,
+						413,
+						`${path} must enforce the body limit before JSON parsing`,
+					);
+				}
+			}
+		}
 		const stream = new ReadableStream<Uint8Array>({
 			start(controller) {
 				controller.enqueue(new Uint8Array(70_000));

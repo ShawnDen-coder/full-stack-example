@@ -16,7 +16,7 @@ import {
 	TabsTrigger,
 } from "@full-stack-example/ui/components/tabs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { client } from "@/utils/orpc";
 import { LogoPreview, prepareLogo } from "./workspace-logo";
 
@@ -36,7 +36,7 @@ export function WorkspaceSettings({
 }) {
 	const queries = useQueryClient();
 	const [name, setName] = useState(space.name);
-	const [logo, setLogo] = useState<string | null>(null);
+	const [logoDraft, setLogo] = useState<string | null>();
 	const [fileError, setFileError] = useState("");
 	const [preparing, setPreparing] = useState(false);
 	const currentLogo = useQuery({
@@ -44,9 +44,12 @@ export function WorkspaceSettings({
 		queryFn: () => client.access.workspaceLogo({ workspaceId: space.id }),
 		enabled: open && space.hasLogo,
 	});
-	useEffect(() => {
-		if (space.hasLogo && currentLogo.data) setLogo(currentLogo.data.logo);
-	}, [currentLogo.data, space.hasLogo]);
+	const logo =
+		logoDraft === undefined
+			? space.hasLogo
+				? (currentLogo.data?.logo ?? null)
+				: null
+			: logoDraft;
 	const refresh = async () => {
 		await queries.invalidateQueries({ queryKey: ["workspaces"] });
 		await queries.invalidateQueries({ queryKey: ["access"] });
@@ -58,6 +61,8 @@ export function WorkspaceSettings({
 				name,
 				logo,
 			}),
+		// Render errors inline; authentication errors still reach the session boundary.
+		onError: () => {},
 		onSuccess: async () => {
 			await refresh();
 			onOpenChange(false);
@@ -66,6 +71,7 @@ export function WorkspaceSettings({
 	const toggle = useMutation({
 		mutationFn: (enabled: boolean) =>
 			client.access.setTool({ workspaceId: space.id, tool: "todos", enabled }),
+		onError: () => {},
 		onSuccess: refresh,
 	});
 	const busy = save.isPending || toggle.isPending || preparing;

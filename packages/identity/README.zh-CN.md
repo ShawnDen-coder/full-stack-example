@@ -10,7 +10,8 @@ L2 身份与工作区能力，负责 Better Auth 配置、原生权限检查、�
 
 Workspace 基础信息通过 workspace service 原子更新。平台 superadmin 和目标空间
 owner/admin 可修改名称和 logo；slug 不可修改。服务端接受最多 32 KiB、256 × 256
-像素的静态 PNG/WebP data URL，完整解码并重编码为不含 metadata 的 WebP；仅平台管理员或空间成员可读取。
+像素的静态 PNG/WebP data URL，完整解码并重编码为不含 metadata 的 WebP，拒绝动画 PNG。
+未改变的 logo 保留原始字节，只修改名称不会重复压缩；仅平台管理员或空间成员可读取。
 
 ## 扩展
 

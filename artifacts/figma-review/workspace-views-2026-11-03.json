@@ -1,0 +1,70 @@
+{
+  "fileKey": "wbcGZwxsUSTjA3oALLEaBX",
+  "pageId": "182:2",
+  "frames": {
+    "desktopList": "183:1314",
+    "desktopCards": "213:2945",
+    "mobileList": "186:1680",
+    "mobileCards": "213:2971",
+    "settingsGeneralDesktop": "218:3036",
+    "settingsToolsDesktop": "218:3112"
+  },
+  "workspaceCardComponent": "213:2928",
+  "review": {
+    "authority": "Current user corrections and this gear-based settings specification supersede earlier logo-only handoffs",
+    "rejectedReport": "workspace-ui-coco-logo-contract-20261103",
+    "reason": "The report retained inline Todos controls and separate Edit logo actions, contrary to the user's unified settings request",
+    "conflictingDesignOperations": "Cancelled; Cindy delivery reviewed and integrated in b70171d",
+    "obsoleteFigmaFrames": "Logo-only proposals renamed Superseded on the design page",
+    "restoredPrimaryViews": "Seven frames each contain six settings gears and zero inline Enabled, Disabled or Edit logo controls"
+  },
+  "behavior": {
+    "switcher": "List / Cards, immediately before New workspace",
+    "defaultView": "list",
+    "preference": "Persist the display mode locally; keep the same workspace scope, data and pagination",
+    "prototype": "List and Cards controls navigate between matching desktop or mobile frames",
+    "desktop": "Three columns, six cards, 16 px gap",
+    "mobile": "One column, six cards at 390 px",
+    "pageIdentity": "Breadcrumb only",
+    "cardContents": "Logo, name, slug and a top-right settings gear; no inline Todos status or separate Edit logo action",
+    "settingsGeneral": "Edit name and logo together; slug remains read-only",
+    "settingsTools": "Enable Todos switch is inside Tools and remains platform-admin controlled",
+    "logo": "Building2 fallback; upload, replace and remove live inside unified workspace settings; authorized persistence implemented"
+  },
+  "verification": {
+    "editableStructure": true,
+    "imageFilledUiNodes": 0,
+    "fontFamilies": [
+      "Inter"
+    ],
+    "desktopCardCount": 6,
+    "mobileCardCount": 6,
+    "screenshotsReviewed": [
+      "desktopList",
+      "desktopCards",
+      "mobileCards",
+      "settingsGeneralDesktop",
+      "settingsToolsDesktop"
+    ],
+    "prototypeVerification": "Navigation reaction destinations inspected; no real application testing implied",
+    "implementation": "Cindy delivery integrated; reviewed server authorization, body limit, image decoding and editable client state",
+    "reviewFixes": [
+      "Normalize equivalent RPC/OpenAPI paths before body-limit matching",
+      "Preserve stored logo bytes when only the workspace name changes",
+      "Reject animated PNG chunks",
+      "Keep unsaved logo edits across background refetches",
+      "Preserve logo aspect ratio"
+    ],
+    "checks": {
+      "install": "frozen lockfile passed",
+      "unit": "passed",
+      "types": "passed",
+      "build": "passed",
+      "biome": "passed",
+      "boundaries": "passed",
+      "integration": "13 passed using dedicated PostgreSQL and Redis",
+      "e2e": "Full run: 63 passed, 2 failed. Both failures passed targeted rerun after Workspace keyboard synchronization was corrected; queue test unchanged.",
+      "linuxServerImage": "Incomplete: full Podman build stalled after dependency installation; stopped. Native sharp smoke previously passed in delivery review."
+    }
+  }
+}

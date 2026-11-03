@@ -175,7 +175,6 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 				)
 					throw new ORPCError("FORBIDDEN");
 			}
-			const logo = await normalizeWorkspaceLogo(input.logo);
 			return db.transaction(async (tx) => {
 				if (current.role !== "superadmin") {
 					const [membership] = await tx
@@ -196,12 +195,20 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 						throw new ORPCError("FORBIDDEN");
 				}
 				const [space] = await tx
+					.select({ id: organization.id, logo: organization.logo })
+					.from(organization)
+					.where(eq(organization.id, input.workspaceId))
+					.for("update");
+				if (!space) throw new ORPCError("NOT_FOUND");
+				const logo =
+					input.logo === space.logo
+						? space.logo
+						: await normalizeWorkspaceLogo(input.logo);
+				await tx
 					.update(organization)
 					.set({ name: input.name, logo })
-					.where(eq(organization.id, input.workspaceId))
-					.returning({ id: organization.id });
-				if (!space) throw new ORPCError("NOT_FOUND");
-				return space;
+					.where(eq(organization.id, input.workspaceId));
+				return { id: space.id };
 			});
 		},
 		async setTool(
