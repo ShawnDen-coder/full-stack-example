@@ -122,6 +122,85 @@ test("workspace creation, membership, tools and Todo isolation form one authoriz
 		spaceIds.push(a.id);
 		const b = await create("B");
 		spaceIds.push(b.id);
+		const png =
+			"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAE0lEQVQImWP4z8DwnwGM/zMwAAAf7gP9qS/A4gAAAABJRU5ErkJggg==";
+		await owner.client.access.updateWorkspaceBasics({
+			workspaceId: a.id,
+			name: "Renamed A",
+			logo: png,
+		});
+		assert.match(
+			(await owner.client.access.workspaceLogo({ workspaceId: a.id })).logo ??
+				"",
+			/^data:image\/webp;base64,/,
+		);
+		assert.equal(
+			(await owner.client.access.mine()).find((space) => space.id === a.id)
+				?.name,
+			"Renamed A",
+		);
+		await assert.rejects(
+			() => outsider.client.access.workspaceLogo({ workspaceId: a.id }),
+			{ code: "FORBIDDEN" },
+		);
+		await assert.rejects(
+			() =>
+				outsider.client.access.updateWorkspaceBasics({
+					workspaceId: a.id,
+					name: "Denied",
+					logo: null,
+				}),
+			{ code: "FORBIDDEN" },
+		);
+		await assert.rejects(
+			() =>
+				owner.client.access.updateWorkspaceBasics({
+					workspaceId: a.id,
+					name: "Invalid",
+					logo: "data:image/png;base64,YWJj",
+				}),
+			{ code: "BAD_REQUEST" },
+		);
+		assert.equal(
+			(await owner.client.access.mine()).find((space) => space.id === a.id)
+				?.name,
+			"Renamed A",
+		);
+		assert.equal(
+			(
+				await app.request("/rpc/access/updateWorkspaceBasics", {
+					method: "POST",
+					headers: { "content-type": "application/json", cookie: owner.cookie },
+					body: "x".repeat(70_000),
+				})
+			).status,
+			413,
+		);
+		const stream = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(new Uint8Array(70_000));
+				controller.close();
+			},
+		});
+		const streamed = new Request(
+			"http://localhost:3000/rpc/access/updateWorkspaceBasics",
+			{
+				method: "POST",
+				headers: { "content-type": "application/json", cookie: owner.cookie },
+				body: stream,
+				duplex: "half",
+			} as RequestInit,
+		);
+		assert.equal((await app.fetch(streamed)).status, 413);
+		await platform.client.access.updateWorkspaceBasics({
+			workspaceId: a.id,
+			name: "A",
+			logo: null,
+		});
+		assert.equal(
+			(await owner.client.access.workspaceLogo({ workspaceId: a.id })).logo,
+			null,
+		);
 		assert.equal((await owner.client.access.mine()).length, 2);
 		assert.deepEqual(await platform.client.access.mine(), []);
 		assert.equal(
@@ -174,6 +253,50 @@ test("workspace creation, membership, tools and Todo isolation form one authoriz
 			email: outsider.email,
 		});
 		assert.equal((await outsider.client.access.mine()).length, 1);
+		await assert.rejects(
+			() =>
+				outsider.client.access.updateWorkspaceBasics({
+					workspaceId: a.id,
+					name: "Denied member",
+					logo: null,
+				}),
+			{ code: "FORBIDDEN" },
+		);
+		await db
+			.update(member)
+			.set({ role: "admin,standard" })
+			.where(
+				and(eq(member.organizationId, a.id), eq(member.userId, outsider.id)),
+			);
+		await outsider.client.access.updateWorkspaceBasics({
+			workspaceId: a.id,
+			name: "Admin updated",
+			logo: null,
+		});
+		await assert.rejects(
+			() =>
+				outsider.client.access.updateWorkspaceBasics({
+					workspaceId: b.id,
+					name: "Other",
+					logo: null,
+				}),
+			{ code: "FORBIDDEN" },
+		);
+		await assert.rejects(
+			() =>
+				outsider.client.access.setTool({
+					workspaceId: a.id,
+					tool: "todos",
+					enabled: false,
+				}),
+			{ code: "FORBIDDEN" },
+		);
+		await db
+			.update(member)
+			.set({ role: "member,standard" })
+			.where(
+				and(eq(member.organizationId, a.id), eq(member.userId, outsider.id)),
+			);
 		assert.deepEqual(
 			(await outsider.client.todo.list({ workspaceId: a.id })).items,
 			[],

@@ -5,6 +5,9 @@
 L3 HTTP boundaries: Hono composition, oRPC validation, injected session resolution
 and transport error mapping. Identity and runtime capabilities are provided by L2.
 
+Workspace basics and logo use narrow validated procedures; image-bearing writes
+have a 64 KiB HTTP body limit and identity enforces authorization and image bounds.
+
 ## Entry points
 
 | File | Responsibility |

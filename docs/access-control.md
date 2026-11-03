@@ -25,8 +25,15 @@ The former Tasks demo is not a workspace task center.
 
 - `/workspaces`: platform metadata list, transactional creation with an existing
   account owner, and tool enable/disable. Creator membership is never implicit.
+  Cards and list display the same page; the preference is stored locally.
+- Workspace settings: platform superadmins or the target workspace owner/admin
+  may atomically change its name and logo. Only platform superadmins can change
+  tool availability. Slug is immutable; logos are bounded, normalized raster data.
+  Members may read their workspace logo without gaining management access.
 - `/admin/users?workspace=<id>`: local owner/admin adds existing accounts by exact
   email and manages native page-role templates. Only owners may manage admins.
+  The switcher offers **Members & access** for the current owner/admin; `/users`
+  remains a compatibility entry to the same screen.
 - `/queues`: platform-only operational monitoring, outside workspace tool grants.
 - Todo: membership **and** enabled configuration **and** native page permission;
   domain SQL additionally filters workspace and authenticated owner on every operation.

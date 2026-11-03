@@ -1,5 +1,8 @@
 # @full-stack-example/api
 
+Workspace 基础信息和 logo 使用独立校验的接口；携带图片的写入请求体上限为
+64 KiB，identity 层负责授权及图片限制。
+
 [English](README.md) · [简体中文](README.zh-CN.md) · [项目说明](../../README.zh-CN.md)
 
 L3 HTTP 接入边界：Hono 组装、oRPC 输入校验、注入的 session 解析和传输错误映射。身份与运行支撑能力由 L2 提供。

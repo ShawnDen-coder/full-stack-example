@@ -24,6 +24,7 @@
 		"drizzle-orm": "catalog:",
 		"@full-stack-example/domain": "workspace:*",
 		"pino": "catalog:",
+		"sharp": "0.35.5",
 		"@opentelemetry/api": "catalog:",
 		"@opentelemetry/sdk-node": "catalog:",
 		"@opentelemetry/resources": "catalog:",

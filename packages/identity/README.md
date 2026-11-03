@@ -8,6 +8,12 @@ L2 identity and workspace capabilities. Owns Better Auth configuration, native p
 
 `./auth` creates Better Auth from an injected database. `./access` exposes the authorization/workspace facade. SQL and transaction behavior moved from API without changing endpoint contracts.
 
+Workspace basics are updated atomically through the workspace service. Platform
+superadmins and the target workspace's owner/admin may change name and logo;
+slug remains immutable. The server accepts static PNG/WebP data URLs up to 32 KiB
+and 256 × 256 pixels, fully decodes and re-encodes them as WebP without metadata.
+Read access is limited to platform administrators or members.
+
 ## Extend
 
 Follow the [layer policy](../../docs/dependency-layers.md). Add narrow public exports,

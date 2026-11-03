@@ -6,7 +6,16 @@ import {
 } from "@better-auth-ui/react/plugins/organization";
 import { defaultMemberRole, pages } from "@full-stack-example/access";
 import { Button } from "@full-stack-example/ui/components/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@full-stack-example/ui/components/dialog";
 import { Input } from "@full-stack-example/ui/components/input";
+import { Label } from "@full-stack-example/ui/components/label";
 import {
 	Table,
 	TableBody,
@@ -41,7 +50,12 @@ const permissions = Object.fromEntries(
 		.filter((page) => page.key !== "queues")
 		.map((page) => [
 			page.key,
-			{ label: page.title, actions: { read: `View ${page.title}` } },
+			{
+				label: page.title,
+				actions: {
+					read: page.key === "todos" ? "Use Todos" : `View ${page.title}`,
+				},
+			},
 		]),
 );
 const plugin = organizationPlugin({
@@ -87,10 +101,13 @@ function AccessManagement() {
 	const access = useAccess();
 	const workspaceId = useWorkspaceId() ?? "";
 	const [email, setEmail] = useState("");
+	const [addOpen, setAddOpen] = useState(false);
+	const [tab, setTab] = useState("members");
 	const addMember = useMutation({
 		mutationFn: () => client.access.addMember({ workspaceId, email }),
 		onSuccess: () => {
 			setEmail("");
+			setAddOpen(false);
 			void members.refetch();
 		},
 	});
@@ -129,36 +146,87 @@ function AccessManagement() {
 	);
 	return (
 		<div>
-			<div className="mb-6">
-				<h1 className="font-semibold text-2xl">Users and access</h1>
-				<p className="mt-2 text-muted-foreground text-sm">
-					Assign page access through roles. Changes apply to everyone with that
-					role.
-				</p>
-			</div>
-			<Tabs defaultValue="members">
-				<TabsList>
-					<TabsTrigger value="members">Members</TabsTrigger>
-					<TabsTrigger value="roles">Page roles</TabsTrigger>
-				</TabsList>
+			<h1 className="sr-only">Members &amp; access</h1>
+			<Tabs value={tab} onValueChange={setTab}>
+				<div className="flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<TabsList>
+						<TabsTrigger value="members">Members</TabsTrigger>
+						<TabsTrigger value="roles">Page roles</TabsTrigger>
+					</TabsList>
+					{tab === "members" ? (
+						<Dialog
+							open={addOpen}
+							onOpenChange={(next) => {
+								if (!addMember.isPending) {
+									setAddOpen(next);
+									if (next) addMember.reset();
+								}
+							}}
+						>
+							<DialogTrigger asChild>
+								<Button>Add member</Button>
+							</DialogTrigger>
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>Add member</DialogTitle>
+									<DialogDescription>
+										Add an existing account by exact email. New members receive
+										member and standard roles.
+									</DialogDescription>
+								</DialogHeader>
+								<form
+									className="space-y-4"
+									onSubmit={(event) => {
+										event.preventDefault();
+										if (!addMember.isPending) addMember.mutate();
+									}}
+								>
+									<div className="space-y-2">
+										<Label htmlFor="member-email">Member email</Label>
+										<Input
+											id="member-email"
+											disabled={addMember.isPending}
+											type="email"
+											required
+											placeholder="Existing account email"
+											value={email}
+											onChange={(event) => setEmail(event.target.value)}
+										/>
+									</div>
+									{addMember.isError && (
+										<p role="alert" className="text-destructive text-sm">
+											{addMember.error.message ||
+												"Unable to add member. Please try again."}
+										</p>
+									)}
+									<div className="flex justify-end gap-2">
+										<Button
+											type="button"
+											variant="outline"
+											disabled={addMember.isPending}
+											onClick={() => setAddOpen(false)}
+										>
+											Cancel
+										</Button>
+										<Button disabled={addMember.isPending || !email}>
+											{addMember.isPending ? "Adding…" : "Add member"}
+										</Button>
+									</div>
+								</form>
+							</DialogContent>
+						</Dialog>
+					) : (
+						<Button
+							onClick={(event) => {
+								dialogTrigger.current = event.currentTarget;
+								setEditingRole(null);
+							}}
+						>
+							Create role
+						</Button>
+					)}
+				</div>
 				<TabsContent value="members" className="space-y-4 pt-4">
-					<form
-						className="flex max-w-lg gap-2"
-						onSubmit={(event) => {
-							event.preventDefault();
-							addMember.mutate();
-						}}
-					>
-						<Input
-							type="email"
-							required
-							aria-label="Member email"
-							placeholder="Existing account email"
-							value={email}
-							onChange={(event) => setEmail(event.target.value)}
-						/>
-						<Button disabled={addMember.isPending || !email}>Add member</Button>
-					</form>
 					<Input
 						className="max-w-sm"
 						aria-label="Filter this page of members"
@@ -250,20 +318,6 @@ function AccessManagement() {
 					)}
 				</TabsContent>
 				<TabsContent value="roles" className="space-y-4 pt-4">
-					<div className="flex flex-wrap items-center justify-between gap-3">
-						<p className="text-muted-foreground text-sm">
-							New members receive the standard role. Tools also require platform
-							enablement.
-						</p>
-						<Button
-							onClick={(event) => {
-								dialogTrigger.current = event.currentTarget;
-								setEditingRole(null);
-							}}
-						>
-							Create role
-						</Button>
-					</div>
 					{roles.isError ? (
 						<p role="alert">
 							Could not load roles.{" "}
