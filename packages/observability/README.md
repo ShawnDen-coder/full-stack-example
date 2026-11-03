@@ -15,6 +15,7 @@ deadlines shared by the server, Worker and business services.
 | [src/telemetry.ts](src/telemetry.ts) | Explicit per-process SDK startup and shutdown |
 | [src/deadline.ts](src/deadline.ts) | Promise deadline helper |
 | [tests/telemetry.test.ts](tests/telemetry.test.ts) | Isolation, secret exclusion and exporter failure checks |
+| [tests/logging.test.ts](tests/logging.test.ts) | Credential redaction and request/error context |
 
 ## Extend
 
