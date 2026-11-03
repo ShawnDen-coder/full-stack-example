@@ -23,6 +23,7 @@ import UserMenu from "@/components/user-menu";
 import { DirectionProvider } from "@/context/direction-provider";
 import { LayoutProvider, useLayout } from "@/context/layout-provider";
 import { useAccess, visibleNavigation } from "@/lib/access";
+import { resetAccessQueries } from "@/lib/access-cache";
 import { useWorkspaceId } from "@/lib/workspace";
 import { queryClient, synchronizeWorkspace } from "@/utils/orpc";
 import { Breadcrumbs } from "./breadcrumbs";
@@ -60,9 +61,11 @@ function AppLayoutInner() {
 	const workspaceId = useWorkspaceId();
 	const access = useAccess();
 	const navigate = useNavigate();
-	const previous = useRef<{ signature: string; workspaceId?: string }>(
-		undefined,
-	);
+	const previous = useRef<{
+		signature: string;
+		workspaceId?: string;
+		superadmin: boolean;
+	}>(undefined);
 	const signature = JSON.stringify(access.data);
 	useEffect(() => {
 		if (!access.data) return;
@@ -71,14 +74,17 @@ function AppLayoutInner() {
 			previous.current.workspaceId === workspaceId &&
 			previous.current.signature !== signature
 		) {
-			void queryClient.cancelQueries({
-				predicate: (q) => q.queryKey[0] !== "access",
-			});
-			queryClient.removeQueries({
-				predicate: (q) => q.queryKey[0] !== "access",
-			});
+			resetAccessQueries(
+				queryClient,
+				previous.current.superadmin &&
+					access.data.platformRole === "superadmin",
+			);
 		}
-		previous.current = { signature, workspaceId };
+		previous.current = {
+			signature,
+			workspaceId,
+			superadmin: access.data.platformRole === "superadmin",
+		};
 		if (!canVisit(access.data, pathname))
 			void navigate({ to: "/no-access", replace: true });
 	}, [access.data, signature, pathname, navigate, workspaceId]);
