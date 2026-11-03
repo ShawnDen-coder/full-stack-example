@@ -89,5 +89,102 @@
 			"186:1804",
 			"188:2216"
 		]
+	},
+	"clippingFix": {
+		"grid": "Repeat auto-fill columns with a 17rem minimum capped at 100% of the grid; sizing depends on available grid width rather than the shell container",
+		"figma": "All seven card grids and rows fill their parent; cards stretch equally; unnecessary grid/row clipping disabled",
+		"browserScenarios": [
+			{
+				"label": "normal",
+				"width": 1920,
+				"gridWidth": 960,
+				"columns": "309.328px 309.328px 309.344px",
+				"clipped": false,
+				"buttonsOutside": false,
+				"overflow": false
+			},
+			{
+				"label": "normal",
+				"width": 1440,
+				"gridWidth": 960,
+				"columns": "309.328px 309.328px 309.344px",
+				"clipped": false,
+				"buttonsOutside": false,
+				"overflow": false
+			},
+			{
+				"label": "normal",
+				"width": 1024,
+				"gridWidth": 710,
+				"columns": "347px 347px",
+				"clipped": false,
+				"buttonsOutside": false,
+				"overflow": false
+			},
+			{
+				"label": "normal",
+				"width": 768,
+				"gridWidth": 454,
+				"columns": "454px",
+				"clipped": false,
+				"buttonsOutside": false,
+				"overflow": false
+			},
+			{
+				"label": "normal",
+				"width": 390,
+				"gridWidth": 358,
+				"columns": "358px",
+				"clipped": false,
+				"buttonsOutside": false,
+				"overflow": false
+			},
+			{
+				"label": "normal",
+				"width": 320,
+				"gridWidth": 288,
+				"columns": "288px",
+				"clipped": false,
+				"buttonsOutside": false,
+				"overflow": false
+			},
+			{
+				"label": "narrow container on wide screen",
+				"width": 1440,
+				"gridWidth": 640,
+				"columns": "312px 312px",
+				"clipped": false,
+				"buttonsOutside": false,
+				"overflow": false
+			},
+			{
+				"label": "long name and slug",
+				"width": 1440,
+				"gridWidth": 960,
+				"columns": "309.328px 309.328px 309.344px",
+				"clipped": false,
+				"buttonsOutside": false,
+				"overflow": false
+			},
+			{
+				"label": "long name and slug",
+				"width": 390,
+				"gridWidth": 358,
+				"columns": "358px",
+				"clipped": false,
+				"buttonsOutside": false,
+				"overflow": false
+			},
+			{
+				"label": "long name and slug",
+				"width": 320,
+				"gridWidth": 288,
+				"columns": "288px",
+				"clipped": false,
+				"buttonsOutside": false,
+				"overflow": false
+			}
+		],
+		"checks": "Frontend build and Biome passed; visual review of desktop and long-name mobile cards passed"
 	}
 }
