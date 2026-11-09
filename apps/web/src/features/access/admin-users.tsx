@@ -6,16 +6,7 @@ import {
 } from "@better-auth-ui/react/plugins/organization";
 import { defaultMemberRole, pages } from "@full-stack-example/access";
 import { Button } from "@full-stack-example/ui/components/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@full-stack-example/ui/components/dialog";
 import { Input } from "@full-stack-example/ui/components/input";
-import { Label } from "@full-stack-example/ui/components/label";
 import {
 	Table,
 	TableBody,
@@ -30,7 +21,7 @@ import {
 	TabsList,
 	TabsTrigger,
 } from "@full-stack-example/ui/components/tabs";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -43,7 +34,7 @@ import { useAccess } from "@/lib/access";
 import { organizationPlugin } from "@/lib/auth/organization-plugin";
 import { authClient } from "@/lib/auth-client";
 import { useWorkspaceId } from "@/lib/workspace";
-import { client } from "@/utils/orpc";
+import { AddMemberDialog } from "./add-member-dialog";
 
 const permissions = Object.fromEntries(
 	pages
@@ -100,22 +91,13 @@ function AccessManagement() {
 	};
 	const access = useAccess();
 	const workspaceId = useWorkspaceId() ?? "";
-	const [email, setEmail] = useState("");
-	const [addOpen, setAddOpen] = useState(false);
 	const [tab, setTab] = useState("members");
-	const addMember = useMutation({
-		mutationFn: () => client.access.addMember({ workspaceId, email }),
-		onError: () => {},
-		onSuccess: () => {
-			setEmail("");
-			setAddOpen(false);
-			void members.refetch();
-		},
-	});
 	const queryClient = useQueryClient();
 	const [offset, setOffset] = useState(0);
 	const [search, setSearch] = useState("");
-	const [editingRole, setEditingRole] = useState<Role | null>();
+	const [roleEditor, setRoleEditor] = useState<
+		{ kind: "closed" } | { kind: "create" } | { kind: "edit"; role: Role }
+	>({ kind: "closed" });
 	const [editingMember, setEditingMember] = useState<{
 		id: string;
 		role: string;
@@ -154,73 +136,16 @@ function AccessManagement() {
 						<TabsTrigger value="members">Members</TabsTrigger>
 						<TabsTrigger value="roles">Page roles</TabsTrigger>
 					</TabsList>
-					{tab === "members" ? (
-						<Dialog
-							open={addOpen}
-							onOpenChange={(next) => {
-								if (!addMember.isPending) {
-									setAddOpen(next);
-									if (next) addMember.reset();
-								}
-							}}
-						>
-							<DialogTrigger asChild>
-								<Button>Add member</Button>
-							</DialogTrigger>
-							<DialogContent>
-								<DialogHeader>
-									<DialogTitle>Add member</DialogTitle>
-									<DialogDescription>
-										Add an existing account by exact email. New members receive
-										member and standard roles.
-									</DialogDescription>
-								</DialogHeader>
-								<form
-									className="space-y-4"
-									onSubmit={(event) => {
-										event.preventDefault();
-										if (!addMember.isPending) addMember.mutate();
-									}}
-								>
-									<div className="space-y-2">
-										<Label htmlFor="member-email">Member email</Label>
-										<Input
-											id="member-email"
-											disabled={addMember.isPending}
-											type="email"
-											required
-											placeholder="Existing account email"
-											value={email}
-											onChange={(event) => setEmail(event.target.value)}
-										/>
-									</div>
-									{addMember.isError && (
-										<p role="alert" className="text-destructive text-sm">
-											{addMember.error.message ||
-												"Unable to add member. Please try again."}
-										</p>
-									)}
-									<div className="flex justify-end gap-2">
-										<Button
-											type="button"
-											variant="outline"
-											disabled={addMember.isPending}
-											onClick={() => setAddOpen(false)}
-										>
-											Cancel
-										</Button>
-										<Button disabled={addMember.isPending || !email}>
-											{addMember.isPending ? "Adding…" : "Add member"}
-										</Button>
-									</div>
-								</form>
-							</DialogContent>
-						</Dialog>
-					) : (
+					<AddMemberDialog
+						active={tab === "members"}
+						workspaceId={workspaceId}
+						onAdded={() => void members.refetch()}
+					/>
+					{tab === "roles" && (
 						<Button
 							onClick={(event) => {
 								dialogTrigger.current = event.currentTarget;
-								setEditingRole(null);
+								setRoleEditor({ kind: "create" });
 							}}
 						>
 							Create role
@@ -363,7 +288,7 @@ function AccessManagement() {
 													aria-label={`Edit ${role.role}`}
 													onClick={(event) => {
 														dialogTrigger.current = event.currentTarget;
-														setEditingRole(role);
+														setRoleEditor({ kind: "edit", role });
 													}}
 												>
 													Edit
@@ -399,13 +324,13 @@ function AccessManagement() {
 			</Tabs>
 			<RoleDialog
 				onCloseAutoFocus={restoreFocus}
-				open={editingRole !== undefined}
-				role={editingRole ?? undefined}
+				open={roleEditor.kind !== "closed"}
+				role={roleEditor.kind === "edit" ? roleEditor.role : undefined}
 				organizationId={workspaceId}
 				registry={permissions}
 				onOpenChange={(open) => {
 					if (!open) {
-						setEditingRole(undefined);
+						setRoleEditor({ kind: "closed" });
 						refreshAccess();
 					}
 				}}

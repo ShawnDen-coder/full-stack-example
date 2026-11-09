@@ -28,6 +28,50 @@ function procedurePaths(router: object, prefix = "/rpc"): string[] {
 }
 const registeredRpcPaths = new Set(procedurePaths(appRouter));
 
+const workspaceWritePaths = new Set([
+	"/rpc/access/createWorkspace",
+	"/rpc/access/updateWorkspaceBasics",
+	"/api-reference/access/createWorkspace",
+	"/api-reference/access/updateWorkspaceBasics",
+]);
+
+function requestLabels(path: string, requestMethod: string) {
+	const method = [
+		"GET",
+		"POST",
+		"PUT",
+		"PATCH",
+		"DELETE",
+		"HEAD",
+		"OPTIONS",
+		"TRACE",
+		"CONNECT",
+	].includes(requestMethod)
+		? requestMethod
+		: "_OTHER";
+	// Only registered names become labels. Unknown URLs and auth inputs are never logged.
+	const route = registeredRpcPaths.has(path)
+		? path
+		: path.startsWith("/api/auth/")
+			? "/api/auth/*"
+			: ["/", "/health", "/ready", "/ready/jobs", "/api-reference"].includes(
+						path,
+					)
+				? path
+				: "unmatched";
+	return { method, route };
+}
+
+function isWorkspaceWritePath(rawPath: string) {
+	let path = rawPath;
+	try {
+		path = decodeURIComponent(path);
+	} catch {
+		// A malformed path is left for the router to reject.
+	}
+	return workspaceWritePaths.has(path.replace(/\/+$/, ""));
+}
+
 export function createApi(
 	deps: ContextDependencies & {
 		corsOrigin: string;
@@ -43,29 +87,7 @@ export function createApi(
 		c.set("requestId", requestId);
 		c.header("X-Request-ID", requestId);
 		const path = c.req.path;
-		const method = [
-			"GET",
-			"POST",
-			"PUT",
-			"PATCH",
-			"DELETE",
-			"HEAD",
-			"OPTIONS",
-			"TRACE",
-			"CONNECT",
-		].includes(c.req.method)
-			? c.req.method
-			: "_OTHER";
-		// Only registered names become labels. Unknown URLs and auth inputs are never logged.
-		const route = registeredRpcPaths.has(path)
-			? path
-			: path.startsWith("/api/auth/")
-				? "/api/auth/*"
-				: ["/", "/health", "/ready", "/ready/jobs", "/api-reference"].includes(
-							path,
-						)
-					? path
-					: "unmatched";
+		const { method, route } = requestLabels(path, c.req.method);
 		if (path === "/health" || path === "/ready" || path === "/ready/jobs")
 			return next();
 		return observeRequest(
@@ -101,24 +123,13 @@ export function createApi(
 		);
 		return c.json({ error: "Internal Server Error" }, 500);
 	});
-	const workspaceWritePaths = new Set([
-		"/rpc/access/createWorkspace",
-		"/rpc/access/updateWorkspaceBasics",
-		"/api-reference/access/createWorkspace",
-		"/api-reference/access/updateWorkspaceBasics",
-	]);
+
 	const limitWorkspaceBody = bodyLimit({
 		maxSize: 64 * 1024,
 		onError: (c) => c.json({ error: "Request body too large" }, 413),
 	});
 	app.use("*", (c, next) => {
-		let path = c.req.path;
-		try {
-			path = decodeURIComponent(path);
-		} catch {
-			// A malformed path is left for the router to reject.
-		}
-		return workspaceWritePaths.has(path.replace(/\/+$/, ""))
+		return isWorkspaceWritePath(c.req.path)
 			? limitWorkspaceBody(c, next)
 			: next();
 	});

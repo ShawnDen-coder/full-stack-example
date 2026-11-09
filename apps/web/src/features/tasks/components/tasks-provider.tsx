@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import useDialogState from "@/hooks/use-dialog-state";
+import useToggleDialogState from "@/hooks/use-toggle-dialog-state";
 import type { Task } from "../data/schema";
 
 type TasksDialogType = "create" | "update" | "delete" | "import";
 
 type TasksContextType = {
 	open: TasksDialogType | null;
-	setOpen: (str: TasksDialogType | null) => void;
+	toggleDialog: (str: TasksDialogType | null) => void;
 	currentRow: Task | null;
 	setCurrentRow: React.Dispatch<React.SetStateAction<Task | null>>;
 };
@@ -14,11 +14,11 @@ type TasksContextType = {
 const TasksContext = React.createContext<TasksContextType | null>(null);
 
 export function TasksProvider({ children }: { children: React.ReactNode }) {
-	const [open, setOpen] = useDialogState<TasksDialogType>(null);
+	const [open, toggleDialog] = useToggleDialogState<TasksDialogType>(null);
 	const [currentRow, setCurrentRow] = useState<Task | null>(null);
 
 	return (
-		<TasksContext value={{ open, setOpen, currentRow, setCurrentRow }}>
+		<TasksContext value={{ open, toggleDialog, currentRow, setCurrentRow }}>
 			{children}
 		</TasksContext>
 	);

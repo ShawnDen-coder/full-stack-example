@@ -72,6 +72,51 @@ export async function createServerResources(
 		role: "server",
 	});
 	let profileJobs: ReturnType<typeof createProfileReadClient> | undefined;
+	async function rollbackAcquiredResources() {
+		const report = (err: unknown, resource?: string) => {
+			try {
+				logger.error({ err, resource }, "Startup cleanup failed");
+			} catch {
+				// A broken logger must not replace the assembly failure.
+			}
+		};
+		// Start both cleanups even if one hangs or throws synchronously.
+		const resources = [
+			...(profileJobs
+				? [{ name: "producer", close: () => profileJobs?.close() }]
+				: []),
+			{ name: "database", close: () => db.close() },
+		];
+		const cleanup = Promise.all(
+			resources.map(async ({ name, close }) => {
+				try {
+					await Promise.resolve().then(close);
+				} catch (err) {
+					report(err, name);
+				}
+			}),
+		);
+		try {
+			await withDeadline(
+				cleanup,
+				config.SERVER_SHUTDOWN_TIMEOUT_MS ?? 30000,
+				"Startup cleanup timed out",
+			);
+		} catch (err) {
+			report(err);
+		}
+	}
+
+	async function closeProducerThenDatabase(
+		producer: ReturnType<typeof createProfileReadClient>,
+	) {
+		try {
+			await producer.close();
+		} finally {
+			await db.close();
+		}
+	}
+
 	try {
 		const authConfig: AuthConfig = {
 			db,
@@ -116,49 +161,12 @@ export async function createServerResources(
 			},
 			checkJobsReady: () => producer.checkReady(),
 			close() {
-				closePromise ??= (async () => {
-					try {
-						await producer.close();
-					} finally {
-						await db.close();
-					}
-				})();
+				closePromise ??= closeProducerThenDatabase(producer);
 				return closePromise;
 			},
 		};
 	} catch (error) {
-		const report = (err: unknown, resource?: string) => {
-			try {
-				logger.error({ err, resource }, "Startup cleanup failed");
-			} catch {
-				// A broken logger must not replace the assembly failure.
-			}
-		};
-		// Start both cleanups even if one hangs or throws synchronously.
-		const resources = [
-			...(profileJobs
-				? [{ name: "producer", close: () => profileJobs?.close() }]
-				: []),
-			{ name: "database", close: () => db.close() },
-		];
-		const cleanup = Promise.all(
-			resources.map(async ({ name, close }) => {
-				try {
-					await Promise.resolve().then(close);
-				} catch (err) {
-					report(err, name);
-				}
-			}),
-		);
-		try {
-			await withDeadline(
-				cleanup,
-				config.SERVER_SHUTDOWN_TIMEOUT_MS ?? 30000,
-				"Startup cleanup timed out",
-			);
-		} catch (err) {
-			report(err);
-		}
+		await rollbackAcquiredResources();
 		throw error;
 	}
 }

@@ -28,7 +28,7 @@ export function DataTableRowActions<TData>({
 }: DataTableRowActionsProps<TData>) {
 	const task = taskSchema.parse(row.original);
 
-	const { setOpen, setCurrentRow } = useTasks();
+	const { toggleDialog, setCurrentRow } = useTasks();
 
 	return (
 		<DropdownMenu modal={false}>
@@ -45,7 +45,7 @@ export function DataTableRowActions<TData>({
 				<DropdownMenuItem
 					onClick={() => {
 						setCurrentRow(task);
-						setOpen("update");
+						toggleDialog("update");
 					}}
 				>
 					Edit
@@ -69,7 +69,7 @@ export function DataTableRowActions<TData>({
 				<DropdownMenuItem
 					onClick={() => {
 						setCurrentRow(task);
-						setOpen("delete");
+						toggleDialog("delete");
 					}}
 				>
 					Delete

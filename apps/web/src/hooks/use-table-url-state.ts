@@ -65,6 +65,83 @@ type UseTableUrlStateReturn = {
 	) => void;
 };
 
+export function decodeColumnFilters(
+	search: SearchRecord,
+	columnFiltersCfg: NonNullable<UseTableUrlStateParams["columnFilters"]>,
+): ColumnFiltersState {
+	const collected: ColumnFiltersState = [];
+	for (const cfg of columnFiltersCfg) {
+		const raw = (search as SearchRecord)[cfg.searchKey];
+		const deserialize = cfg.deserialize ?? ((v: unknown) => v);
+		if (cfg.type === "string") {
+			const value = (deserialize(raw) as string) ?? "";
+			if (typeof value === "string" && value.trim() !== "") {
+				collected.push({ id: cfg.columnId, value });
+			}
+		} else {
+			// default to array type
+			const value = (deserialize(raw) as unknown[]) ?? [];
+			if (Array.isArray(value) && value.length > 0) {
+				collected.push({ id: cfg.columnId, value });
+			}
+		}
+	}
+	return collected;
+}
+
+export function encodeColumnFilters(
+	next: ColumnFiltersState,
+	columnFiltersCfg: NonNullable<UseTableUrlStateParams["columnFilters"]>,
+) {
+	const patch: Record<string, unknown> = {};
+
+	for (const cfg of columnFiltersCfg) {
+		const found = next.find((f) => f.id === cfg.columnId);
+		const serialize = cfg.serialize ?? ((v: unknown) => v);
+		if (cfg.type === "string") {
+			const value =
+				typeof found?.value === "string" ? (found.value as string) : "";
+			patch[cfg.searchKey] = value.trim() !== "" ? serialize(value) : undefined;
+		} else {
+			const value = Array.isArray(found?.value)
+				? (found?.value as unknown[])
+				: [];
+			patch[cfg.searchKey] = value.length > 0 ? serialize(value) : undefined;
+		}
+	}
+	return patch;
+}
+
+export function decodePagination(
+	search: SearchRecord,
+	pageKey: string,
+	pageSizeKey: string,
+	defaultPage: number,
+	defaultPageSize: number,
+): PaginationState {
+	const rawPage = search[pageKey];
+	const rawPageSize = search[pageSizeKey];
+	const pageNum = typeof rawPage === "number" ? rawPage : defaultPage;
+	const pageSize =
+		typeof rawPageSize === "number" ? rawPageSize : defaultPageSize;
+	return { pageIndex: Math.max(0, pageNum - 1), pageSize };
+}
+
+export function encodePagination(
+	next: PaginationState,
+	pageKey: string,
+	pageSizeKey: string,
+	defaultPage: number,
+	defaultPageSize: number,
+): SearchRecord {
+	const page = next.pageIndex + 1;
+	return {
+		[pageKey]: page <= defaultPage ? undefined : page,
+		[pageSizeKey]:
+			next.pageSize === defaultPageSize ? undefined : next.pageSize,
+	};
+}
+
 export function useTableUrlState(
 	params: UseTableUrlStateParams,
 ): UseTableUrlStateReturn {
@@ -85,58 +162,41 @@ export function useTableUrlState(
 	const globalFilterEnabled = globalFilterCfg?.enabled ?? true;
 	const trimGlobal = globalFilterCfg?.trim ?? true;
 
-	// Build initial column filters from the current search params
-	const initialColumnFilters: ColumnFiltersState = useMemo(() => {
-		const collected: ColumnFiltersState = [];
-		for (const cfg of columnFiltersCfg) {
-			const raw = (search as SearchRecord)[cfg.searchKey];
-			const deserialize = cfg.deserialize ?? ((v: unknown) => v);
-			if (cfg.type === "string") {
-				const value = (deserialize(raw) as string) ?? "";
-				if (typeof value === "string" && value.trim() !== "") {
-					collected.push({ id: cfg.columnId, value });
-				}
-			} else {
-				// default to array type
-				const value = (deserialize(raw) as unknown[]) ?? [];
-				if (Array.isArray(value) && value.length > 0) {
-					collected.push({ id: cfg.columnId, value });
-				}
-			}
-		}
-		return collected;
-	}, [columnFiltersCfg, search]);
+	const columnFilters = useMemo(
+		() => decodeColumnFilters(search, columnFiltersCfg),
+		[columnFiltersCfg, search],
+	);
 
-	const columnFilters = initialColumnFilters;
-
-	const pagination: PaginationState = useMemo(() => {
-		const rawPage = (search as SearchRecord)[pageKey];
-		const rawPageSize = (search as SearchRecord)[pageSizeKey];
-		const pageNum = typeof rawPage === "number" ? rawPage : defaultPage;
-		const pageSizeNum =
-			typeof rawPageSize === "number" ? rawPageSize : defaultPageSize;
-		return { pageIndex: Math.max(0, pageNum - 1), pageSize: pageSizeNum };
-	}, [search, pageKey, pageSizeKey, defaultPage, defaultPageSize]);
+	const pagination = useMemo(
+		() =>
+			decodePagination(
+				search,
+				pageKey,
+				pageSizeKey,
+				defaultPage,
+				defaultPageSize,
+			),
+		[search, pageKey, pageSizeKey, defaultPage, defaultPageSize],
+	);
 
 	const onPaginationChange: OnChangeFn<PaginationState> = (updater) => {
 		const next = typeof updater === "function" ? updater(pagination) : updater;
-		const nextPage = next.pageIndex + 1;
-		const nextPageSize = next.pageSize;
-		navigate({
-			search: (prev) => ({
-				...(prev as SearchRecord),
-				[pageKey]: nextPage <= defaultPage ? undefined : nextPage,
-				[pageSizeKey]:
-					nextPageSize === defaultPageSize ? undefined : nextPageSize,
-			}),
-		});
+		const patch = encodePagination(
+			next,
+			pageKey,
+			pageSizeKey,
+			defaultPage,
+			defaultPageSize,
+		);
+		navigate({ search: (prev) => ({ ...prev, ...patch }) });
 	};
 
-	const globalFilter = (() => {
-		if (!globalFilterEnabled) return undefined;
-		const raw = (search as SearchRecord)[globalFilterKey];
-		return typeof raw === "string" ? raw : "";
-	})();
+	const rawGlobalFilter = search[globalFilterKey];
+	const globalFilter = !globalFilterEnabled
+		? undefined
+		: typeof rawGlobalFilter === "string"
+			? rawGlobalFilter
+			: "";
 
 	const onGlobalFilterChange: OnChangeFn<string> | undefined =
 		globalFilterEnabled
@@ -160,23 +220,7 @@ export function useTableUrlState(
 		const next =
 			typeof updater === "function" ? updater(columnFilters) : updater;
 
-		const patch: Record<string, unknown> = {};
-
-		for (const cfg of columnFiltersCfg) {
-			const found = next.find((f) => f.id === cfg.columnId);
-			const serialize = cfg.serialize ?? ((v: unknown) => v);
-			if (cfg.type === "string") {
-				const value =
-					typeof found?.value === "string" ? (found.value as string) : "";
-				patch[cfg.searchKey] =
-					value.trim() !== "" ? serialize(value) : undefined;
-			} else {
-				const value = Array.isArray(found?.value)
-					? (found?.value as unknown[])
-					: [];
-				patch[cfg.searchKey] = value.length > 0 ? serialize(value) : undefined;
-			}
-		}
+		const patch = encodeColumnFilters(next, columnFiltersCfg);
 
 		navigate({
 			search: (prev) => ({

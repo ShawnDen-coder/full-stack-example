@@ -192,56 +192,19 @@ export async function startWorker({
 		if (state !== "closing" && state !== "closed") state = "failed";
 		completion.reject(error);
 	};
-	try {
-		await waitForStartup(
-			resources.checkReady(),
-			config.WORKER_STARTUP_TIMEOUT_MS,
-			signal,
+	function observeConsumerLoop(name: string, worker: Consumer) {
+		// Attach observers before the next consumer starts.
+		return worker.run().then(
+			() => {
+				if (state === "running" || state === "failed")
+					recordFailure(consumerError(name, "stopped unexpectedly", undefined));
+			},
+			(error: unknown) =>
+				recordFailure(consumerError(name, "execution failed", error)),
 		);
-		checkCancelled(signal);
-		for (const definition of factories.consumerDefinitions) {
-			checkCancelled(signal);
-			const worker = definition.create({
-				redisUrl: config.REDIS_URL,
-				services: resources.services,
-				concurrency: definition.concurrency ?? config.WORKER_CONCURRENCY,
-				logger: logger.child({ consumer: definition.name }),
-			});
-			consumers.push({ name: definition.name, worker });
-			logger.info(
-				{ consumer: definition.name, phase: "created" },
-				"Consumer created",
-			);
-		}
-		checkCancelled(signal);
-		await waitForStartup(
-			Promise.all(
-				consumers.map(({ worker }) => attempt(() => worker.waitUntilReady())),
-			),
-			config.WORKER_STARTUP_TIMEOUT_MS,
-			signal,
-		);
-		checkCancelled(signal);
-		state = "running";
-		for (const { name, worker } of consumers) {
-			checkCancelled(signal);
-			// Each loop is observed before starting the next consumer.
-			const loop = worker.run().then(
-				() => {
-					if (state === "running" || state === "failed")
-						recordFailure(
-							consumerError(name, "stopped unexpectedly", undefined),
-						);
-				},
-				(error: unknown) =>
-					recordFailure(consumerError(name, "execution failed", error)),
-			);
-			loops.push(loop);
-			logger.info({ consumer: name, phase: "running" }, "Consumer started");
-		}
-		checkCancelled(signal);
-	} catch (error) {
-		state = "closing";
+	}
+
+	async function rollbackStartup(error: unknown): Promise<never> {
 		const errors: unknown[] = [error];
 		try {
 			await withDeadline(
@@ -277,8 +240,82 @@ export async function startWorker({
 		throw error;
 	}
 
+	try {
+		await waitForStartup(
+			resources.checkReady(),
+			config.WORKER_STARTUP_TIMEOUT_MS,
+			signal,
+		);
+		checkCancelled(signal);
+		for (const definition of factories.consumerDefinitions) {
+			checkCancelled(signal);
+			const worker = definition.create({
+				redisUrl: config.REDIS_URL,
+				services: resources.services,
+				concurrency: definition.concurrency ?? config.WORKER_CONCURRENCY,
+				logger: logger.child({ consumer: definition.name }),
+			});
+			consumers.push({ name: definition.name, worker });
+			logger.info(
+				{ consumer: definition.name, phase: "created" },
+				"Consumer created",
+			);
+		}
+		checkCancelled(signal);
+		await waitForStartup(
+			Promise.all(
+				consumers.map(({ worker }) => attempt(() => worker.waitUntilReady())),
+			),
+			config.WORKER_STARTUP_TIMEOUT_MS,
+			signal,
+		);
+		checkCancelled(signal);
+		state = "running";
+		for (const { name, worker } of consumers) {
+			checkCancelled(signal);
+			const loop = observeConsumerLoop(name, worker);
+			loops.push(loop);
+			logger.info({ consumer: name, phase: "running" }, "Consumer started");
+		}
+		checkCancelled(signal);
+	} catch (error) {
+		state = "closing";
+		return rollbackStartup(error);
+	}
+
 	let closePromise: Promise<void> | undefined;
 	let drained = false;
+	async function drainConsumersAndCloseResources() {
+		const results = await Promise.allSettled(
+			consumers.map(async ({ name, worker }) => {
+				logger.info({ consumer: name, phase: "closing" }, "Consumer draining");
+				try {
+					await worker.close();
+				} catch (cause) {
+					throw consumerError(name, "drain failed", cause);
+				}
+			}),
+		);
+		const errors = rejected(results);
+		if (errors.length)
+			throw new AggregateError(
+				[...errors, ...loopErrors],
+				"Consumer drain failed",
+			);
+		await Promise.all(loops);
+		drained = true;
+		// All consumers have stopped before the database can be closed.
+		if (state !== "closing")
+			throw new Error("Worker shutdown budget exhausted");
+		await resources.close();
+		if (state !== "closing")
+			throw new Error("Worker shutdown budget exhausted");
+		if (loopErrors.length)
+			throw new AggregateError(loopErrors, "Consumer execution failed");
+		state = "closed";
+		completion.resolve();
+	}
+
 	return {
 		done: completion.promise,
 		async checkReady() {
@@ -307,39 +344,7 @@ export async function startWorker({
 			if (closePromise) return closePromise;
 			state = "closing";
 			closePromise = withDeadline(
-				(async () => {
-					const results = await Promise.allSettled(
-						consumers.map(async ({ name, worker }) => {
-							logger.info(
-								{ consumer: name, phase: "closing" },
-								"Consumer draining",
-							);
-							try {
-								await worker.close();
-							} catch (cause) {
-								throw consumerError(name, "drain failed", cause);
-							}
-						}),
-					);
-					const errors = rejected(results);
-					if (errors.length)
-						throw new AggregateError(
-							[...errors, ...loopErrors],
-							"Consumer drain failed",
-						);
-					await Promise.all(loops);
-					drained = true;
-					// All consumers have stopped before the database can be closed.
-					if (state !== "closing")
-						throw new Error("Worker shutdown budget exhausted");
-					await resources.close();
-					if (state !== "closing")
-						throw new Error("Worker shutdown budget exhausted");
-					if (loopErrors.length)
-						throw new AggregateError(loopErrors, "Consumer execution failed");
-					state = "closed";
-					completion.resolve();
-				})(),
+				drainConsumersAndCloseResources(),
 				config.WORKER_SHUTDOWN_TIMEOUT_MS,
 				"Worker shutdown timed out",
 			).catch((error: unknown) => {

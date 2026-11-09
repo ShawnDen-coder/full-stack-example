@@ -8,6 +8,8 @@ L2 resource assembly and operational capabilities. Imports L1 infrastructure and
 
 `./server` creates HTTP process services and bounded startup cleanup. `./worker` creates independent worker DB/services. `./process` configures logger/telemetry and deadlines. `./http` records requests. `./queue-monitor` owns read-only queue projection. `./queue-summaries` projects safe fields. `./deployment` owns migrations, runtime-role provisioning and auth-schema generation.
 
+Queue monitor adapter and job state failures raise `QueueMonitorUnavailableError` with a static operation source; projection failures propagate to the API boundary. Never log its cause.
+
 ## Extend
 
 Follow the [layer policy](../../docs/dependency-layers.md). Add narrow public exports,

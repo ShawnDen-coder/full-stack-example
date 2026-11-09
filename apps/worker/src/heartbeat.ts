@@ -16,21 +16,22 @@ export async function startHeartbeat(
 		clearInterval(interval);
 	};
 	signal?.addEventListener("abort", stop, { once: true });
-	let probing: Promise<void> | undefined;
-	let inFlight: Promise<void> | undefined;
+	let boundedProbe: Promise<void> | undefined;
+	let dependencyCheckInFlight: Promise<void> | undefined;
 	const probe = () => {
-		if (probing || inFlight || !running) return probing;
+		if (boundedProbe || dependencyCheckInFlight || !running)
+			return boundedProbe;
 		const raw = Promise.resolve().then(checkReady);
-		inFlight = raw;
+		dependencyCheckInFlight = raw;
 		void raw.then(
 			() => {
-				inFlight = undefined;
+				dependencyCheckInFlight = undefined;
 			},
 			() => {
-				inFlight = undefined;
+				dependencyCheckInFlight = undefined;
 			},
 		);
-		probing = (async () => {
+		boundedProbe = (async () => {
 			try {
 				await withDeadline(raw, 2000, "Worker readiness timed out");
 				if (!running) return;
@@ -43,10 +44,10 @@ export async function startHeartbeat(
 			} catch {
 				await rm(file, { force: true });
 			} finally {
-				probing = undefined;
+				boundedProbe = undefined;
 			}
 		})();
-		return probing;
+		return boundedProbe;
 	};
 	await rm(file, { force: true });
 	await probe();
@@ -58,7 +59,7 @@ export async function startHeartbeat(
 		async close() {
 			stop();
 			signal?.removeEventListener("abort", stop);
-			await probing;
+			await boundedProbe;
 			await rm(file, { force: true });
 		},
 	};

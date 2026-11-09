@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { authRoles, organizationRoles } from "../src/auth";
-import { canVisit, landingPath } from "../src/index";
+import { canVisit, landingPath, pageKeys, pages } from "../src/index";
 
 test("navigation checks exact path boundaries and keeps basic account access", () => {
 	const access = {
@@ -66,4 +66,11 @@ test("native roles reserve administration for admins and owners", () => {
 	);
 	assert.equal(authRoles.user.authorize({ user: ["ban"] }).success, false);
 	assert.equal(authRoles.superadmin.authorize({ user: ["ban"] }).success, true);
+});
+
+test("page metadata and permission keys stay in the same order", () => {
+	assert.deepEqual(
+		pages.map((page) => page.key),
+		[...pageKeys],
+	);
 });

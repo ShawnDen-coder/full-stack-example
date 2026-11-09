@@ -295,3 +295,186 @@ test("name search bounds each state, deduplicates IDs and reports truncation", a
 	assert.equal(ranges.length, 7);
 	assert.ok(ranges.every(([, start, end]) => start === 0 && end === 100));
 });
+
+test("projection failures retain their identity while dependency failures are classified", async () => {
+	const projectionError = new TypeError("projection failure");
+	const adapter: QueueReadAdapter = {
+		getJobLogs: async () => ({ logs: [], count: 0 }),
+		getJobCounts: async () => ({}),
+		isPaused: async () => false,
+		getJobs: async () => [
+			{
+				id: "1",
+				name: "job",
+				timestamp: 0,
+				data: {},
+				returnvalue: null,
+				getState: async () => "waiting",
+			},
+		],
+		getJob: async () => undefined,
+		getJobSchedulers: async () => [],
+		getJobSchedulersCount: async () => 0,
+	};
+	const subject = createQueueMonitor([
+		{
+			key: "test",
+			name: "Test",
+			adapter,
+			summarizeData: () => {
+				throw projectionError;
+			},
+			summarizeResult: () => ({}),
+		},
+	]);
+	await assert.rejects(
+		subject.jobs({
+			queueKey: "test",
+			status: "waiting",
+			page: 1,
+			pageSize: 20,
+		}),
+		(error) => error === projectionError,
+	);
+});
+
+test("getState failures are dependency failures and missing jobs do not read state", async () => {
+	const failure = new Error("redis secret");
+	const adapter: QueueReadAdapter = {
+		getJobLogs: async () => {
+			throw new Error("unexpected logs");
+		},
+		getJobCounts: async () => ({}),
+		isPaused: async () => false,
+		getJobs: async () => [],
+		getJob: async (id) =>
+			id === "missing"
+				? undefined
+				: {
+						id,
+						name: "job",
+						timestamp: 0,
+						data: {},
+						returnvalue: null,
+						getState: async () => {
+							throw failure;
+						},
+					},
+		getJobSchedulers: async () => [],
+		getJobSchedulersCount: async () => 0,
+	};
+	const subject = monitor(adapter);
+	await assert.rejects(
+		subject.job({ queueKey: "user-profile", jobId: "1" }),
+		(error) =>
+			error instanceof QueueMonitorUnavailableError &&
+			error.source === "getState" &&
+			error.cause === failure,
+	);
+	assert.equal(
+		await subject.job({ queueKey: "user-profile", jobId: "missing" }),
+		null,
+	);
+	assert.equal(
+		await subject.logs({
+			queueKey: "user-profile",
+			jobId: "missing",
+			page: 1,
+			pageSize: 20,
+		}),
+		null,
+	);
+});
+
+test("name search distinguishes scan and unique result limits", async () => {
+	for (const [count, unique, scanTruncated, resultsTruncated] of [
+		[100, 50, false, false],
+		[101, 50, true, false],
+		[100, 51, false, true],
+	] as const) {
+		const calls: Array<[string, number | undefined, number | undefined]> = [];
+		const subject = monitor({
+			getJobCounts: async () => ({}),
+			isPaused: async () => false,
+			getJob: async () => undefined,
+			getJobs: async (states, start, end) => {
+				calls.push([states[0] ?? "", start, end]);
+				return Array.from(
+					{ length: count },
+					(_, index): Job => ({
+						id: String(index % unique),
+						name: "target",
+						timestamp: 1,
+						data: {},
+						returnvalue: null,
+						getState: async () => {
+							throw new Error("unexpected state read");
+						},
+					}),
+				);
+			},
+			getJobSchedulers: async () => [],
+			getJobSchedulersCount: async () => 0,
+			getJobLogs: async () => ({ logs: [], count: 0 }),
+		});
+		const result = await subject.jobs({
+			queueKey: "user-profile",
+			status: "waiting",
+			page: 1,
+			pageSize: 20,
+			mode: "name",
+			query: "target",
+		});
+		assert.equal(result?.mode, "name");
+		if (result?.mode !== "name") throw new Error("wrong mode");
+		assert.equal(result.items.length, 50);
+		assert.equal(result.scannedCount, 700);
+		assert.equal(result.scanTruncated, scanTruncated);
+		assert.equal(result.resultsTruncated, resultsTruncated);
+		assert.equal(calls.length, 7);
+		assert.ok(calls.every(([, start, end]) => start === 0 && end === 100));
+	}
+});
+
+test("name search ignores missing IDs and duplicate matches across states", async () => {
+	const calls: string[] = [];
+	const subject = monitor({
+		getJobCounts: async () => ({}),
+		isPaused: async () => false,
+		getJob: async () => undefined,
+		getJobs: async (states) => {
+			calls.push(states[0] ?? "");
+			return [undefined, "same"].map(
+				(id): Job => ({
+					id,
+					name: "target",
+					timestamp: 1,
+					data: {},
+					returnvalue: null,
+					getState: async () => {
+						throw new Error("unexpected state read");
+					},
+				}),
+			);
+		},
+		getJobSchedulers: async () => [],
+		getJobSchedulersCount: async () => 0,
+		getJobLogs: async () => ({ logs: [], count: 0 }),
+	});
+	const args = {
+		queueKey: "user-profile",
+		status: "waiting" as const,
+		page: 1,
+		pageSize: 20,
+		mode: "name" as const,
+	};
+	const result = await subject.jobs({ ...args, query: "target" });
+	assert.equal(result?.mode, "name");
+	if (result?.mode !== "name") throw new Error("wrong mode");
+	assert.equal(result.items.length, 1);
+	assert.equal(result.scannedCount, 14);
+	assert.equal(result.resultsTruncated, false);
+	assert.equal(calls.length, 7);
+	const empty = await subject.jobs({ ...args, query: "missing" });
+	assert.equal(empty?.items.length, 0);
+});

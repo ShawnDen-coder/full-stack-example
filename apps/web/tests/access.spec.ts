@@ -105,6 +105,16 @@ test("administrators configure native page roles through real services", async (
 		await page.getByRole("button", { name: /Switch workspace/ }).click();
 		await page.getByRole("menuitem", { name: "Members & access" }).click();
 		await expect(page).toHaveURL(/\/admin\/users\?workspace=application/);
+		await page.getByRole("button", { name: "Add member", exact: true }).click();
+		await page.getByLabel("Member email").fill("draft@example.test");
+		await page.getByRole("button", { name: "Cancel", exact: true }).click();
+		await page.getByRole("tab", { name: "Page roles" }).click();
+		await page.getByRole("tab", { name: "Members", exact: true }).click();
+		await page.getByRole("button", { name: "Add member", exact: true }).click();
+		await expect(page.getByLabel("Member email")).toHaveValue(
+			"draft@example.test",
+		);
+		await page.getByRole("button", { name: "Cancel", exact: true }).click();
 		await ordinary.goto("/apps?workspace=application");
 		await ordinary.getByRole("button", { name: /Switch workspace/ }).click();
 		await expect(

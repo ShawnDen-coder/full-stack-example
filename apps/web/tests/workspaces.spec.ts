@@ -104,6 +104,42 @@ test("create workspaces, use cards and keep Todo data scoped when switching", as
 			exact: true,
 		});
 		await settings.click();
+		// Keep image decoding pending to exercise the form's close and submit gate.
+		await page.evaluate(() => {
+			const original = window.createImageBitmap;
+			Object.assign(window, {
+				__originalCreateBitmap: original,
+				__rejectBitmap: undefined,
+			});
+			window.createImageBitmap = (() =>
+				new Promise((_resolve, reject) => {
+					Object.assign(window, { __rejectBitmap: reject });
+				})) as typeof createImageBitmap;
+		});
+		await page.getByLabel("Logo", { exact: true }).setInputFiles({
+			name: "pending.png",
+			mimeType: "image/png",
+			buffer: Buffer.from("pending"),
+		});
+		await expect(
+			page.getByRole("button", { name: "Save changes" }),
+		).toBeDisabled();
+		await page.keyboard.press("Escape");
+		await expect(
+			page.getByRole("dialog", { name: "Workspace settings" }),
+		).toBeVisible();
+		await page.evaluate(() => {
+			const state = window as unknown as {
+				__rejectBitmap: (error: Error) => void;
+				__originalCreateBitmap: typeof createImageBitmap;
+			};
+			state.__rejectBitmap(new Error("decode failed"));
+			window.createImageBitmap = state.__originalCreateBitmap;
+		});
+		await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible();
+		await expect(
+			page.getByRole("button", { name: "Save changes" }),
+		).toBeEnabled();
 		await page.getByLabel("Logo", { exact: true }).setInputFiles({
 			name: "logo.png",
 			mimeType: "image/png",

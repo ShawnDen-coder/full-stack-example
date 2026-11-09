@@ -9,6 +9,7 @@ import {
 	member,
 	organization,
 	organizationRole,
+	session,
 	user,
 } from "@full-stack-example/db/schema";
 import { createLogger } from "@full-stack-example/observability";
@@ -488,6 +489,34 @@ test("workspace creation, membership, tools and Todo isolation form one authoriz
 			.from(user)
 			.where(eq(user.id, owner.id));
 		assert.equal(activeOwner?.banned, false);
+		const bannedAccount = await signup("Banned account");
+		assert.ok(
+			await auth.api.getSession({
+				headers: new Headers({ cookie: bannedAccount.cookie }),
+			}),
+		);
+		await auth.api.banUser({
+			headers: new Headers({ cookie: platform.cookie }),
+			body: { userId: bannedAccount.id },
+		});
+		const [bannedUser] = await db
+			.select()
+			.from(user)
+			.where(eq(user.id, bannedAccount.id));
+		assert.equal(bannedUser?.banned, true);
+		assert.deepEqual(
+			await db
+				.select()
+				.from(session)
+				.where(eq(session.userId, bannedAccount.id)),
+			[],
+		);
+		assert.equal(
+			await auth.api.getSession({
+				headers: new Headers({ cookie: bannedAccount.cookie }),
+			}),
+			null,
+		);
 		const raceOwner = await signup("Concurrent owner");
 		const raceSpaceId = randomUUID();
 		spaceIds.push(raceSpaceId);

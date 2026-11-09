@@ -101,6 +101,51 @@ export function NavigationSearch() {
 				icon: item.icon,
 			})),
 	);
+	async function navigateToPage(item: (typeof items)[number]) {
+		if (pendingRef.current) return;
+		pendingRef.current = true;
+		const operation = ++token.current;
+		destination.current = item.to;
+		setPending(true);
+		setError("");
+		try {
+			const prepared = await router.preloadRoute({
+				to: item.to,
+				search: { workspace },
+			});
+			if (operation !== token.current) return;
+			if (
+				!prepared ||
+				prepared.some((match) => match.status === "error") ||
+				!samePath(prepared.at(-1)?.pathname, item.to)
+			)
+				throw new Error("Unable to prepare navigation.");
+			await router.navigate({
+				to: item.to,
+				search: { workspace },
+			});
+			if (operation !== token.current) return;
+			if (
+				!samePath(router.state.resolvedLocation?.pathname, item.to) ||
+				router.state.matches.some((match) => match.status === "error")
+			)
+				throw new Error("Navigation did not reach the selected page.");
+			destination.current = null;
+			focusMain.current = true;
+			setOpen(false);
+		} catch {
+			if (operation === token.current) {
+				destination.current = null;
+				setError("Unable to open that page. Please try again.");
+			}
+		} finally {
+			if (operation === token.current) {
+				pendingRef.current = false;
+				setPending(false);
+			}
+		}
+	}
+
 	return (
 		<>
 			<Tooltip>
@@ -161,57 +206,7 @@ export function NavigationSearch() {
 							<CommandItem
 								key={item.to}
 								disabled={pending}
-								onSelect={async () => {
-									if (pendingRef.current) return;
-									pendingRef.current = true;
-									const operation = ++token.current;
-									destination.current = item.to;
-									setPending(true);
-									setError("");
-									try {
-										const prepared = await router.preloadRoute({
-											to: item.to,
-											search: { workspace },
-										});
-										if (operation !== token.current) return;
-										if (
-											!prepared ||
-											prepared.some((match) => match.status === "error") ||
-											!samePath(prepared.at(-1)?.pathname, item.to)
-										)
-											throw new Error("Unable to prepare navigation.");
-										await router.navigate({
-											to: item.to,
-											search: { workspace },
-										});
-										if (operation !== token.current) return;
-										if (
-											!samePath(
-												router.state.resolvedLocation?.pathname,
-												item.to,
-											) ||
-											router.state.matches.some(
-												(match) => match.status === "error",
-											)
-										)
-											throw new Error(
-												"Navigation did not reach the selected page.",
-											);
-										destination.current = null;
-										focusMain.current = true;
-										setOpen(false);
-									} catch {
-										if (operation === token.current) {
-											destination.current = null;
-											setError("Unable to open that page. Please try again.");
-										}
-									} finally {
-										if (operation === token.current) {
-											pendingRef.current = false;
-											setPending(false);
-										}
-									}
-								}}
+								onSelect={() => void navigateToPage(item)}
 							>
 								<Icon icon={item.icon} />
 								{item.title}

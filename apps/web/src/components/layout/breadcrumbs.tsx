@@ -9,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useMatch, useMatches } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { useAccess } from "@/lib/access";
-import { breadcrumbAncestors, breadcrumbTargets } from "@/lib/breadcrumbs";
+import { breadcrumbTargets, breadcrumbViewModel } from "@/lib/breadcrumbs";
 import { catalog } from "@/lib/catalog";
 import { client } from "@/utils/orpc";
 
@@ -42,29 +42,18 @@ export function Breadcrumbs() {
 		job?.params.queueKey ??
 		jobs?.params.queueKey ??
 		schedulers?.params.queueKey;
-	const queuePage =
-		key === "queue-job" || key === "queue-jobs" || key === "queue-schedulers";
-	const leaf =
-		key === "queue-job"
-			? job?.params.jobId
-			: key === "queue-jobs"
-				? "Jobs"
-				: key === "queue-schedulers"
-					? "Schedulers"
-					: catalog.find((entry) => entry.id === key)?.title;
-	const current =
-		queuePage && queueKey && leaf
-			? `${queueKey} / ${leaf}`
-			: key === "workspaces"
-				? "Platform / Workspaces"
-				: key === "users" && currentSpace
-					? `${currentSpace.name} / ${leaf}`
-					: leaf;
-	if (!current) return null;
-	const chain = breadcrumbAncestors(key, queueKey, {
-		toolHome: Boolean(access.data && canVisit(access.data, "/apps")),
-		queues: Boolean(access.data && canVisit(access.data, "/queues")),
+	const { queuePage, current, leaf, chain } = breadcrumbViewModel({
+		key,
+		queueKey,
+		jobId: job?.params.jobId,
+		workspaceName: currentSpace?.name,
+		leafTitle: catalog.find((entry) => entry.id === key)?.title,
+		access: {
+			toolHome: Boolean(access.data && canVisit(access.data, "/apps")),
+			queues: Boolean(access.data && canVisit(access.data, "/queues")),
+		},
 	});
+	if (!current) return null;
 	const showHome = chain.includes("tool-home");
 	const showQueues = Boolean(queueKey && chain.includes("queues"));
 

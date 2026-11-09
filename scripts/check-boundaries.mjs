@@ -127,13 +127,8 @@ function publicTargets(workspace, specifier) {
 		);
 }
 
-export function checkBoundaries(
-	workspaceRoot,
-	rules = boundaryRules,
-	layers = workspaceLayers,
-) {
-	const root = resolve(workspaceRoot);
-	const workspaces = ["apps", "packages"].flatMap((group) =>
+function discoverWorkspaces(root) {
+	return ["apps", "packages"].flatMap((group) =>
 		readdirSync(join(root, group), { withFileTypes: true })
 			.filter(
 				(entry) =>
@@ -163,6 +158,34 @@ export function checkBoundaries(
 				};
 			}),
 	);
+}
+
+function appendCycleDiagnostics(graph, diagnostics) {
+	const visited = new Set();
+	const active = [];
+	const visit = (id) => {
+		if (active.includes(id)) {
+			diagnostics.push(
+				`Package cycle: ${[...active.slice(active.indexOf(id)), id].join(" -> ")}`,
+			);
+			return;
+		}
+		if (visited.has(id)) return;
+		visited.add(id);
+		active.push(id);
+		for (const target of graph.get(id)) visit(target);
+		active.pop();
+	};
+	for (const id of graph.keys()) visit(id);
+}
+
+export function checkBoundaries(
+	workspaceRoot,
+	rules = boundaryRules,
+	layers = workspaceLayers,
+) {
+	const root = resolve(workspaceRoot);
+	const workspaces = discoverWorkspaces(root);
 	const owner = (file) =>
 		workspaces.find(
 			({ directory }) =>
@@ -185,11 +208,7 @@ export function checkBoundaries(
 			for (const error of errors) diagnostics.push(`${location}: ${error}`);
 		return errors;
 	};
-	for (const workspace of workspaces) {
-		if (!Object.hasOwn(rules, workspace.id))
-			diagnostics.push(`${workspace.id}: missing dependency policy`);
-		if (!Number.isInteger(layers[workspace.id]) || layers[workspace.id] < 1)
-			diagnostics.push(`${workspace.id}: missing or invalid internal layer`);
+	function checkWorkspaceDeclarations(workspace) {
 		// Validate declarations even if no source file currently imports the dependency.
 		for (const field of [
 			"dependencies",
@@ -226,6 +245,9 @@ export function checkBoundaries(
 					`${workspace.id}/tsconfig.json: project reference has no internal dependency policy: ${ref.path}`,
 				);
 		}
+	}
+
+	function checkWorkspaceSources(workspace) {
 		// Check production configs as well as src. Test harnesses are deliberately separate.
 		const productionFiles = [
 			...files(join(workspace.directory, "src")),
@@ -332,22 +354,16 @@ export function checkBoundaries(
 			}
 		}
 	}
-	const visited = new Set();
-	const active = [];
-	const visit = (id) => {
-		if (active.includes(id)) {
-			diagnostics.push(
-				`Package cycle: ${[...active.slice(active.indexOf(id)), id].join(" -> ")}`,
-			);
-			return;
-		}
-		if (visited.has(id)) return;
-		visited.add(id);
-		active.push(id);
-		for (const target of graph.get(id)) visit(target);
-		active.pop();
-	};
-	for (const id of graph.keys()) visit(id);
+
+	for (const workspace of workspaces) {
+		if (!Object.hasOwn(rules, workspace.id))
+			diagnostics.push(`${workspace.id}: missing dependency policy`);
+		if (!Number.isInteger(layers[workspace.id]) || layers[workspace.id] < 1)
+			diagnostics.push(`${workspace.id}: missing or invalid internal layer`);
+		checkWorkspaceDeclarations(workspace);
+		checkWorkspaceSources(workspace);
+	}
+	appendCycleDiagnostics(graph, diagnostics);
 	return [...new Set(diagnostics)];
 }
 

@@ -8,6 +8,10 @@ import { createTodosService } from "@full-stack-example/domain/todos";
 import { createAccessService } from "@full-stack-example/identity/access";
 import type { Auth, Session } from "@full-stack-example/identity/auth";
 import { createLogger } from "@full-stack-example/observability";
+import {
+	createQueueMonitor,
+	type QueueReadAdapter,
+} from "@full-stack-example/runtime/queue-monitor";
 import { serve } from "@hono/node-server";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
@@ -711,5 +715,96 @@ test("queue monitoring requires platform superadmin before reading Redis", async
 		assert.ok(allowed.calls.includes("queues.list"));
 	} finally {
 		await allowed.close();
+	}
+});
+
+test("queue RPC safely classifies failures and logs no sensitive error details", async () => {
+	const f = await fixture({
+		...session,
+		user: { ...session.user, role: "superadmin" },
+	});
+	const lines: string[] = [];
+	try {
+		const logger = createLogger("test", { write: (line) => lines.push(line) });
+		const { app } = createApi({
+			...f.deps,
+			logger,
+			corsOrigin: "http://localhost:3001",
+			checkReady: async () => {},
+		});
+		const secret =
+			"review-pii@example.test token=review-secret redis://user:pass@example.test:6379 payload-marker";
+		for (const [kind, status] of [
+			["dependency", 503],
+			["internal", 500],
+		] as const) {
+			const adapter: QueueReadAdapter = {
+				getJobCounts: async () => ({}),
+				isPaused: async () => false,
+				getJobLogs: async () => ({ logs: [], count: 0 }),
+				getJob: async () => undefined,
+				getJobSchedulers: async () => [],
+				getJobSchedulersCount: async () => 0,
+				getJobs: async () => {
+					if (kind === "dependency") throw new TypeError(secret);
+					return [
+						{
+							id: "1",
+							name: "job",
+							timestamp: 0,
+							data: {},
+							returnvalue: null,
+							getState: async () => "waiting",
+						},
+					];
+				},
+			};
+			f.deps.services.queueMonitor = createQueueMonitor([
+				{
+					key: "test",
+					name: "Test",
+					adapter,
+					summarizeData: () => {
+						throw new TypeError(secret);
+					},
+					summarizeResult: () => ({}),
+				},
+			]);
+			const response = await app.request("/rpc/queues/jobs", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ json: { queueKey: "test" } }),
+			});
+			assert.equal(response.status, status);
+			const body = await response.text();
+			for (const sentinel of [
+				"review-pii@example.test",
+				"review-secret",
+				"redis://user:pass",
+				"payload-marker",
+			]) {
+				assert.ok(!body.includes(sentinel));
+				assert.ok(!lines.join("").includes(sentinel));
+			}
+			assert.ok(
+				lines
+					.map((line) => JSON.parse(line))
+					.some(
+						(entry) =>
+							entry.event === "queue_monitor.failed" &&
+							entry.failure_kind === kind &&
+							entry.operation === "jobs" &&
+							(kind !== "dependency" || entry.source === "getJobs"),
+					),
+			);
+		}
+		const missing = await app.request("/rpc/queues/job", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ json: { queueKey: "missing", jobId: "missing" } }),
+		});
+		assert.equal(missing.status, 404);
+	} finally {
+		await f.close();
 	}
 });

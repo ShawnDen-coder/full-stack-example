@@ -20,6 +20,8 @@ L3 HTTP 接入边界：Hono 组装、oRPC 输入校验、注入的 session 解�
 | [src/routers/queues.ts](src/routers/queues.ts) | 受平台权限保护的队列、任务、日志和定时过程 |
 | [identity auth](../identity/src/auth.ts) | Better Auth 工厂 |
 
+队列接口仅记录固定故障分类和操作名称；依赖故障映射为 503，内部故障映射为 500，不记录原始异常。
+
 ## 扩展步骤
 
 1. 先在 [domain](../domain/README.zh-CN.md) 实现操作。将具体服务类型加入 `Services`，在 [server services](../runtime/src/server-resources.ts) 中实例化，再注入 `createApi`。

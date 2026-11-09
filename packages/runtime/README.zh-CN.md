@@ -8,6 +8,8 @@ L2 资源组装与运行支撑能力，依赖 L1 基础包及明确授权的 L2 
 
 `./server` 创建服务与有界启动清理；`./worker` 创建独立 Worker 数据库和服务；`./process` 配置日志、遥测与 deadline；`./http` 记录请求；`./queue-monitor` 提供只读队列投影；`./queue-summaries` 投影安全字段；`./deployment` 负责迁移、运行角色配置与认证 Schema 生成。
 
+队列监控的 adapter 和 job state 失败会抛出带静态操作来源的 `QueueMonitorUnavailableError`；projection 错误传播至 API 边界。不得记录其 cause。
+
 ## 扩展
 
 遵守[分层规则](../../docs/dependency-layers.zh-CN.md)，只新增明确能力入口，不建立转发基础设施的 barrel。

@@ -345,3 +345,23 @@ test("production modules cannot launder dependencies through excluded test harne
 		2,
 	);
 });
+
+test("diagnostics retain source order, deduplicate and include forbidden edges in cycles", (t) => {
+	const f = fixture(t);
+	f.put(
+		"packages/api/src/index.ts",
+		"import '@full-stack-example/domain';\nimport 'hidden/index';\nimport 'hidden/index';",
+	);
+	f.put("packages/domain/src/index.ts", "import '@full-stack-example/api';");
+	const errors = f.check();
+	assert.deepEqual(errors, [...new Set(errors)]);
+	assert.ok(errors.some((item) => item.includes("Package cycle:")));
+	assert.equal(
+		errors.filter((item) => item.includes("hidden/index")).length,
+		6,
+	);
+	assert.ok(
+		errors.findIndex((item) => item.includes("hidden/index")) <
+			errors.findIndex((item) => item.includes("Package cycle:")),
+	);
+});

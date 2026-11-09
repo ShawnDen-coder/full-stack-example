@@ -88,6 +88,56 @@ test("native Better Auth roles enforce page access and administrator boundaries"
 			.update(member)
 			.set({ role: "owner" })
 			.where(eq(member.id, owner.memberId));
+		// Selector conflicts are rejected before workspace or session checks.
+		const conflictingSelectors = await post("organization/update-member-role", {
+			roleId: "one",
+			roleName: "two",
+			memberId: 42,
+			role: 42,
+		});
+		assert.equal(conflictingSelectors.status, 400);
+		for (const memberId of [undefined, 42, null]) {
+			const response = await post(
+				"organization/update-member-role",
+				{
+					organizationId: "application",
+					memberId,
+					role: "member",
+				},
+				owner.cookie,
+			);
+			assert.equal(response.status, 400);
+		}
+		for (const role of [undefined, 42, ["member", 42], null]) {
+			const response = await post(
+				"organization/update-member-role",
+				{
+					organizationId: "application",
+					memberId: ordinary.memberId,
+					role,
+				},
+				owner.cookie,
+			);
+			assert.equal(response.status, 400);
+			const [unchanged] = await db
+				.select()
+				.from(member)
+				.where(eq(member.id, ordinary.memberId));
+			assert.equal(unchanged?.role, "member,standard");
+		}
+		for (const role of ["member", ["member", "standard"], "member,standard"]) {
+			const response = await post(
+				"organization/update-member-role",
+				{
+					organizationId: "application",
+					memberId: ordinary.memberId,
+					role,
+				},
+				owner.cookie,
+			);
+			assert.equal(response.status, 200);
+		}
+
 		assert.equal(
 			(
 				await post(

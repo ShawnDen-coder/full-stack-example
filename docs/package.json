@@ -5,7 +5,7 @@
 	"scripts": {
 		"generate": "tsx scripts/generate.ts",
 		"dev:site": "pnpm generate && rspress dev --host 127.0.0.1",
-		"build:site": "pnpm generate && rspress build && node scripts/check-build.mjs",
+		"build:site": "pnpm generate && rspress build && node scripts/generate-redirects.mjs && node scripts/check-build.mjs",
 		"preview:site": "rspress preview --host 127.0.0.1",
 		"check-types": "tsc --noEmit",
 		"test": "node --test scripts/*.test.mjs"
