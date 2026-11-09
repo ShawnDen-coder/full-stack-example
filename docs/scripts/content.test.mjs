@@ -78,3 +78,14 @@ test("sends repository files to GitHub and rejects broken or escaping links", as
 		"https://example.com",
 	);
 });
+
+test("all generated page routes are represented in each localized sidebar", async () => {
+	const { sidebar } = await import("./content.ts");
+	for (const language of ["zh", "en"]) {
+		const links = sidebar(language).flatMap((section) =>
+			section.items.map((item) => item.link),
+		);
+		for (const page of pages(language))
+			assert.ok(links.includes(siteRoute(page.route, language)), page.route);
+	}
+});

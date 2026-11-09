@@ -43,7 +43,7 @@ export function Chats() {
 		fullName.toLowerCase().includes(search.trim().toLowerCase()),
 	);
 
-	const currentMessage = selectedUser?.messages.reduce(
+	const messagesByDate = selectedUser?.messages.reduce(
 		(acc: Record<string, Convo[]>, obj) => {
 			const key = format(obj.timestamp, "d MMM, yyyy");
 
@@ -223,10 +223,10 @@ export function Chats() {
 								<div className="flex size-full flex-1">
 									<div className="chat-text-container relative -me-4 flex flex-1 flex-col overflow-y-hidden">
 										<div className="chat-flex flex h-40 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
-											{currentMessage &&
-												Object.keys(currentMessage).map((key) => (
+											{messagesByDate &&
+												Object.keys(messagesByDate).map((key) => (
 													<Fragment key={key}>
-														{currentMessage[key].map((msg) => (
+														{messagesByDate[key].map((msg) => (
 															<div
 																key={`${msg.sender}-${msg.timestamp}-${msg.message}`}
 																className={cn(

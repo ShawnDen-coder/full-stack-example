@@ -1,9 +1,9 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 // Reset clears old data and cancels in-flight results without orphaning observers.
-export function resetAccessQueries(
+export function resetNonAccessQueries(
 	client: QueryClient,
-	keepWorkspaceList: boolean,
+	{ keepWorkspaceList }: { keepWorkspaceList: boolean },
 ) {
 	// This list is platform-superadmin-only and independent of workspace grants.
 	// Keeping it avoids closing its active settings dialog during a tool change.

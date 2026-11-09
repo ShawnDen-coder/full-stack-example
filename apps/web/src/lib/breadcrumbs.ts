@@ -35,3 +35,40 @@ export function breadcrumbAncestors(
 		return ["queues", "queue"];
 	return [];
 }
+
+export function breadcrumbViewModel({
+	key,
+	queueKey,
+	jobId,
+	workspaceName,
+	leafTitle,
+	access,
+}: {
+	key: BreadcrumbKey | undefined;
+	queueKey?: string;
+	jobId?: string;
+	workspaceName?: string;
+	leafTitle?: string;
+	access: { toolHome: boolean; queues: boolean };
+}) {
+	const queuePage =
+		key === "queue-job" || key === "queue-jobs" || key === "queue-schedulers";
+	const leaf =
+		key === "queue-job"
+			? jobId
+			: key === "queue-jobs"
+				? "Jobs"
+				: key === "queue-schedulers"
+					? "Schedulers"
+					: leafTitle;
+	const current =
+		queuePage && queueKey && leaf
+			? `${queueKey} / ${leaf}`
+			: key === "workspaces"
+				? "Platform / Workspaces"
+				: key === "users" && workspaceName
+					? `${workspaceName} / ${leaf}`
+					: leaf;
+	const chain = breadcrumbAncestors(key, queueKey, access);
+	return { queuePage, current, leaf, chain };
+}

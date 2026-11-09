@@ -25,6 +25,246 @@ export type AuthConfig = {
 	trustedOrigins: string[];
 };
 
+type BeforeContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
+
+function createBeforeHook(db: Database) {
+	const roleWrites = [
+		"/organization/update-member-role",
+		"/organization/create-role",
+		"/organization/update-role",
+		"/organization/delete-role",
+	];
+	const reads = [
+		"/organization/list",
+		"/organization/get-full-organization",
+		"/organization/get-active-member",
+		"/organization/get-active-member-role",
+		"/organization/list-members",
+		"/organization/list-roles",
+		"/organization/get-role",
+		"/organization/has-permission",
+		"/organization/list-invitations",
+		"/organization/list-user-invitations",
+	];
+
+	async function guardOrganizationRoleWrite(
+		ctx: BeforeContext,
+		workspaceId: BeforeContext["body"]["organizationId"],
+	) {
+		if (ctx.body?.roleId !== undefined && ctx.body?.roleName !== undefined)
+			throw new APIError("BAD_REQUEST", {
+				message: "Use only one role selector",
+			});
+		if (typeof workspaceId !== "string" || !workspaceId)
+			throw new APIError("BAD_REQUEST", {
+				message: "Explicit organizationId is required",
+			});
+		const session = await getSessionFromCtx(ctx);
+		if (!session) throw new APIError("UNAUTHORIZED");
+		const [manager] = await db
+			.select()
+			.from(schema.member)
+			.where(
+				and(
+					eq(schema.member.organizationId, workspaceId),
+					eq(schema.member.userId, session.user.id),
+				),
+			);
+		if (
+			!manager?.role
+				.split(",")
+				.some((role) => role === "owner" || role === "admin")
+		)
+			throw new APIError("FORBIDDEN");
+		if (ctx.body?.roleId) {
+			const [target] = await db
+				.select()
+				.from(schema.organizationRole)
+				.where(
+					and(
+						eq(schema.organizationRole.id, ctx.body.roleId),
+						eq(schema.organizationRole.organizationId, workspaceId),
+					),
+				);
+			if (!target) throw new APIError("FORBIDDEN");
+		}
+	}
+
+	async function banUserWithOwnerProtection(input: {
+		userId: string;
+		banReason?: string;
+		banExpiresIn?: number;
+	}) {
+		// Serialize with workspace creation's owner row lock. The check, ban and
+		// session revocation commit together; a pre-hook check alone races creation.
+		return db.transaction(async (tx) => {
+			const [target] = await tx
+				.select()
+				.from(schema.user)
+				.where(eq(schema.user.id, input.userId))
+				.for("update");
+			if (!target) throw new APIError("NOT_FOUND");
+			const memberships = await tx
+				.select()
+				.from(schema.member)
+				.where(eq(schema.member.userId, target.id));
+			if (memberships.some((item) => item.role.split(",").includes("owner")))
+				throw new APIError("FORBIDDEN", {
+					message: "Workspace owners cannot be disabled",
+				});
+			const [updated] = await tx
+				.update(schema.user)
+				.set({
+					banned: true,
+					banReason: input.banReason || "No reason",
+					banExpires: input.banExpiresIn
+						? new Date(Date.now() + input.banExpiresIn * 1000)
+						: null,
+				})
+				.where(eq(schema.user.id, target.id))
+				.returning();
+			await tx
+				.delete(schema.session)
+				.where(eq(schema.session.userId, target.id));
+			return updated;
+		});
+	}
+
+	async function handleBanUser(ctx: BeforeContext) {
+		const current = await getSessionFromCtx(ctx);
+		if (!current) throw new APIError("UNAUTHORIZED");
+		if (current.user.role !== "superadmin") throw new APIError("FORBIDDEN");
+		const parsed = z
+			.object({
+				userId: z.string().min(1),
+				banReason: z.string().max(1000).optional(),
+				banExpiresIn: z.number().int().positive().max(315360000).optional(),
+			})
+			.safeParse(ctx.body);
+		if (!parsed.success || parsed.data.userId === current.user.id)
+			throw new APIError("BAD_REQUEST");
+		const input = parsed.data;
+		const banned = await banUserWithOwnerProtection(input);
+		return ctx.json({ user: banned });
+	}
+
+	async function guardMemberRoleChange(
+		ctx: BeforeContext,
+		workspaceId: BeforeContext["body"]["organizationId"],
+	) {
+		const session = await getSessionFromCtx(ctx);
+		if (!session) throw new APIError("UNAUTHORIZED");
+		const [actor] = await db
+			.select()
+			.from(schema.member)
+			.where(
+				and(
+					eq(schema.member.userId, session.user.id),
+					eq(schema.member.organizationId, workspaceId),
+				),
+			);
+		if (typeof ctx.body?.memberId !== "string")
+			throw new APIError("BAD_REQUEST");
+		const [target] = await db
+			.select()
+			.from(schema.member)
+			.where(eq(schema.member.id, ctx.body.memberId));
+		if (!target || target.organizationId !== workspaceId)
+			throw new APIError("FORBIDDEN");
+		const role: unknown = ctx.body.role;
+		if (
+			typeof role !== "string" &&
+			(!Array.isArray(role) ||
+				!role.every((value) => typeof value === "string"))
+		)
+			throw new APIError("BAD_REQUEST");
+		const assigned = (Array.isArray(role) ? role : [role])
+			.flatMap((value: string) => value.split(","))
+			.map((value: string) => value.trim());
+		if (target?.role.split(",").includes("owner") || assigned.includes("owner"))
+			throw new APIError("FORBIDDEN", {
+				message: "Workspace owners are managed through deployment provisioning",
+			});
+		if (
+			!actor?.role.split(",").includes("owner") &&
+			(target?.role.split(",").includes("admin") || assigned.includes("admin"))
+		)
+			throw new APIError("FORBIDDEN", {
+				message: "Only owners can manage administrators",
+			});
+	}
+
+	async function guardEditableRoles(
+		ctx: BeforeContext,
+		workspaceId: BeforeContext["body"]["organizationId"],
+	) {
+		// Editable role templates can grant business pages, never administrative capabilities.
+		if (
+			["/organization/create-role", "/organization/update-role"].includes(
+				ctx.path,
+			)
+		) {
+			const permission =
+				ctx.path === "/organization/create-role"
+					? ctx.body?.permission
+					: ctx.body?.data?.permission;
+			if (
+				permission &&
+				Object.entries(permission).some(
+					([resource, actions]) =>
+						!pageKeys.some((key) => key !== "queues" && key === resource) ||
+						!Array.isArray(actions) ||
+						actions.some((action) => action !== "read"),
+				)
+			)
+				throw new APIError("FORBIDDEN", {
+					message: "Editable roles may only contain page read permissions",
+				});
+			if (ctx.path === "/organization/update-role" && ctx.body?.data?.roleName)
+				throw new APIError("BAD_REQUEST", {
+					message:
+						"Role keys are permanent; create a new role to change its key",
+				});
+		}
+		if (ctx.path === "/organization/delete-role") {
+			const body = ctx.body;
+			const [role] = await db
+				.select()
+				.from(schema.organizationRole)
+				.where(
+					body.roleId
+						? eq(schema.organizationRole.id, body.roleId)
+						: and(
+								eq(schema.organizationRole.organizationId, workspaceId),
+								eq(schema.organizationRole.role, body.roleName),
+							),
+				);
+			if (role?.role === defaultMemberRole)
+				throw new APIError("FORBIDDEN", {
+					message: "The registration role cannot be deleted",
+				});
+		}
+	}
+
+	return createAuthMiddleware(async (ctx) => {
+		if (
+			ctx.path.startsWith("/organization/") &&
+			![...roleWrites, ...reads].includes(ctx.path)
+		)
+			throw new APIError("FORBIDDEN", {
+				message: "Use workspace management for this operation",
+			});
+		const workspaceId = ctx.body?.organizationId;
+		if (roleWrites.includes(ctx.path))
+			await guardOrganizationRoleWrite(ctx, workspaceId);
+		if (ctx.path === "/admin/remove-user") throw new APIError("FORBIDDEN");
+		if (ctx.path === "/admin/ban-user") return handleBanUser(ctx);
+		if (ctx.path === "/organization/update-member-role")
+			await guardMemberRoleChange(ctx, workspaceId);
+		await guardEditableRoles(ctx, workspaceId);
+	});
+}
+
 export function createAuth({
 	db,
 	secret,
@@ -64,226 +304,7 @@ export function createAuth({
 			}),
 		],
 		hooks: {
-			before: createAuthMiddleware(async (ctx) => {
-				const roleWrites = [
-					"/organization/update-member-role",
-					"/organization/create-role",
-					"/organization/update-role",
-					"/organization/delete-role",
-				];
-				const reads = [
-					"/organization/list",
-					"/organization/get-full-organization",
-					"/organization/get-active-member",
-					"/organization/get-active-member-role",
-					"/organization/list-members",
-					"/organization/list-roles",
-					"/organization/get-role",
-					"/organization/has-permission",
-					"/organization/list-invitations",
-					"/organization/list-user-invitations",
-				];
-				if (
-					ctx.path.startsWith("/organization/") &&
-					![...roleWrites, ...reads].includes(ctx.path)
-				)
-					throw new APIError("FORBIDDEN", {
-						message: "Use workspace management for this operation",
-					});
-				const workspaceId = ctx.body?.organizationId;
-				if (roleWrites.includes(ctx.path)) {
-					if (
-						ctx.body?.roleId !== undefined &&
-						ctx.body?.roleName !== undefined
-					)
-						throw new APIError("BAD_REQUEST", {
-							message: "Use only one role selector",
-						});
-					if (typeof workspaceId !== "string" || !workspaceId)
-						throw new APIError("BAD_REQUEST", {
-							message: "Explicit organizationId is required",
-						});
-					const session = await getSessionFromCtx(ctx);
-					if (!session) throw new APIError("UNAUTHORIZED");
-					const [manager] = await db
-						.select()
-						.from(schema.member)
-						.where(
-							and(
-								eq(schema.member.organizationId, workspaceId),
-								eq(schema.member.userId, session.user.id),
-							),
-						);
-					if (
-						!manager?.role
-							.split(",")
-							.some((role) => role === "owner" || role === "admin")
-					)
-						throw new APIError("FORBIDDEN");
-					if (ctx.body?.roleId) {
-						const [target] = await db
-							.select()
-							.from(schema.organizationRole)
-							.where(
-								and(
-									eq(schema.organizationRole.id, ctx.body.roleId),
-									eq(schema.organizationRole.organizationId, workspaceId),
-								),
-							);
-						if (!target) throw new APIError("FORBIDDEN");
-					}
-				}
-				if (ctx.path === "/admin/remove-user") throw new APIError("FORBIDDEN");
-				if (ctx.path === "/admin/ban-user") {
-					const current = await getSessionFromCtx(ctx);
-					if (!current) throw new APIError("UNAUTHORIZED");
-					if (current.user.role !== "superadmin")
-						throw new APIError("FORBIDDEN");
-					const parsed = z
-						.object({
-							userId: z.string().min(1),
-							banReason: z.string().max(1000).optional(),
-							banExpiresIn: z
-								.number()
-								.int()
-								.positive()
-								.max(315360000)
-								.optional(),
-						})
-						.safeParse(ctx.body);
-					if (!parsed.success || parsed.data.userId === current.user.id)
-						throw new APIError("BAD_REQUEST");
-					const input = parsed.data;
-					// Serialize with workspace creation's owner row lock. The check, ban and
-					// session revocation commit together; a pre-hook check alone races creation.
-					const banned = await db.transaction(async (tx) => {
-						const [target] = await tx
-							.select()
-							.from(schema.user)
-							.where(eq(schema.user.id, input.userId))
-							.for("update");
-						if (!target) throw new APIError("NOT_FOUND");
-						const memberships = await tx
-							.select()
-							.from(schema.member)
-							.where(eq(schema.member.userId, target.id));
-						if (
-							memberships.some((item) => item.role.split(",").includes("owner"))
-						)
-							throw new APIError("FORBIDDEN", {
-								message: "Workspace owners cannot be disabled",
-							});
-						const [updated] = await tx
-							.update(schema.user)
-							.set({
-								banned: true,
-								banReason: input.banReason || "No reason",
-								banExpires: input.banExpiresIn
-									? new Date(Date.now() + input.banExpiresIn * 1000)
-									: null,
-							})
-							.where(eq(schema.user.id, target.id))
-							.returning();
-						await tx
-							.delete(schema.session)
-							.where(eq(schema.session.userId, target.id));
-						return updated;
-					});
-					return ctx.json({ user: banned });
-				}
-
-				// Organization member hooks receive the target user, not the actor.
-				// Read the authenticated actor here, then let the native endpoint authorize and mutate.
-				if (ctx.path === "/organization/update-member-role") {
-					const session = await getSessionFromCtx(ctx);
-					if (!session) throw new APIError("UNAUTHORIZED");
-					const [actor] = await db
-						.select()
-						.from(schema.member)
-						.where(
-							and(
-								eq(schema.member.userId, session.user.id),
-								eq(schema.member.organizationId, workspaceId),
-							),
-						);
-					const [target] = await db
-						.select()
-						.from(schema.member)
-						.where(eq(schema.member.id, ctx.body.memberId));
-					if (!target || target.organizationId !== workspaceId)
-						throw new APIError("FORBIDDEN");
-					const assigned = (
-						Array.isArray(ctx.body.role) ? ctx.body.role : [ctx.body.role]
-					)
-						.flatMap((role: string) => role.split(","))
-						.map((role: string) => role.trim());
-					if (
-						target?.role.split(",").includes("owner") ||
-						assigned.includes("owner")
-					)
-						throw new APIError("FORBIDDEN", {
-							message:
-								"Workspace owners are managed through deployment provisioning",
-						});
-					if (
-						!actor?.role.split(",").includes("owner") &&
-						(target?.role.split(",").includes("admin") ||
-							assigned.includes("admin"))
-					)
-						throw new APIError("FORBIDDEN", {
-							message: "Only owners can manage administrators",
-						});
-				}
-				// Editable role templates can grant business pages, never administrative capabilities.
-				if (
-					["/organization/create-role", "/organization/update-role"].includes(
-						ctx.path,
-					)
-				) {
-					const permission =
-						ctx.path === "/organization/create-role"
-							? ctx.body?.permission
-							: ctx.body?.data?.permission;
-					if (
-						permission &&
-						Object.entries(permission).some(
-							([resource, actions]) =>
-								!pageKeys.some((key) => key !== "queues" && key === resource) ||
-								!Array.isArray(actions) ||
-								actions.some((action) => action !== "read"),
-						)
-					)
-						throw new APIError("FORBIDDEN", {
-							message: "Editable roles may only contain page read permissions",
-						});
-					if (
-						ctx.path === "/organization/update-role" &&
-						ctx.body?.data?.roleName
-					)
-						throw new APIError("BAD_REQUEST", {
-							message:
-								"Role keys are permanent; create a new role to change its key",
-						});
-				}
-				if (ctx.path === "/organization/delete-role") {
-					const body = ctx.body;
-					const [role] = await db
-						.select()
-						.from(schema.organizationRole)
-						.where(
-							body.roleId
-								? eq(schema.organizationRole.id, body.roleId)
-								: and(
-										eq(schema.organizationRole.organizationId, workspaceId),
-										eq(schema.organizationRole.role, body.roleName),
-									),
-						);
-					if (role?.role === defaultMemberRole)
-						throw new APIError("FORBIDDEN", {
-							message: "The registration role cannot be deleted",
-						});
-				}
-			}),
+			before: createBeforeHook(db),
 		},
 	});
 }

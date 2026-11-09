@@ -18,7 +18,7 @@ type DataTableRowActionsProps = {
 };
 
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
-	const { setOpen, setCurrentRow } = useUsers();
+	const { toggleDialog, setCurrentRow } = useUsers();
 	return (
 		<DropdownMenu modal={false}>
 			<DropdownMenuTrigger asChild>
@@ -34,7 +34,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
 				<DropdownMenuItem
 					onClick={() => {
 						setCurrentRow(row.original);
-						setOpen("edit");
+						toggleDialog("edit");
 					}}
 				>
 					Edit
@@ -46,7 +46,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
 				<DropdownMenuItem
 					onClick={() => {
 						setCurrentRow(row.original);
-						setOpen("delete");
+						toggleDialog("delete");
 					}}
 					className="text-red-500!"
 				>

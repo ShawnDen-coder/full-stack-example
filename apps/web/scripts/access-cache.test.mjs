@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
-import { resetAccessQueries } from "../src/lib/access-cache.ts";
+import { resetNonAccessQueries } from "../src/lib/access-cache.ts";
 
 test("access changes clear old data, cancel late responses and keep observers", {
 	timeout: 5000,
@@ -35,7 +35,7 @@ test("access changes clear old data, cancel late responses and keep observers", 
 	t.after(unsubscribe);
 	await observer.refetch();
 	const oldRequest = observer.refetch();
-	resetAccessQueries(client, false);
+	resetNonAccessQueries(client, { keepWorkspaceList: false });
 	assert.notEqual(client.getQueryData(options.queryKey), "old restricted data");
 	await currentData;
 	assert.equal(client.getQueryData(options.queryKey), "current data");
@@ -55,9 +55,9 @@ test("workspace list is retained only across unchanged superadmin access", async
 	t.after(() => client.clear());
 	client.setQueryData(["workspaces", "all", 0], "platform data");
 	client.setQueryData(["access", "me"], "access data");
-	resetAccessQueries(client, true);
+	resetNonAccessQueries(client, { keepWorkspaceList: true });
 	assert.equal(client.getQueryData(["workspaces", "all", 0]), "platform data");
-	resetAccessQueries(client, false);
+	resetNonAccessQueries(client, { keepWorkspaceList: false });
 	assert.equal(client.getQueryData(["workspaces", "all", 0]), undefined);
 	assert.equal(client.getQueryData(["access", "me"]), "access data");
 });

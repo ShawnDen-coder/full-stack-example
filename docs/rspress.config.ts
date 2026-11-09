@@ -8,6 +8,22 @@ import { sidebar } from "./scripts/content.ts";
 const repository = "https://github.com/ShawnDen-coder/full-stack-example";
 const docs = import.meta.dirname;
 
+async function localizeTypeDocReference() {
+	const reference = path.join(docs, "content/en/reference/typescript");
+	const files = await readdir(reference, { recursive: true });
+	for (const file of files.filter((file) => file.endsWith(".md"))) {
+		const source = path.join(reference, file);
+		const markdown = await readFile(source, "utf8");
+		await writeFile(
+			source,
+			`---\noutline: false\nfooter: false\n---\n\n${markdown}`,
+		);
+	}
+	await cp(reference, path.join(docs, "content/zh/reference/typescript"), {
+		recursive: true,
+	});
+}
+
 export default defineConfig({
 	root: path.join(docs, "content"),
 	outDir: path.join(docs, "doc_build"),
@@ -72,23 +88,7 @@ export default defineConfig({
 		{
 			name: "localized-typescript-reference",
 			async config(config) {
-				const reference = path.join(docs, "content/en/reference/typescript");
-				const files = await readdir(reference, { recursive: true });
-				for (const file of files.filter((file) => file.endsWith(".md"))) {
-					const source = path.join(reference, file);
-					const markdown = await readFile(source, "utf8");
-					await writeFile(
-						source,
-						`---\noutline: false\nfooter: false\n---\n\n${markdown}`,
-					);
-				}
-				await cp(
-					reference,
-					path.join(docs, "content/zh/reference/typescript"),
-					{
-						recursive: true,
-					},
-				);
+				await localizeTypeDocReference();
 				return config;
 			},
 		},

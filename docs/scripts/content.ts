@@ -17,33 +17,47 @@ export const packageNames = [
 export const languages = ["zh", "en"] as const;
 export type Language = (typeof languages)[number];
 
+// Source pages and sidebar entries share these routes.
+const routes = {
+	home: "/",
+	development: "/guide/development/",
+	dependencyLayers: "/guide/dependency-layers/",
+	extensionExamples: "/guide/extension-examples/",
+	extensionDesign: "/guide/extension-design/",
+	contributing: "/guide/contributing/",
+	operations: "/operations/",
+	accessControl: "/guide/access-control/",
+	container: "/operations/container/",
+	observability: "/operations/observability/",
+} as const;
+
 export function pages(language: Language) {
 	const suffix = language === "zh" ? ".zh-CN" : "";
 	return [
-		{ source: `README${suffix}.md`, route: "/" },
-		{ source: `docs/development${suffix}.md`, route: "/guide/development/" },
+		{ source: `README${suffix}.md`, route: routes.home },
+		{ source: `docs/development${suffix}.md`, route: routes.development },
 		{
 			source: `docs/dependency-layers${suffix}.md`,
-			route: "/guide/dependency-layers/",
+			route: routes.dependencyLayers,
 		},
 		{
 			source: `docs/extension-examples${suffix}.md`,
-			route: "/guide/extension-examples/",
+			route: routes.extensionExamples,
 		},
 		{
 			source: `docs/extension-design${suffix}.md`,
-			route: "/guide/extension-design/",
+			route: routes.extensionDesign,
 		},
-		{ source: `CONTRIBUTING${suffix}.md`, route: "/guide/contributing/" },
-		{ source: `docs/operations${suffix}.md`, route: "/operations/" },
+		{ source: `CONTRIBUTING${suffix}.md`, route: routes.contributing },
+		{ source: `docs/operations${suffix}.md`, route: routes.operations },
 		{
 			source: `docs/access-control${suffix}.md`,
-			route: "/guide/access-control/",
+			route: routes.accessControl,
 		},
-		{ source: `container/README${suffix}.md`, route: "/operations/container/" },
+		{ source: `container/README${suffix}.md`, route: routes.container },
 		{
 			source: `docs/observability${suffix}.md`,
-			route: "/operations/observability/",
+			route: routes.observability,
 		},
 		...packageNames.map((name) => ({
 			source: `packages/${name}/README${suffix}.md`,
@@ -120,37 +134,25 @@ export function sidebar(language: Language) {
 	return [
 		{
 			text: zh ? "开始" : "Start",
-			items: [item(zh ? "快速开始" : "Quick start", "/")],
+			items: [item(zh ? "快速开始" : "Quick start", routes.home)],
 		},
 		{
 			text: zh ? "开发" : "Development",
 			items: [
-				item(
-					zh ? "架构与接线" : "Architecture and wiring",
-					"/guide/development/",
-				),
-				item(
-					zh ? "依赖层级" : "Dependency layers",
-					"/guide/dependency-layers/",
-				),
-				item(
-					zh ? "扩展示例" : "Extension examples",
-					"/guide/extension-examples/",
-				),
-				item(
-					zh ? "扩展约定" : "Extension contract",
-					"/guide/extension-design/",
-				),
-				item(zh ? "权限控制" : "Access control", "/guide/access-control/"),
-				item(zh ? "贡献与发布" : "Contributing", "/guide/contributing/"),
+				item(zh ? "架构与接线" : "Architecture and wiring", routes.development),
+				item(zh ? "依赖层级" : "Dependency layers", routes.dependencyLayers),
+				item(zh ? "扩展示例" : "Extension examples", routes.extensionExamples),
+				item(zh ? "扩展约定" : "Extension contract", routes.extensionDesign),
+				item(zh ? "权限控制" : "Access control", routes.accessControl),
+				item(zh ? "贡献与发布" : "Contributing", routes.contributing),
 			],
 		},
 		{
 			text: zh ? "运维" : "Operations",
 			items: [
-				item(zh ? "部署与恢复" : "Deployment and recovery", "/operations/"),
-				item(zh ? "容器" : "Containers", "/operations/container/"),
-				item(zh ? "可观测性" : "Observability", "/operations/observability/"),
+				item(zh ? "部署与恢复" : "Deployment and recovery", routes.operations),
+				item(zh ? "容器" : "Containers", routes.container),
+				item(zh ? "可观测性" : "Observability", routes.observability),
 			],
 		},
 		{

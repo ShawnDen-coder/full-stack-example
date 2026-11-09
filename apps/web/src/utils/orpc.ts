@@ -6,14 +6,18 @@ import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ENV } from "../env";
 import { trackSearchInvalidations } from "../features/queues/search-invalidation";
+import {
+	invalidateIdentityScope,
+	scopeTicket,
+	updateIdentityScope,
+	updateWorkspaceScope,
+} from "./request-scope";
+import { createScopedFetch } from "./scoped-fetch";
 
-let identity: string | null | undefined;
-let generation = 0;
-let workspace: string | undefined;
+export { isScopeCurrent, scopeTicket } from "./request-scope";
+
 export function synchronizeWorkspace(workspaceId: string | undefined) {
-	if (workspace === workspaceId) return;
-	workspace = workspaceId;
-	generation++;
+	if (!updateWorkspaceScope(workspaceId)) return;
 	void queryClient.cancelQueries();
 	queryClient.removeQueries({
 		predicate: (query) =>
@@ -21,22 +25,17 @@ export function synchronizeWorkspace(workspaceId: string | undefined) {
 	});
 	queryClient.getMutationCache().clear();
 }
-export const identityTicket = () => generation;
-export const isIdentityCurrent = (userId: string | null, ticket: number) =>
-	identity === userId && ticket === generation;
 let onUnauthorized: () => void = () => {};
 export function setUnauthorizedHandler(handler: () => void) {
 	onUnauthorized = handler;
 }
 export function synchronizeIdentity(userId: string | null) {
-	if (identity === userId) return;
-	identity = userId;
-	generation++;
+	if (!updateIdentityScope(userId)) return;
 	void queryClient.cancelQueries();
 	queryClient.clear();
 }
 export function clearSessionData() {
-	identity = undefined;
+	invalidateIdentityScope();
 	synchronizeIdentity(null);
 }
 function isUnauthorized(error: unknown) {
@@ -101,22 +100,7 @@ export const queryClient = createQueryClient();
 export const searchInvalidations = trackSearchInvalidations(queryClient);
 export const link = new RPCLink({
 	url: `${ENV.VITE_SERVER_URL.replace(/\/$/, "")}/rpc`,
-	async fetch(request, options) {
-		const started = generation;
-		const response = await fetch(request, {
-			...options,
-			credentials: "include",
-		});
-		// Read the body before handing it to oRPC: identity may change while streaming.
-		const body = await response.arrayBuffer();
-		if (started !== generation)
-			throw new DOMException("Session changed", "AbortError");
-		return new Response(body, {
-			status: response.status,
-			statusText: response.statusText,
-			headers: response.headers,
-		});
-	},
+	fetch: createScopedFetch(scopeTicket),
 });
 export const client: AppRouterClient = createORPCClient(link);
 export const orpc = createTanstackQueryUtils(client);

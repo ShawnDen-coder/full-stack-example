@@ -5,19 +5,19 @@ import { TasksMutateDrawer } from "./tasks-mutate-drawer";
 import { useTasks } from "./tasks-provider";
 
 export function TasksDialogs() {
-	const { open, setOpen, currentRow, setCurrentRow } = useTasks();
+	const { open, toggleDialog, currentRow, setCurrentRow } = useTasks();
 	return (
 		<>
 			<TasksMutateDrawer
 				key="task-create"
 				open={open === "create"}
-				onOpenChange={() => setOpen("create")}
+				onOpenChange={() => toggleDialog("create")}
 			/>
 
 			<TasksImportDialog
 				key="tasks-import"
 				open={open === "import"}
-				onOpenChange={() => setOpen("import")}
+				onOpenChange={() => toggleDialog("import")}
 			/>
 
 			{currentRow && (
@@ -26,7 +26,7 @@ export function TasksDialogs() {
 						key={`task-update-${currentRow.id}`}
 						open={open === "update"}
 						onOpenChange={() => {
-							setOpen("update");
+							toggleDialog("update");
 							setTimeout(() => {
 								setCurrentRow(null);
 							}, 500);
@@ -39,13 +39,13 @@ export function TasksDialogs() {
 						destructive
 						open={open === "delete"}
 						onOpenChange={() => {
-							setOpen("delete");
+							toggleDialog("delete");
 							setTimeout(() => {
 								setCurrentRow(null);
 							}, 500);
 						}}
 						handleConfirm={() => {
-							setOpen(null);
+							toggleDialog(null);
 							setTimeout(() => {
 								setCurrentRow(null);
 							}, 500);

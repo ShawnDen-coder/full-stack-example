@@ -21,6 +21,8 @@ have a 64 KiB HTTP body limit and identity enforces authorization and image boun
 | [src/routers/queues.ts](src/routers/queues.ts) | Platform-protected queue, job, log and scheduler procedures |
 | [identity auth](../identity/src/auth.ts) | Better Auth factory |
 
+Queue procedures log fixed failure classifications and operation names only; they map dependency failures to 503 and internal failures to 500 without logging raw exceptions.
+
 ## Extend
 
 1. Implement the operation in [domain](../domain/README.md). Add its concrete

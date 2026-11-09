@@ -2,7 +2,11 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
 	testDir: "./tests",
-	testMatch: "feedback.spec.ts",
+	testMatch: [
+		"feedback-queue.spec.ts",
+		"feedback-shell.spec.ts",
+		"feedback-forms.spec.ts",
+	],
 	workers: 1,
 	timeout: 30000,
 	reporter: "list",

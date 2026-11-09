@@ -17,16 +17,19 @@ import type { Auth } from "./auth";
 import { normalizeWorkspaceLogo } from "./workspace-logo";
 
 export function createWorkspaceService(auth: Auth, db: Database) {
-	async function actor(headers: Headers, platform = false) {
+	async function requireActor(headers: Headers) {
 		const session = await auth.api.getSession({ headers });
 		if (!session) throw new ORPCError("UNAUTHORIZED");
-		if (platform && session.user.role !== "superadmin")
-			throw new ORPCError("FORBIDDEN");
 		return session.user;
+	}
+	async function requirePlatformAdmin(headers: Headers) {
+		const user = await requireActor(headers);
+		if (user.role !== "superadmin") throw new ORPCError("FORBIDDEN");
+		return user;
 	}
 	return {
 		async mine(headers: Headers) {
-			const current = await actor(headers);
+			const current = await requireActor(headers);
 			return db
 				.select({
 					id: organization.id,
@@ -40,7 +43,7 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 				.orderBy(asc(organization.name), asc(organization.id));
 		},
 		async list(headers: Headers, offset: number) {
-			await actor(headers, true);
+			await requirePlatformAdmin(headers);
 			const rows = await db
 				.select({
 					id: organization.id,
@@ -76,7 +79,7 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 				logo?: string | null;
 			},
 		) {
-			await actor(headers, true);
+			await requirePlatformAdmin(headers);
 			const logo = await normalizeWorkspaceLogo(input.logo ?? null);
 			try {
 				return await db.transaction(async (tx) => {
@@ -133,7 +136,7 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 			}
 		},
 		async logo(headers: Headers, workspaceId: string) {
-			const current = await actor(headers);
+			const current = await requireActor(headers);
 			if (current.role !== "superadmin") {
 				const [membership] = await db
 					.select({ id: member.id })
@@ -157,7 +160,7 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 			headers: Headers,
 			input: { workspaceId: string; name: string; logo: string | null },
 		) {
-			const current = await actor(headers);
+			const current = await requireActor(headers);
 			if (current.role !== "superadmin") {
 				const [membership] = await db
 					.select({ role: member.role })
@@ -215,7 +218,7 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 			headers: Headers,
 			input: { workspaceId: string; tool: WorkspaceToolKey; enabled: boolean },
 		) {
-			await actor(headers, true);
+			await requirePlatformAdmin(headers);
 			return db.transaction(async (tx) => {
 				const [space] = await tx
 					.select({ id: organization.id })
@@ -240,7 +243,7 @@ export function createWorkspaceService(auth: Auth, db: Database) {
 			headers: Headers,
 			input: { workspaceId: string; email: string },
 		) {
-			const current = await actor(headers);
+			const current = await requireActor(headers);
 			return db.transaction(async (tx) => {
 				const [manager] = await tx
 					.select()

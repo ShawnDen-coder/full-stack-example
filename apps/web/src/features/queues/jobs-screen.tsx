@@ -1,10 +1,6 @@
 import "./queue-table.css";
 import { Button } from "@full-stack-example/ui/components/button";
 import {
-	Empty,
-	EmptyDescription,
-} from "@full-stack-example/ui/components/empty";
-import {
 	Field,
 	FieldDescription,
 	FieldError,
@@ -13,46 +9,19 @@ import {
 } from "@full-stack-example/ui/components/field";
 import { Input } from "@full-stack-example/ui/components/input";
 import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@full-stack-example/ui/components/table";
-import {
 	ToggleGroup,
 	ToggleGroupItem,
 } from "@full-stack-example/ui/components/toggle-group";
-import {
-	hashKey,
-	type Query,
-	useQueries,
-	useQuery,
-} from "@tanstack/react-query";
-import {
-	getRouteApi,
-	Link,
-	useRouter,
-	useRouterState,
-} from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import {
-	identityTicket,
-	isIdentityCurrent,
-	orpc,
-	queryClient,
-	searchInvalidations,
-} from "@/utils/orpc";
-import {
-	failureSummary,
-	formatCompactTime,
-	formatTime,
-	shortId,
-} from "./format";
+import { useQuery } from "@tanstack/react-query";
+import { getRouteApi } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
+import { orpc, scopeTicket } from "@/utils/orpc";
+import { formatTime } from "./format";
+import { QueueJobsTable } from "./jobs-table";
 import { isRpcCode, QueueQueryState } from "./query-state";
 import { QueueNav } from "./queue-nav";
 import { type JobStatus, jobStatuses, jobStatusLabels } from "./statuses";
+import { useQueueJobs } from "./use-queue-jobs";
 
 const browseScroll = new Map<string, number>();
 
@@ -61,12 +30,10 @@ export function QueueJobsScreen() {
 	const { queueKey } = route.useParams();
 	const search = route.useSearch();
 	const navigate = route.useNavigate();
-	const router = useRouter();
-	const routerState = useRouterState();
 	const { session } = route.useRouteContext();
 	const owner = useRef({
 		userId: session.data?.user.id ?? null,
-		generation: identityTicket(),
+		generation: scopeTicket(),
 	}).current;
 	const mode = search.mode ?? "browse";
 	const queues = useQuery({
@@ -105,265 +72,17 @@ export function QueueJobsScreen() {
 				bar.getBoundingClientRect().left -
 				(bar.clientWidth - active.clientWidth) / 2;
 	}, [status, mode]);
-	const inputRef = useRef<HTMLInputElement>(null);
-	const [draft, setDraft] = useState(search.query ?? "");
-	useEffect(() => {
-		// A new queue or mode owns a separate draft.
-		if (queueKey && mode) setDraft(search.query ?? "");
-	}, [search.query, queueKey, mode]);
-	const scope = JSON.stringify([
-		queueKey,
-		mode,
-		search.query,
-		status,
-		page,
-		pageSize,
-	]);
-	const lock = useRef<{
-		target: string;
-		href: string;
-		ticket: number;
-		query?: Query;
-		started: boolean;
-		navigation: boolean;
-		ownsNavigation: boolean;
-		kind: "search" | "refresh";
-	} | null>(null);
-	const latest = useRef<typeof lock.current>(null);
-	const [busy, setBusy] = useState<"search" | "refresh" | null>(null);
-	const [announcement, setAnnouncement] = useState("");
-	const scopeRef = useRef(scope);
-	scopeRef.current = scope;
-	const finish = (op: NonNullable<typeof lock.current>, success: boolean) => {
-		if (lock.current !== op) return;
-		lock.current = null;
-		setBusy(null);
-		if (success && scopeRef.current === op.target)
-			setAnnouncement(`Search for ${search.query} completed.`);
-	};
-	useEffect(
-		() =>
-			router.subscribe("onBeforeNavigate", ({ toLocation }) => {
-				const op = lock.current;
-				if (!op) {
-					latest.current = null;
-					return;
-				}
-				if (op.ownsNavigation && !op.navigation && toLocation.href === op.href)
-					op.navigation = true;
-				else {
-					lock.current = null;
-					latest.current = null;
-					setBusy(null);
-				}
-			}),
-		[router],
-	);
-	useEffect(
-		() => () => {
-			lock.current = null;
-			latest.current = null;
-		},
-		[],
-	);
-	useEffect(() => {
-		if (scope) setAnnouncement("");
-	}, [scope]);
-	const ready = () => {
-		const state = router.state;
-		const resolved = state.resolvedLocation;
-		const match = state.matches.find(
-			(item) => item.routeId === "/_auth/queues/$queueKey/jobs/",
-		);
-		const actual = resolved?.search;
-		return (
-			isIdentityCurrent(owner.userId, owner.generation) &&
-			state.status === "idle" &&
-			!state.isLoading &&
-			!!resolved &&
-			state.location.href === resolved.href &&
-			state.location.state.__TSR_key === resolved.state.__TSR_key &&
-			match?.status === "success" &&
-			match.context.session.data?.user.id === owner.userId &&
-			resolved.pathname === routerState.location.pathname &&
-			match.params.queueKey === queueKey &&
-			(actual?.mode ?? "browse") === mode &&
-			actual?.query === search.query &&
-			(actual?.status ?? "waiting") === status &&
-			(actual?.page ?? 1) === page &&
-			(actual?.pageSize ?? 20) === pageSize
-		);
-	};
-	const input = {
-		queueKey,
-		status,
-		page,
-		pageSize,
-		mode,
-		query: mode === "browse" ? undefined : search.query,
-	};
-	const options = orpc.queues.jobs.queryOptions({ input });
-	const queryKey = options.queryKey;
-	const queryHash = hashKey(queryKey);
-	const op =
-		lock.current?.target === scope && lock.current.ticket === owner.generation
-			? lock.current
-			: null;
-	const explicit = () => !!op && lock.current === op && !op.started && ready();
-	const markStarted = (query: Query | undefined) => {
-		if (explicit() && op && query) {
-			op.started = true;
-			op.query = query;
-		}
-	};
-	const results = useQueries<
-		{ queryFnData: Awaited<ReturnType<typeof options.queryFn>> }[]
-	>({
-		queries: ready()
-			? [
-					{
-						...options,
-						queryKey,
-						queryFn: (context: Parameters<typeof options.queryFn>[0]) => {
-							if (!isIdentityCurrent(owner.userId, owner.generation))
-								throw new DOMException("Session changed", "AbortError");
-							markStarted(
-								queryClient.getQueryCache().find({ queryKey, exact: true }),
-							);
-							return options.queryFn(context);
-						},
-						enabled: mode === "browse" || !!search.query,
-						staleTime: mode === "browse" ? undefined : Number.POSITIVE_INFINITY,
-						refetchInterval: mode === "browse" ? 5000 : false,
-						refetchOnWindowFocus: mode === "browse",
-						refetchOnReconnect: mode === "browse",
-						refetchOnMount:
-							mode === "browse"
-								? true
-								: () =>
-										explicit() || searchInvalidations.has(queryHash)
-											? "always"
-											: false,
-						retryOnMount:
-							mode === "browse"
-								? true
-								: () => explicit() || searchInvalidations.has(queryHash),
-						retry: mode === "browse" ? undefined : false,
-						refetchIntervalInBackground: false,
-						meta: {
-							errorHandledLocally: true,
-							explicitQueueSearch: mode !== "browse",
-							queueSearchJoined: markStarted,
-							queueSearchSettled: (query: Query, success: boolean) => {
-								if (
-									op?.ownsNavigation &&
-									op.started &&
-									op.query === query &&
-									isIdentityCurrent(owner.userId, op.ticket)
-								)
-									finish(op, success);
-							},
-						},
-					},
-				]
-			: [],
-	});
-	const jobs = results[0];
-	const runSearch = async (kind: "search" | "refresh" | "retry") => {
-		const term = kind === "search" ? draft.trim() : search.query;
-		if (!term || lock.current || jobs?.isFetching || !ready()) return;
-		const target = JSON.stringify([
-			queueKey,
-			mode,
-			term,
-			status,
-			page,
-			pageSize,
-		]);
-		const location = router.buildLocation({
-			to: ".",
-			from: "/queues/$queueKey/jobs/",
-			search: (prev) => ({ ...prev, query: term }),
-		});
-		const token = {
-			target,
-			href: location.href,
-			ticket: owner.generation,
-			started: false,
-			query: undefined as Query | undefined,
-			navigation: false,
-			ownsNavigation: target !== scope,
-			kind: kind === "search" ? ("search" as const) : ("refresh" as const),
-		};
-		lock.current = token;
-		latest.current = token;
-		setBusy(token.kind);
-		setAnnouncement("");
-		if (target !== scope) {
-			try {
-				await navigate({
-					search: (prev) => ({ ...prev, query: term }),
-				});
-			} catch {
-				if (lock.current === token) {
-					lock.current = null;
-					setBusy(null);
-				}
-			}
-			return;
-		}
-		const retryFocus = document.activeElement;
-		token.started = true;
-		token.query = queryClient.getQueryCache().find({ queryKey, exact: true });
-		try {
-			const result = await jobs?.refetch({ cancelRefetch: false });
-			if (
-				result &&
-				!result.error &&
-				lock.current === token &&
-				isIdentityCurrent(owner.userId, token.ticket) &&
-				scopeRef.current === scope
-			) {
-				lastError.current.error = null;
-				setAnnouncement(`Search for ${term} completed.`);
-				if (kind === "retry")
-					requestAnimationFrame(() => {
-						if (
-							latest.current === token &&
-							isIdentityCurrent(owner.userId, token.ticket) &&
-							token.query ===
-								queryClient.getQueryCache().find({ queryKey, exact: true }) &&
-							ready() &&
-							scopeRef.current === scope &&
-							(document.activeElement === retryFocus ||
-								document.activeElement === document.body)
-						)
-							inputRef.current?.focus();
-					});
-			}
-		} finally {
-			if (
-				lock.current === token &&
-				(!isIdentityCurrent(owner.userId, token.ticket) ||
-					token.query ===
-						queryClient.getQueryCache().find({ queryKey, exact: true }))
-			) {
-				lock.current = null;
-				setBusy(null);
-			}
-		}
-	};
-
-	const lastError = useRef<{ scope: string; error: unknown }>({
-		scope,
-		error: null,
-	});
-	if (lastError.current.scope !== scope)
-		lastError.current = { scope, error: null };
-	if (jobs?.error) lastError.current.error = jobs.error;
-	else if (jobs?.isSuccess && !jobs.isFetching) lastError.current.error = null;
-	const displayedError =
-		jobs?.error ?? (busy === "refresh" ? lastError.current.error : null);
+	const {
+		jobs,
+		displayedError,
+		busy,
+		announcement,
+		inputRef,
+		draft,
+		setDraft,
+		runSearch,
+		resetSearch,
+	} = useQueueJobs(owner);
 	const denied = ["UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND"].some(
 		(code) => isRpcCode(jobs?.error, code) || isRpcCode(queues.error, code),
 	);
@@ -422,10 +141,7 @@ export function QueueJobsScreen() {
 							!["browse", "id", "name"].includes(value)
 						)
 							return;
-						lock.current = null;
-						setBusy(null);
-						setDraft("");
-						setAnnouncement("");
+						resetSearch();
 						void navigate({
 							search: (prev) => ({
 								...prev,
@@ -652,136 +368,18 @@ export function QueueJobsScreen() {
 							</span>
 						</div>
 					)}
-					<div className="shrink-0 overflow-x-auto rounded-md border">
-						<Table
-							className={`queue-table queue-jobs-table ${showFailure ? "has-failure" : ""}`}
-						>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Job</TableHead>
-									{showFailure && <TableHead>Failure</TableHead>}
-									<TableHead className="text-right">Attempts</TableHead>
-									<TableHead className="text-right">Created</TableHead>
-									<TableHead className="text-right">
-										{mode === "browse"
-											? status === "active"
-												? "Processed"
-												: "Finished"
-											: "Latest time"}
-									</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{data.items.length ? (
-									data.items.map((job) => (
-										<TableRow key={job.id}>
-											<TableCell>
-												<Link
-													to="/queues/$queueKey/jobs/$jobId"
-													params={{ queueKey, jobId: job.id }}
-													onClick={() => {
-														if (mode === "browse")
-															browseScroll.set(
-																scrollKey,
-																scrollArea.current?.scrollTop ?? 0,
-															);
-													}}
-													search={search}
-													title={job.id}
-													className="font-medium hover:underline"
-												>
-													{shortId(job.id)}
-												</Link>
-												<div
-													className="text-muted-foreground text-xs"
-													title={job.summary.userId}
-												>
-													{job.name} · User ID{" "}
-													{job.summary.userId
-														? shortId(job.summary.userId)
-														: "—"}{" "}
-													· {job.state}
-												</div>
-											</TableCell>
-											{showFailure && (
-												<TableCell
-													className={
-														job.failedReason ? undefined : "queue-empty-failure"
-													}
-												>
-													<span className="queue-field-label">Failure</span>
-													<span
-														className="queue-failure-summary"
-														title={failureSummary(job.failedReason)}
-													>
-														{failureSummary(job.failedReason)}
-													</span>
-												</TableCell>
-											)}
-											<TableCell className="text-right tabular-nums">
-												<span className="queue-field-label">Attempts</span>
-												<span>
-													{job.attemptsMade} / {job.attemptsConfigured ?? "—"}
-												</span>
-											</TableCell>
-											<TableCell className="queue-created-time text-right">
-												<span className="queue-field-label">Created</span>
-												<span>{formatTime(job.timestamp)}</span>
-											</TableCell>
-											<TableCell className="queue-latest-time text-right">
-												<div className="queue-desktop-time">
-													<span className="queue-field-label">
-														{job.state === "active" ? "Processed" : "Finished"}
-													</span>
-													<span>
-														{formatTime(
-															job.state === "active"
-																? job.processedOn
-																: job.finishedOn,
-														)}
-													</span>
-												</div>
-												<div className="queue-mobile-time">
-													<span className="queue-field-label">
-														{job.state === "failed" || job.state === "completed"
-															? "Finished"
-															: job.state === "active"
-																? "Processed"
-																: "Created"}
-													</span>{" "}
-													<span>
-														{formatCompactTime(
-															job.state === "failed" ||
-																job.state === "completed"
-																? job.finishedOn
-																: job.state === "active"
-																	? job.processedOn
-																	: job.timestamp,
-														)}
-													</span>
-												</div>
-											</TableCell>
-										</TableRow>
-									))
-								) : (
-									<TableRow>
-										<TableCell
-											colSpan={showFailure ? 5 : 4}
-											className="h-24 text-center"
-										>
-											<Empty className="border-0">
-												<EmptyDescription>
-													{mode === "browse"
-														? "No jobs in this state."
-														: "No matches in the searched range."}
-												</EmptyDescription>
-											</Empty>
-										</TableCell>
-									</TableRow>
-								)}
-							</TableBody>
-						</Table>
-					</div>
+					<QueueJobsTable
+						items={data.items}
+						showFailure={showFailure}
+						mode={mode}
+						status={status}
+						queueKey={queueKey}
+						search={search}
+						onJobNavigate={() => {
+							if (mode === "browse")
+								browseScroll.set(scrollKey, scrollArea.current?.scrollTop ?? 0);
+						}}
+					/>
 					{mode === "browse" && (
 						<div className="flex flex-wrap items-center gap-2 text-sm">
 							<span className="w-full sm:mr-auto sm:w-auto">

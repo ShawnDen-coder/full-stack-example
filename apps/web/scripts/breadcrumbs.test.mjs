@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
 	breadcrumbAncestors,
 	breadcrumbTargets,
+	breadcrumbViewModel,
 } from "../src/lib/breadcrumbs.ts";
 
 test("breadcrumb ancestry is logical, permission filtered and uses real typed targets", () => {
@@ -37,4 +38,30 @@ test("breadcrumb ancestry is logical, permission filtered and uses real typed ta
 		queueKey: "sample",
 	});
 	assert.equal(breadcrumbTargets.jobs("sample").to, "/queues/$queueKey/jobs");
+});
+
+test("breadcrumb view model preserves full scoped titles and filtered ancestors", () => {
+	assert.deepEqual(
+		breadcrumbViewModel({
+			key: "queue-job",
+			queueKey: "profile",
+			jobId: "job-123",
+			access: { toolHome: true, queues: true },
+		}),
+		{
+			queuePage: true,
+			current: "profile / job-123",
+			leaf: "job-123",
+			chain: ["queues", "queue", "jobs"],
+		},
+	);
+	assert.equal(
+		breadcrumbViewModel({
+			key: "users",
+			workspaceName: "Design",
+			leafTitle: "Members",
+			access: { toolHome: true, queues: false },
+		}).current,
+		"Design / Members",
+	);
 });

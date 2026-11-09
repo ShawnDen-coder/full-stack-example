@@ -102,36 +102,41 @@ export function observeQueue(
 	const age = meter.createObservableGauge("jobs.queue.oldest_age", {
 		unit: "s",
 	});
-	let pending: Promise<void> | undefined;
+	let pendingCollection: Promise<void> | undefined;
+	async function collectQueueMetrics(
+		result: Parameters<
+			Parameters<typeof meter.addBatchObservableCallback>[0]
+		>[0],
+	) {
+		try {
+			const [counts, jobs] = await withDeadline(
+				Promise.all([
+					reader.getJobCounts("waiting", "active", "delayed", "failed"),
+					reader.getWaiting(0, 0),
+				]),
+				1500,
+				"Queue observation timed out",
+			);
+			for (const [state, value] of Object.entries(counts))
+				result.observe(depth, value, { queue, state });
+			result.observe(
+				age,
+				jobs[0] ? Math.max(0, Date.now() - jobs[0].timestamp) / 1000 : 0,
+				{ queue },
+			);
+		} catch {
+			/* Dependency failures are represented by readiness; no fabricated zeroes. */
+		}
+	}
 	const callback: Parameters<typeof meter.addBatchObservableCallback>[0] =
 		async (result) => {
-			pending = (async () => {
-				try {
-					const [counts, jobs] = await withDeadline(
-						Promise.all([
-							reader.getJobCounts("waiting", "active", "delayed", "failed"),
-							reader.getWaiting(0, 0),
-						]),
-						1500,
-						"Queue observation timed out",
-					);
-					for (const [state, value] of Object.entries(counts))
-						result.observe(depth, value, { queue, state });
-					result.observe(
-						age,
-						jobs[0] ? Math.max(0, Date.now() - jobs[0].timestamp) / 1000 : 0,
-						{ queue },
-					);
-				} catch {
-					/* Dependency failures are represented by readiness; no fabricated zeroes. */
-				}
-			})();
-			await pending;
+			pendingCollection = collectQueueMetrics(result);
+			await pendingCollection;
 		};
 	meter.addBatchObservableCallback(callback, [depth, age]);
 	return async () => {
 		meter.removeBatchObservableCallback(callback, [depth, age]);
-		await pending;
+		await pendingCollection;
 	};
 }
 

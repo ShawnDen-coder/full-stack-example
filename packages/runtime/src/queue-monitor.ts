@@ -13,10 +13,26 @@ export const jobStatuses = [
 export type JobStatus = (typeof jobStatuses)[number];
 
 const TEXT_LIMIT = 2000;
+const NAME_SCAN_LIMIT = 100;
+const NAME_RESULT_LIMIT = 50;
+
+type DependencyOperation =
+	| "unknown"
+	| "getJobLogs"
+	| "getJobCounts"
+	| "isPaused"
+	| "getJobs"
+	| "getJob"
+	| "getJobSchedulers"
+	| "getJobSchedulersCount"
+	| "getState";
 
 export class QueueMonitorUnavailableError extends Error {
-	constructor() {
-		super("Queue monitoring is temporarily unavailable");
+	constructor(
+		readonly source: DependencyOperation = "unknown",
+		cause?: unknown,
+	) {
+		super("Queue monitoring is temporarily unavailable", { cause });
 		this.name = "QueueMonitorUnavailableError";
 	}
 }
@@ -122,13 +138,38 @@ function createBullReader(queue: Queue): QueueReadAdapter {
 	};
 }
 
-async function read<T>(work: () => Promise<T>) {
+async function readQueueDependency<T>(
+	source: DependencyOperation,
+	work: () => Promise<T>,
+) {
 	try {
 		return await work();
 	} catch (error) {
 		if (error instanceof QueueMonitorUnavailableError) throw error;
-		throw new QueueMonitorUnavailableError();
+		throw new QueueMonitorUnavailableError(source, error);
 	}
+}
+
+function withDependencyErrors(adapter: QueueReadAdapter): QueueReadAdapter {
+	return {
+		getJobLogs: (...args) =>
+			readQueueDependency("getJobLogs", () => adapter.getJobLogs(...args)),
+		getJobCounts: () =>
+			readQueueDependency("getJobCounts", () => adapter.getJobCounts()),
+		isPaused: () => readQueueDependency("isPaused", () => adapter.isPaused()),
+		getJobs: (...args) =>
+			readQueueDependency("getJobs", () => adapter.getJobs(...args)),
+		getJob: (...args) =>
+			readQueueDependency("getJob", () => adapter.getJob(...args)),
+		getJobSchedulers: (...args) =>
+			readQueueDependency("getJobSchedulers", () =>
+				adapter.getJobSchedulers(...args),
+			),
+		getJobSchedulersCount: () =>
+			readQueueDependency("getJobSchedulersCount", () =>
+				adapter.getJobSchedulersCount(),
+			),
+	};
 }
 
 export function createQueueMonitor(registrations: QueueMonitorRegistration[]) {
@@ -137,12 +178,14 @@ export function createQueueMonitor(registrations: QueueMonitorRegistration[]) {
 			registration.key,
 			{
 				registration,
-				adapter: registration.adapter ?? createBullReader(registration.queue),
+				adapter: withDependencyErrors(
+					registration.adapter ?? createBullReader(registration.queue),
+				),
 			},
 		]),
 	);
 
-	function requireQueue(queueKey: string) {
+	function findQueueEntry(queueKey: string) {
 		return entries.get(queueKey) ?? null;
 	}
 
@@ -167,29 +210,61 @@ export function createQueueMonitor(registrations: QueueMonitorRegistration[]) {
 		};
 	}
 
+	async function searchJobsByName(
+		entry: NonNullable<ReturnType<typeof findQueueEntry>>,
+		query: string | undefined,
+		refreshedAt: string,
+	) {
+		const matches = new Map<string, ReturnType<typeof project>>();
+		let scannedCount = 0;
+		let scanTruncated = false;
+		let resultsTruncated = false;
+		const seen = new Set<string>();
+		for (const state of jobStatuses) {
+			const batch = await entry.adapter.getJobs([state], 0, NAME_SCAN_LIMIT);
+			if (batch.length > NAME_SCAN_LIMIT) scanTruncated = true;
+			for (const job of batch.slice(0, NAME_SCAN_LIMIT)) {
+				scannedCount++;
+				if (!job.id || job.name !== query || seen.has(job.id)) continue;
+				seen.add(job.id);
+				if (matches.size >= NAME_RESULT_LIMIT) {
+					resultsTruncated = true;
+					continue;
+				}
+				matches.set(job.id, project(entry.registration, job, state));
+			}
+		}
+		return {
+			mode: "name" as const,
+			items: [...matches.values()].filter((item) => item !== null),
+			scannedCount,
+			scanTruncated,
+			resultsTruncated,
+			refreshedAt,
+		};
+	}
+
 	return {
 		async list() {
 			const refreshedAt = new Date().toISOString();
-			return read(async () => {
-				const queues = [];
-				for (const { registration, adapter } of entries.values()) {
-					const [rawCounts, paused] = await Promise.all([
-						adapter.getJobCounts(),
-						adapter.isPaused(),
-					]);
-					const counts = Object.fromEntries(
-						jobStatuses.map((status) => [status, rawCounts[status] ?? 0]),
-					) as Record<JobStatus, number>;
-					queues.push({
-						key: registration.key,
-						name: registration.name,
-						paused,
-						counts,
-						refreshedAt,
-					});
-				}
-				return queues;
-			});
+			const queues = [];
+			for (const { registration, adapter } of entries.values()) {
+				const [rawCounts, paused] = await Promise.all([
+					adapter.getJobCounts(),
+					adapter.isPaused(),
+				]);
+				const counts = Object.fromEntries(
+					jobStatuses.map((status) => [status, rawCounts[status] ?? 0]),
+				) as Record<JobStatus, number>;
+				queues.push({
+					key: registration.key,
+					name: registration.name,
+					paused,
+					counts,
+					refreshedAt,
+				});
+			}
+			return queues;
 		},
 		async jobs({
 			queueKey,
@@ -208,89 +283,65 @@ export function createQueueMonitor(registrations: QueueMonitorRegistration[]) {
 			mode?: "browse" | "id" | "name";
 			query?: string;
 		}) {
-			const entry = requireQueue(queueKey);
+			const entry = findQueueEntry(queueKey);
 			if (!entry) return null;
-			return read(async () => {
-				const refreshedAt = new Date().toISOString();
-				if (mode === "id") {
-					const job = await entry.adapter.getJob(query ?? jobId ?? "");
-					const item = job?.id
-						? project(entry.registration, job, await job.getState())
-						: null;
-					return {
-						mode,
-						items: item ? [item] : [],
-						total: item ? 1 : 0,
-						page: 1,
-						pageSize,
-						refreshedAt,
-					};
-				}
-				if (mode === "name") {
-					const matches = new Map<string, ReturnType<typeof project>>();
-					let scannedCount = 0;
-					let scanTruncated = false;
-					let resultsTruncated = false;
-					const seen = new Set<string>();
-					for (const state of jobStatuses) {
-						const batch = await entry.adapter.getJobs([state], 0, 100);
-						if (batch.length > 100) scanTruncated = true;
-						for (const job of batch.slice(0, 100)) {
-							scannedCount++;
-							if (!job.id || job.name !== query || seen.has(job.id)) continue;
-							seen.add(job.id);
-							if (matches.size >= 50) {
-								resultsTruncated = true;
-								continue;
-							}
-							matches.set(job.id, project(entry.registration, job, state));
-						}
-					}
-					return {
-						mode,
-						items: [...matches.values()].filter((item) => item !== null),
-						scannedCount,
-						scanTruncated,
-						resultsTruncated,
-						refreshedAt,
-					};
-				}
-				const rawCounts = await entry.adapter.getJobCounts();
-				const start = (page - 1) * pageSize;
-				const jobs = await entry.adapter.getJobs(
-					[status],
-					start,
-					start + pageSize - 1,
-				);
+			const refreshedAt = new Date().toISOString();
+			if (mode === "id") {
+				const job = await entry.adapter.getJob(query ?? jobId ?? "");
+				const item = job?.id
+					? project(
+							entry.registration,
+							job,
+							await readQueueDependency("getState", () => job.getState()),
+						)
+					: null;
 				return {
-					mode: "browse" as const,
-					items: jobs.flatMap((job) => {
-						const item = project(entry.registration, job, status);
-						return item ? [item] : [];
-					}),
-					total: rawCounts[status] ?? 0,
-					page,
+					mode,
+					items: item ? [item] : [],
+					total: item ? 1 : 0,
+					page: 1,
 					pageSize,
 					refreshedAt,
 				};
-			});
+			}
+			if (mode === "name") return searchJobsByName(entry, query, refreshedAt);
+			const rawCounts = await entry.adapter.getJobCounts();
+			const start = (page - 1) * pageSize;
+			const jobs = await entry.adapter.getJobs(
+				[status],
+				start,
+				start + pageSize - 1,
+			);
+			return {
+				mode: "browse" as const,
+				items: jobs.flatMap((job) => {
+					const item = project(entry.registration, job, status);
+					return item ? [item] : [];
+				}),
+				total: rawCounts[status] ?? 0,
+				page,
+				pageSize,
+				refreshedAt,
+			};
 		},
 		async job({ queueKey, jobId }: { queueKey: string; jobId: string }) {
-			const entry = requireQueue(queueKey);
+			const entry = findQueueEntry(queueKey);
 			if (!entry) return null;
-			return read(async () => {
-				const job = await entry.adapter.getJob(jobId);
-				if (!job?.id) return null;
-				const listed = project(entry.registration, job, await job.getState());
-				if (!listed) return null;
-				const stack = job.stacktrace?.filter(Boolean).join("\n");
-				return {
-					...listed,
-					stacktrace: clip(stack),
-					result: fields(entry.registration.summarizeResult(job.returnvalue)),
-					refreshedAt: new Date().toISOString(),
-				};
-			});
+			const job = await entry.adapter.getJob(jobId);
+			if (!job?.id) return null;
+			const listed = project(
+				entry.registration,
+				job,
+				await readQueueDependency("getState", () => job.getState()),
+			);
+			if (!listed) return null;
+			const stack = job.stacktrace?.filter(Boolean).join("\n");
+			return {
+				...listed,
+				stacktrace: clip(stack),
+				result: fields(entry.registration.summarizeResult(job.returnvalue)),
+				refreshedAt: new Date().toISOString(),
+			};
 		},
 		async logs({
 			queueKey,
@@ -303,30 +354,28 @@ export function createQueueMonitor(registrations: QueueMonitorRegistration[]) {
 			page: number;
 			pageSize: number;
 		}) {
-			const entry = requireQueue(queueKey);
+			const entry = findQueueEntry(queueKey);
 			if (!entry) return null;
-			return read(async () => {
-				const job = await entry.adapter.getJob(jobId);
-				if (!job?.id) return null;
-				const start = (page - 1) * pageSize;
-				const result = await entry.adapter.getJobLogs(
-					jobId,
-					start,
-					start + pageSize - 1,
-				);
-				let clipped = false;
-				const lines = result.logs.map((line) => {
-					if (line.length > TEXT_LIMIT) clipped = true;
-					return clip(line) ?? "";
-				});
-				return {
-					lines,
-					total: result.count,
-					page,
-					pageSize,
-					clipped,
-				};
+			const job = await entry.adapter.getJob(jobId);
+			if (!job?.id) return null;
+			const start = (page - 1) * pageSize;
+			const result = await entry.adapter.getJobLogs(
+				jobId,
+				start,
+				start + pageSize - 1,
+			);
+			let clipped = false;
+			const lines = result.logs.map((line) => {
+				if (line.length > TEXT_LIMIT) clipped = true;
+				return clip(line) ?? "";
 			});
+			return {
+				lines,
+				total: result.count,
+				page,
+				pageSize,
+				clipped,
+			};
 		},
 		async schedulers({
 			queueKey,
@@ -335,31 +384,29 @@ export function createQueueMonitor(registrations: QueueMonitorRegistration[]) {
 			queueKey: string;
 			page?: number;
 		}) {
-			const entry = requireQueue(queueKey);
+			const entry = findQueueEntry(queueKey);
 			if (!entry) return null;
-			return read(async () => {
-				const [rows, total] = await Promise.all([
-					entry.adapter.getJobSchedulers((page - 1) * 50, page * 50 - 1),
-					entry.adapter.getJobSchedulersCount(),
-				]);
-				return {
-					items: rows.map((row) => ({
-						id: row.id,
-						name: row.name ?? row.id,
-						pattern: row.pattern ?? null,
-						every: row.every ?? null,
-						tz: row.tz ?? null,
-						next: row.next ?? null,
-						lastTrigger:
-							typeof row.lastRun === "number"
-								? { kind: "inferred" as const, at: row.lastRun }
-								: { kind: "unknown" as const },
-					})),
-					total,
-					page,
-					refreshedAt: new Date().toISOString(),
-				};
-			});
+			const [rows, total] = await Promise.all([
+				entry.adapter.getJobSchedulers((page - 1) * 50, page * 50 - 1),
+				entry.adapter.getJobSchedulersCount(),
+			]);
+			return {
+				items: rows.map((row) => ({
+					id: row.id,
+					name: row.name ?? row.id,
+					pattern: row.pattern ?? null,
+					every: row.every ?? null,
+					tz: row.tz ?? null,
+					next: row.next ?? null,
+					lastTrigger:
+						typeof row.lastRun === "number"
+							? { kind: "inferred" as const, at: row.lastRun }
+							: { kind: "unknown" as const },
+				})),
+				total,
+				page,
+				refreshedAt: new Date().toISOString(),
+			};
 		},
 	};
 }

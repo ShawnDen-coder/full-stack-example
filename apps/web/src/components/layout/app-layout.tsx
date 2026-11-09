@@ -23,7 +23,7 @@ import UserMenu from "@/components/user-menu";
 import { DirectionProvider } from "@/context/direction-provider";
 import { LayoutProvider, useLayout } from "@/context/layout-provider";
 import { useAccess, visibleNavigation } from "@/lib/access";
-import { resetAccessQueries } from "@/lib/access-cache";
+import { resetNonAccessQueries } from "@/lib/access-cache";
 import { useWorkspaceId } from "@/lib/workspace";
 import { queryClient, synchronizeWorkspace } from "@/utils/orpc";
 import { Breadcrumbs } from "./breadcrumbs";
@@ -74,11 +74,11 @@ function AppLayoutInner() {
 			previous.current.workspaceId === workspaceId &&
 			previous.current.signature !== signature
 		) {
-			resetAccessQueries(
-				queryClient,
-				previous.current.superadmin &&
+			resetNonAccessQueries(queryClient, {
+				keepWorkspaceList:
+					previous.current.superadmin &&
 					access.data.platformRole === "superadmin",
-			);
+			});
 		}
 		previous.current = {
 			signature,

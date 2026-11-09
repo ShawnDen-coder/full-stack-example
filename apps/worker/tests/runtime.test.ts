@@ -432,3 +432,34 @@ test("heartbeat does not repeat a hanging consumer after another fails", async (
 		await rm(directory, { recursive: true, force: true });
 	}
 });
+
+test("startup rollback keeps the database open if a started loop cannot be stopped", async () => {
+	const f = fixture(2);
+	const failure = new Error("run failed synchronously");
+	at(f.workers, 1).run = () => {
+		throw failure;
+	};
+	at(f.workers, 0).close = async () => {
+		f.calls.push("0.abort");
+		throw new Error("close failed");
+	};
+	await assert.rejects(
+		f.start(),
+		(error: unknown) =>
+			error instanceof AggregateError && error.errors.includes(failure),
+	);
+	assert.ok(f.calls.includes("0.abort"));
+	assert.ok(f.calls.includes("1.abort"));
+	assert.ok(!f.calls.includes("database.close"));
+	at(f.loops, 0).resolve();
+});
+
+test("resource factory failure is propagated before consumer construction", async () => {
+	const f = fixture();
+	const failure = new Error("factory failed");
+	f.factories.createResources = () => {
+		throw failure;
+	};
+	await assert.rejects(f.start(), (error: unknown) => error === failure);
+	assert.deepEqual(f.calls, []);
+});

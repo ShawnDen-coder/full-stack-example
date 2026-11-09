@@ -18,7 +18,8 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { client } from "@/utils/orpc";
-import { LogoPreview, prepareLogo } from "./workspace-logo";
+import { LogoField } from "./logo-field";
+import { prepareLogo } from "./workspace-logo";
 
 type Space = { id: string; name: string; slug: string; hasLogo: boolean };
 export function WorkspaceSettings({
@@ -113,41 +114,28 @@ export function WorkspaceSettings({
 							}}
 						>
 							<div className="space-y-2">
-								<Label htmlFor="workspace-logo">Logo</Label>
-								<div className="flex flex-wrap items-center gap-2">
-									<LogoPreview name={name} logo={logo} />
-									<Input
-										id="workspace-logo"
-										className="max-w-64"
-										type="file"
-										accept="image/png,image/jpeg,image/webp"
-										disabled={busy || (space.hasLogo && !currentLogo.data)}
-										onChange={(event) => {
-											const file = event.target.files?.[0];
-											event.target.value = "";
-											if (!file) return;
-											setFileError("");
-											setPreparing(true);
-											void prepareLogo(file)
-												.then(setLogo, (error: unknown) =>
-													setFileError(
-														error instanceof Error
-															? error.message
-															: "Unable to read image.",
-													),
-												)
-												.finally(() => setPreparing(false));
-										}}
-									/>
-									<Button
-										type="button"
-										variant="ghost"
-										disabled={busy || !logo}
-										onClick={() => setLogo(null)}
-									>
-										Remove
-									</Button>
-								</div>
+								<LogoField
+									id="workspace-logo"
+									label="Logo"
+									disabled={busy || (space.hasLogo && !currentLogo.data)}
+									removeDisabled={busy || !logo}
+									name={name}
+									logo={logo}
+									onRemove={() => setLogo(null)}
+									onFile={(file) => {
+										setFileError("");
+										setPreparing(true);
+										void prepareLogo(file)
+											.then(setLogo, (error: unknown) =>
+												setFileError(
+													error instanceof Error
+														? error.message
+														: "Unable to read image.",
+												),
+											)
+											.finally(() => setPreparing(false));
+									}}
+								/>
 								<p className="text-muted-foreground text-sm">
 									PNG, JPEG or WebP, up to 5 MB. Images are resized for storage.
 								</p>
